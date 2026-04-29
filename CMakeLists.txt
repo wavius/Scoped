@@ -12,8 +12,8 @@ find_package(OpenGL REQUIRED)
 # 3. List the Source Files (EXPLICIT FILES ONLY)
 set(SOURCES
     # Local source files
-    src/main.cpp
-    src/test.cpp
+    core/src/main.cpp
+    core/src/test.cpp
 
 
     # External source files
@@ -34,8 +34,8 @@ add_executable(Scoped ${SOURCES})
 # 5. Define Include Directories
 # target_include_directories is preferred over include_directories
 target_include_directories(Scoped PRIVATE
-    src
-    inc
+    core/src
+    core/inc
     extern/imgui
     extern/imgui/backends
     extern/implot

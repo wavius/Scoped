@@ -1,3 +1,0 @@
-/home/wavius/Documents/GitHub/Scoped/build/CMakeFiles/Scoped.dir
-/home/wavius/Documents/GitHub/Scoped/build/CMakeFiles/edit_cache.dir
-/home/wavius/Documents/GitHub/Scoped/build/CMakeFiles/rebuild_cache.dir

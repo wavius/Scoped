@@ -1,0 +1,13 @@
+# CMake build folder
+build/
+
+# external repos
+imgui/
+implot
+
+# Generated compiler database
+compile_commands.json
+
+# Optional editor/cache files
+.vscode/ipch/
+.cache/

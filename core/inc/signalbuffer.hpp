@@ -5,28 +5,33 @@
 
 namespace Scoped {
 
-    class SignalBuffer {
-        private:
-            size_t buffer_size;
-            std::vector<uint8_t> buffer;
-            
-        public:
-            /**
-            * @brief Constructor that pre-allocates memory for the signal data buffer.
-            * @param initial_size The number of 8-bit samples to reserve.
-            */
-            SignalBuffer(size_t initial_size);
+class SignalBuffer {
+private:
+  size_t buffer_size;
+  std::vector<uint8_t> buffer;
 
-            /**
-            * @brief Destructor.
-            */
-            ~SignalBuffer();
+public:
+  /**
+   * @brief Constructor that pre-allocates memory for the signal data buffer.
+   * @param initial_size The number of 8-bit samples to reserve.
+   */
+  SignalBuffer(size_t initial_size);
 
-            /**
-            * @brief Get a pointer to the signal data buffer.
-            * @return A pointer to the signal data buffer.
-            */  
-            uint8_t* getBuffer();
+  /**
+   * @brief Destructor.
+   */
+  ~SignalBuffer();
 
-    };
-}
+  /**
+   * @brief Get a pointer to the signal data buffer.
+   * @return A pointer to the signal data buffer.
+   */
+  uint8_t *getBuffer();
+
+  /**
+   * @brief Initialize the buffer with a square wave.
+   * @param
+   */
+  void createTestBufferSquare();
+};
+} // namespace Scoped

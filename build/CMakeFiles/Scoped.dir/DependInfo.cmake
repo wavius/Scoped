@@ -8,6 +8,8 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/home/wavius/Documents/GitHub/Scoped/core/src/main.cpp" "CMakeFiles/Scoped.dir/core/src/main.cpp.o" "gcc" "CMakeFiles/Scoped.dir/core/src/main.cpp.o.d"
+  "/home/wavius/Documents/GitHub/Scoped/core/src/signalbuffer.cpp" "CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.o" "gcc" "CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.o.d"
   "/home/wavius/Documents/GitHub/Scoped/extern/imgui/backends/imgui_impl_opengl3.cpp" "CMakeFiles/Scoped.dir/extern/imgui/backends/imgui_impl_opengl3.cpp.o" "gcc" "CMakeFiles/Scoped.dir/extern/imgui/backends/imgui_impl_opengl3.cpp.o.d"
   "/home/wavius/Documents/GitHub/Scoped/extern/imgui/backends/imgui_impl_sdl2.cpp" "CMakeFiles/Scoped.dir/extern/imgui/backends/imgui_impl_sdl2.cpp.o" "gcc" "CMakeFiles/Scoped.dir/extern/imgui/backends/imgui_impl_sdl2.cpp.o.d"
   "/home/wavius/Documents/GitHub/Scoped/extern/imgui/imgui.cpp" "CMakeFiles/Scoped.dir/extern/imgui/imgui.cpp.o" "gcc" "CMakeFiles/Scoped.dir/extern/imgui/imgui.cpp.o.d"
@@ -17,8 +19,6 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/wavius/Documents/GitHub/Scoped/extern/imgui/imgui_widgets.cpp" "CMakeFiles/Scoped.dir/extern/imgui/imgui_widgets.cpp.o" "gcc" "CMakeFiles/Scoped.dir/extern/imgui/imgui_widgets.cpp.o.d"
   "/home/wavius/Documents/GitHub/Scoped/extern/implot/implot.cpp" "CMakeFiles/Scoped.dir/extern/implot/implot.cpp.o" "gcc" "CMakeFiles/Scoped.dir/extern/implot/implot.cpp.o.d"
   "/home/wavius/Documents/GitHub/Scoped/extern/implot/implot_items.cpp" "CMakeFiles/Scoped.dir/extern/implot/implot_items.cpp.o" "gcc" "CMakeFiles/Scoped.dir/extern/implot/implot_items.cpp.o.d"
-  "/home/wavius/Documents/GitHub/Scoped/src/main.cpp" "CMakeFiles/Scoped.dir/src/main.cpp.o" "gcc" "CMakeFiles/Scoped.dir/src/main.cpp.o.d"
-  "/home/wavius/Documents/GitHub/Scoped/src/test.cpp" "CMakeFiles/Scoped.dir/src/test.cpp.o" "gcc" "CMakeFiles/Scoped.dir/src/test.cpp.o.d"
   "" "Scoped" "gcc" "CMakeFiles/Scoped.dir/link.d"
   )
 

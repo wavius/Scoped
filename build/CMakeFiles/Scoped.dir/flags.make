@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/home/wavius/Documents/GitHub/Scoped/src -I/home/wavius/Documents/GitHub/Scoped/inc -I/home/wavius/Documents/GitHub/Scoped/extern/imgui -I/home/wavius/Documents/GitHub/Scoped/extern/imgui/backends -I/home/wavius/Documents/GitHub/Scoped/extern/implot -isystem /usr/include/SDL2
+CXX_INCLUDES = -I/home/wavius/Documents/GitHub/Scoped/core/src -I/home/wavius/Documents/GitHub/Scoped/core/inc -I/home/wavius/Documents/GitHub/Scoped/extern/imgui -I/home/wavius/Documents/GitHub/Scoped/extern/imgui/backends -I/home/wavius/Documents/GitHub/Scoped/extern/implot -isystem /usr/include/SDL2
 
 CXX_FLAGS = -std=gnu++17
 

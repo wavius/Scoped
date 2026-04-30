@@ -72,33 +72,33 @@ include CMakeFiles/Scoped.dir/flags.make
 CMakeFiles/Scoped.dir/codegen:
 .PHONY : CMakeFiles/Scoped.dir/codegen
 
-CMakeFiles/Scoped.dir/src/main.cpp.o: CMakeFiles/Scoped.dir/flags.make
-CMakeFiles/Scoped.dir/src/main.cpp.o: /home/wavius/Documents/GitHub/Scoped/src/main.cpp
-CMakeFiles/Scoped.dir/src/main.cpp.o: CMakeFiles/Scoped.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/wavius/Documents/GitHub/Scoped/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/Scoped.dir/src/main.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Scoped.dir/src/main.cpp.o -MF CMakeFiles/Scoped.dir/src/main.cpp.o.d -o CMakeFiles/Scoped.dir/src/main.cpp.o -c /home/wavius/Documents/GitHub/Scoped/src/main.cpp
+CMakeFiles/Scoped.dir/core/src/main.cpp.o: CMakeFiles/Scoped.dir/flags.make
+CMakeFiles/Scoped.dir/core/src/main.cpp.o: /home/wavius/Documents/GitHub/Scoped/core/src/main.cpp
+CMakeFiles/Scoped.dir/core/src/main.cpp.o: CMakeFiles/Scoped.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/wavius/Documents/GitHub/Scoped/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/Scoped.dir/core/src/main.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Scoped.dir/core/src/main.cpp.o -MF CMakeFiles/Scoped.dir/core/src/main.cpp.o.d -o CMakeFiles/Scoped.dir/core/src/main.cpp.o -c /home/wavius/Documents/GitHub/Scoped/core/src/main.cpp
 
-CMakeFiles/Scoped.dir/src/main.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/Scoped.dir/src/main.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/wavius/Documents/GitHub/Scoped/src/main.cpp > CMakeFiles/Scoped.dir/src/main.cpp.i
+CMakeFiles/Scoped.dir/core/src/main.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/Scoped.dir/core/src/main.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/wavius/Documents/GitHub/Scoped/core/src/main.cpp > CMakeFiles/Scoped.dir/core/src/main.cpp.i
 
-CMakeFiles/Scoped.dir/src/main.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Scoped.dir/src/main.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/wavius/Documents/GitHub/Scoped/src/main.cpp -o CMakeFiles/Scoped.dir/src/main.cpp.s
+CMakeFiles/Scoped.dir/core/src/main.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Scoped.dir/core/src/main.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/wavius/Documents/GitHub/Scoped/core/src/main.cpp -o CMakeFiles/Scoped.dir/core/src/main.cpp.s
 
-CMakeFiles/Scoped.dir/src/test.cpp.o: CMakeFiles/Scoped.dir/flags.make
-CMakeFiles/Scoped.dir/src/test.cpp.o: /home/wavius/Documents/GitHub/Scoped/src/test.cpp
-CMakeFiles/Scoped.dir/src/test.cpp.o: CMakeFiles/Scoped.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/wavius/Documents/GitHub/Scoped/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/Scoped.dir/src/test.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Scoped.dir/src/test.cpp.o -MF CMakeFiles/Scoped.dir/src/test.cpp.o.d -o CMakeFiles/Scoped.dir/src/test.cpp.o -c /home/wavius/Documents/GitHub/Scoped/src/test.cpp
+CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.o: CMakeFiles/Scoped.dir/flags.make
+CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.o: /home/wavius/Documents/GitHub/Scoped/core/src/signalbuffer.cpp
+CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.o: CMakeFiles/Scoped.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/wavius/Documents/GitHub/Scoped/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.o -MF CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.o.d -o CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.o -c /home/wavius/Documents/GitHub/Scoped/core/src/signalbuffer.cpp
 
-CMakeFiles/Scoped.dir/src/test.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/Scoped.dir/src/test.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/wavius/Documents/GitHub/Scoped/src/test.cpp > CMakeFiles/Scoped.dir/src/test.cpp.i
+CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/wavius/Documents/GitHub/Scoped/core/src/signalbuffer.cpp > CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.i
 
-CMakeFiles/Scoped.dir/src/test.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Scoped.dir/src/test.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/wavius/Documents/GitHub/Scoped/src/test.cpp -o CMakeFiles/Scoped.dir/src/test.cpp.s
+CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/wavius/Documents/GitHub/Scoped/core/src/signalbuffer.cpp -o CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.s
 
 CMakeFiles/Scoped.dir/extern/imgui/imgui.cpp.o: CMakeFiles/Scoped.dir/flags.make
 CMakeFiles/Scoped.dir/extern/imgui/imgui.cpp.o: /home/wavius/Documents/GitHub/Scoped/extern/imgui/imgui.cpp
@@ -228,8 +228,8 @@ CMakeFiles/Scoped.dir/extern/imgui/imgui_demo.cpp.s: cmake_force
 
 # Object files for target Scoped
 Scoped_OBJECTS = \
-"CMakeFiles/Scoped.dir/src/main.cpp.o" \
-"CMakeFiles/Scoped.dir/src/test.cpp.o" \
+"CMakeFiles/Scoped.dir/core/src/main.cpp.o" \
+"CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.o" \
 "CMakeFiles/Scoped.dir/extern/imgui/imgui.cpp.o" \
 "CMakeFiles/Scoped.dir/extern/imgui/imgui_draw.cpp.o" \
 "CMakeFiles/Scoped.dir/extern/imgui/imgui_widgets.cpp.o" \
@@ -243,8 +243,8 @@ Scoped_OBJECTS = \
 # External object files for target Scoped
 Scoped_EXTERNAL_OBJECTS =
 
-Scoped: CMakeFiles/Scoped.dir/src/main.cpp.o
-Scoped: CMakeFiles/Scoped.dir/src/test.cpp.o
+Scoped: CMakeFiles/Scoped.dir/core/src/main.cpp.o
+Scoped: CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.o
 Scoped: CMakeFiles/Scoped.dir/extern/imgui/imgui.cpp.o
 Scoped: CMakeFiles/Scoped.dir/extern/imgui/imgui_draw.cpp.o
 Scoped: CMakeFiles/Scoped.dir/extern/imgui/imgui_widgets.cpp.o

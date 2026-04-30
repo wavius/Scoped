@@ -2,8 +2,8 @@ Scoped: \
   /usr/lib/gcc/x86_64-redhat-linux/15/../../../../lib64/crt1.o \
   /usr/lib/gcc/x86_64-redhat-linux/15/../../../../lib64/crti.o \
   /usr/lib/gcc/x86_64-redhat-linux/15/crtbegin.o \
-  CMakeFiles/Scoped.dir/src/main.cpp.o \
-  CMakeFiles/Scoped.dir/src/test.cpp.o \
+  CMakeFiles/Scoped.dir/core/src/main.cpp.o \
+  CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.o \
   CMakeFiles/Scoped.dir/extern/imgui/imgui.cpp.o \
   CMakeFiles/Scoped.dir/extern/imgui/imgui_draw.cpp.o \
   CMakeFiles/Scoped.dir/extern/imgui/imgui_widgets.cpp.o \
@@ -56,9 +56,9 @@ Scoped: \
 
 /usr/lib/gcc/x86_64-redhat-linux/15/crtbegin.o:
 
-CMakeFiles/Scoped.dir/src/main.cpp.o:
+CMakeFiles/Scoped.dir/core/src/main.cpp.o:
 
-CMakeFiles/Scoped.dir/src/test.cpp.o:
+CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.o:
 
 CMakeFiles/Scoped.dir/extern/imgui/imgui.cpp.o:
 

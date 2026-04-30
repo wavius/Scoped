@@ -129,6 +129,54 @@ Scoped/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Scoped.dir/build.make CMakeFiles/Scoped.dir/build
 .PHONY : Scoped/fast
 
+core/src/main.o: core/src/main.cpp.o
+.PHONY : core/src/main.o
+
+# target to build an object file
+core/src/main.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Scoped.dir/build.make CMakeFiles/Scoped.dir/core/src/main.cpp.o
+.PHONY : core/src/main.cpp.o
+
+core/src/main.i: core/src/main.cpp.i
+.PHONY : core/src/main.i
+
+# target to preprocess a source file
+core/src/main.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Scoped.dir/build.make CMakeFiles/Scoped.dir/core/src/main.cpp.i
+.PHONY : core/src/main.cpp.i
+
+core/src/main.s: core/src/main.cpp.s
+.PHONY : core/src/main.s
+
+# target to generate assembly for a file
+core/src/main.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Scoped.dir/build.make CMakeFiles/Scoped.dir/core/src/main.cpp.s
+.PHONY : core/src/main.cpp.s
+
+core/src/signalbuffer.o: core/src/signalbuffer.cpp.o
+.PHONY : core/src/signalbuffer.o
+
+# target to build an object file
+core/src/signalbuffer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Scoped.dir/build.make CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.o
+.PHONY : core/src/signalbuffer.cpp.o
+
+core/src/signalbuffer.i: core/src/signalbuffer.cpp.i
+.PHONY : core/src/signalbuffer.i
+
+# target to preprocess a source file
+core/src/signalbuffer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Scoped.dir/build.make CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.i
+.PHONY : core/src/signalbuffer.cpp.i
+
+core/src/signalbuffer.s: core/src/signalbuffer.cpp.s
+.PHONY : core/src/signalbuffer.s
+
+# target to generate assembly for a file
+core/src/signalbuffer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Scoped.dir/build.make CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.s
+.PHONY : core/src/signalbuffer.cpp.s
+
 extern/imgui/backends/imgui_impl_opengl3.o: extern/imgui/backends/imgui_impl_opengl3.cpp.o
 .PHONY : extern/imgui/backends/imgui_impl_opengl3.o
 
@@ -345,54 +393,6 @@ extern/implot/implot_items.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Scoped.dir/build.make CMakeFiles/Scoped.dir/extern/implot/implot_items.cpp.s
 .PHONY : extern/implot/implot_items.cpp.s
 
-src/main.o: src/main.cpp.o
-.PHONY : src/main.o
-
-# target to build an object file
-src/main.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Scoped.dir/build.make CMakeFiles/Scoped.dir/src/main.cpp.o
-.PHONY : src/main.cpp.o
-
-src/main.i: src/main.cpp.i
-.PHONY : src/main.i
-
-# target to preprocess a source file
-src/main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Scoped.dir/build.make CMakeFiles/Scoped.dir/src/main.cpp.i
-.PHONY : src/main.cpp.i
-
-src/main.s: src/main.cpp.s
-.PHONY : src/main.s
-
-# target to generate assembly for a file
-src/main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Scoped.dir/build.make CMakeFiles/Scoped.dir/src/main.cpp.s
-.PHONY : src/main.cpp.s
-
-src/test.o: src/test.cpp.o
-.PHONY : src/test.o
-
-# target to build an object file
-src/test.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Scoped.dir/build.make CMakeFiles/Scoped.dir/src/test.cpp.o
-.PHONY : src/test.cpp.o
-
-src/test.i: src/test.cpp.i
-.PHONY : src/test.i
-
-# target to preprocess a source file
-src/test.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Scoped.dir/build.make CMakeFiles/Scoped.dir/src/test.cpp.i
-.PHONY : src/test.cpp.i
-
-src/test.s: src/test.cpp.s
-.PHONY : src/test.s
-
-# target to generate assembly for a file
-src/test.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Scoped.dir/build.make CMakeFiles/Scoped.dir/src/test.cpp.s
-.PHONY : src/test.cpp.s
-
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -402,6 +402,12 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... Scoped"
+	@echo "... core/src/main.o"
+	@echo "... core/src/main.i"
+	@echo "... core/src/main.s"
+	@echo "... core/src/signalbuffer.o"
+	@echo "... core/src/signalbuffer.i"
+	@echo "... core/src/signalbuffer.s"
 	@echo "... extern/imgui/backends/imgui_impl_opengl3.o"
 	@echo "... extern/imgui/backends/imgui_impl_opengl3.i"
 	@echo "... extern/imgui/backends/imgui_impl_opengl3.s"
@@ -429,12 +435,6 @@ help:
 	@echo "... extern/implot/implot_items.o"
 	@echo "... extern/implot/implot_items.i"
 	@echo "... extern/implot/implot_items.s"
-	@echo "... src/main.o"
-	@echo "... src/main.i"
-	@echo "... src/main.s"
-	@echo "... src/test.o"
-	@echo "... src/test.i"
-	@echo "... src/test.s"
 .PHONY : help
 
 

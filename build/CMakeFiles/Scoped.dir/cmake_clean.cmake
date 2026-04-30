@@ -1,5 +1,9 @@
 file(REMOVE_RECURSE
   "CMakeFiles/Scoped.dir/link.d"
+  "CMakeFiles/Scoped.dir/core/src/main.cpp.o"
+  "CMakeFiles/Scoped.dir/core/src/main.cpp.o.d"
+  "CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.o"
+  "CMakeFiles/Scoped.dir/core/src/signalbuffer.cpp.o.d"
   "CMakeFiles/Scoped.dir/extern/imgui/backends/imgui_impl_opengl3.cpp.o"
   "CMakeFiles/Scoped.dir/extern/imgui/backends/imgui_impl_opengl3.cpp.o.d"
   "CMakeFiles/Scoped.dir/extern/imgui/backends/imgui_impl_sdl2.cpp.o"
@@ -18,10 +22,6 @@ file(REMOVE_RECURSE
   "CMakeFiles/Scoped.dir/extern/implot/implot.cpp.o.d"
   "CMakeFiles/Scoped.dir/extern/implot/implot_items.cpp.o"
   "CMakeFiles/Scoped.dir/extern/implot/implot_items.cpp.o.d"
-  "CMakeFiles/Scoped.dir/src/main.cpp.o"
-  "CMakeFiles/Scoped.dir/src/main.cpp.o.d"
-  "CMakeFiles/Scoped.dir/src/test.cpp.o"
-  "CMakeFiles/Scoped.dir/src/test.cpp.o.d"
   "Scoped"
   "Scoped.pdb"
 )

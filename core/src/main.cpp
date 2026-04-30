@@ -6,7 +6,7 @@
 
 // Includes
 #include "implot.h"
-#include "test.hpp"
+#include "signalbuffer.hpp"
 
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL_opengles2.h>
@@ -225,7 +225,13 @@ int main(int, char **) {
     ImGui::NewFrame();
 
     // My code goes here
-    Test::RenderUI();
+    Scoped::SignalBuffer mySignal(128);
+    mySignal.createTestBufferSquare();
+
+    ImPlot::BeginPlot("Test Line Plot");
+    ImPlot::SetupAxes("x", "y");
+    ImPlot::PlotStairs<uint8_t>("Square", mySignal.getBuffer(), 128);
+    ImPlot::EndPlot();
 
     // Rendering
     ImGui::Render();

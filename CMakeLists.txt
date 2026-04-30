@@ -13,10 +13,9 @@ find_package(OpenGL REQUIRED)
 set(SOURCES
     # Local source files
     core/src/main.cpp
-    core/src/test.cpp
+    core/src/signalbuffer.cpp
 
-
-    # External source files
+# External source files
     extern/imgui/imgui.cpp
     extern/imgui/imgui_draw.cpp
     extern/imgui/imgui_widgets.cpp

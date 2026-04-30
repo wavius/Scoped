@@ -30,19 +30,19 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 31,
+				"line" : 34,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 44,
+				"line" : 49,
 				"parent" : 0
 			},
 			{
 				"command" : 3,
 				"file" : 0,
-				"line" : 10,
+				"line" : 15,
 				"parent" : 0
 			},
 			{
@@ -64,7 +64,7 @@
 			{
 				"command" : 5,
 				"file" : 0,
-				"line" : 35,
+				"line" : 39,
 				"parent" : 0
 			}
 		]
@@ -101,7 +101,7 @@
 					"path" : "/home/wavius/Documents/GitHub/Scoped/extern/implot"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 7,
 					"isSystem" : true,
 					"path" : "/usr/include/SDL2"
 				}

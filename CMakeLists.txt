@@ -19,6 +19,8 @@ find_package(OpenGL REQUIRED)
 set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/core/src/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/core/src/signalbuffer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/src/intensitymap.cpp
+
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/imgui.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/imgui_draw.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/imgui_widgets.cpp

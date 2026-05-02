@@ -10,7 +10,13 @@ SignalBuffer::SignalBuffer(size_t initial_size)
 SignalBuffer::~SignalBuffer() {}
 
 // Get a pointer to the signal data buffer
-uint8_t *SignalBuffer::getBuffer() { return buffer.data(); }
+const uint8_t *SignalBuffer::getBuffer() const { return buffer.data(); }
+
+// Get the size of the signal data buffer
+size_t SignalBuffer::getSize() const { return buffer_size; }
+
+// Get the number of valid samples in the buffer
+size_t SignalBuffer::getValidSamples() const { return valid_samples; }
 
 // Initialize the buffer with a square wave
 void SignalBuffer::createTestBufferSquare() {

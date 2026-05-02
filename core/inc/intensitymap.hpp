@@ -7,7 +7,7 @@ namespace Scoped {
 
 class IntensityMap {
 private:
-  std::vector<uint8_t> map;
+  std::vector<uint32_t> map;
   size_t width;
   size_t height;
 

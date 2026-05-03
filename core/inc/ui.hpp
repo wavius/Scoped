@@ -23,6 +23,6 @@ void setupChannelColormap(ImVec4 channel_color);
  *
  * @param map The IntensityMap object containing the accumulated signal data.
  */
-void renderIntensityMap(const IntensityMap &map);
+void renderIntensityMap(IntensityMap &map);
 
 } // namespace Scoped

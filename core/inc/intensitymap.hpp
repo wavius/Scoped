@@ -1,11 +1,16 @@
 #pragma once
 
+#include <GL/gl.h>
 #include <cstdint>
 #include <vector>
 
 #include <signalbuffer.hpp>
 
 namespace Scoped {
+
+struct RGBA {
+  uint8_t r, g, b, a;
+};
 
 /**
  * @brief Manages a 2D grid of intensity values for digital phosphor display.
@@ -18,6 +23,10 @@ private:
   std::vector<uint32_t> grid;
   size_t width;
   size_t height;
+  std::vector<RGBA> texture_data;
+  GLuint texture_id = 0;
+
+  void initTexture();
 
 public:
   /**
@@ -51,6 +60,12 @@ public:
   size_t getHeight() const;
 
   /**
+   * @brief Get texture ID.
+   * @return Texture ID.
+   */
+  GLuint getTextureID() const;
+
+  /**
    * @brief Resets all pixels in the intensity map to zero.
    */
   void clear();
@@ -74,6 +89,8 @@ public:
    * @param buffer The input signal data from the hardware.
    */
   void processBuffer(const SignalBuffer &buffer);
+
+  void updateTexture();
 };
 
 } // namespace Scoped

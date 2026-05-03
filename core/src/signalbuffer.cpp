@@ -46,6 +46,7 @@ void SignalBuffer::createTestBufferSine() {
     float sineValue = std::sin(angle);
     samples[i] = static_cast<uint8_t>((sineValue * 127.5f) + 127.5f);
   }
+  valid_samples = buffer_size;
 }
 
 } // namespace Scoped

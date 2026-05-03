@@ -6,12 +6,17 @@
 namespace Scoped {
 
 // Constructor that pre-allocates memory for the intensity map
-IntensityMap::IntensityMap(size_t initial_width, size_t initial_height)
-    : width(initial_width), height(initial_height),
-      grid(initial_width * initial_height, 0) {}
+IntensityMap::IntensityMap(size_t w, size_t h)
+    : width(w), height(h), grid(w * h), texture_data(w * h, {0, 0, 0, 255}) {
+  initTexture();
+}
 
 // Destructor
-IntensityMap::~IntensityMap() {};
+IntensityMap::~IntensityMap() {
+  if (texture_id != 0) {
+    glDeleteTextures(1, &texture_id);
+  }
+};
 
 // Get a pointer to the intensity map
 const uint32_t *IntensityMap::getMap() const { return grid.data(); }
@@ -22,18 +27,47 @@ size_t IntensityMap::getWidth() const { return width; }
 // Get height of intensity map
 size_t IntensityMap::getHeight() const { return height; }
 
+// Get texture ID
+GLuint IntensityMap::getTextureID() const { return texture_id; }
+
+void IntensityMap::initTexture() {
+  glGenTextures(1, &texture_id);
+  glBindTexture(GL_TEXTURE_2D, texture_id);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+  // Allocate the memory on the GPU
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+               GL_UNSIGNED_BYTE, nullptr);
+}
+
+void IntensityMap::updateTexture() {
+  const size_t pixel_count = width * height;
+
+  for (size_t i = 0; i < pixel_count; ++i) {
+    uint32_t intensity = grid[i];
+
+    // Convert intensity to a brightness value (0-255)
+    uint32_t brightness = std::min(intensity * 255, 255u);
+
+    // Set pixel to Cyan (R=0, G=brightness, B=brightness, A=255)
+    texture_data[i] = {0, static_cast<uint8_t>(brightness),
+                       static_cast<uint8_t>(brightness), 255};
+  }
+
+  // Upload the new pixel data to the GPU
+  glBindTexture(GL_TEXTURE_2D, texture_id);
+  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA,
+                  GL_UNSIGNED_BYTE, texture_data.data());
+}
+
 // Clear intensity map
 void IntensityMap::clear() { std::fill(grid.begin(), grid.end(), 0); }
 
 // Add a sample to the intensity map
-/*
-void IntensityMap::addSample(uint32_t x, uint32_t y) {
-  if (x < width && y < height) {
-    grid[static_cast<size_t>(y) * width + x]++;
-  }
-}
-*/
-
 void IntensityMap::addSample(float x, float y) {
   uint32_t x0 = static_cast<uint32_t>(x);
   uint32_t y0 = static_cast<uint32_t>(y);
@@ -67,35 +101,27 @@ void IntensityMap::processBuffer(const SignalBuffer &buffer) {
   if (length == 0)
     return;
 
-  // Cache constants
   const uint32_t h_m_1 = static_cast<uint32_t>(height - 1);
   const size_t w = width;
   uint32_t *const data = grid.data();
   const size_t end_x = std::min(length, w);
 
-  // Calculate the first sample
   uint32_t prevY = (static_cast<uint32_t>(samples[0]) * h_m_1) >> 8;
 
-  // Prime the very first column (x = 0) so it doesn't stay blank
   data[prevY * w]++;
 
-  // Start loop at x = 1
   for (size_t x = 1; x < end_x; ++x) {
     const uint32_t currY = (static_cast<uint32_t>(samples[x]) * h_m_1) >> 8;
 
-    // Base pointer for the current X column
     uint32_t *const col_ptr = &data[x];
 
-    // Branchless min/max for the vertical span
     const uint32_t startY = (prevY < currY) ? prevY : currY;
     const uint32_t endY = (prevY > currY) ? prevY : currY;
 
-    // Draw the vertical line connecting the previous Y to the current Y
     for (uint32_t y = startY; y <= endY; ++y) {
       col_ptr[y * w]++;
     }
 
-    // Shift pipeline
     prevY = currY;
   }
 }

@@ -5,16 +5,22 @@
 
 namespace Scoped {
 
+/**
+ * @brief Manages a collection of 8-bit signal samples captured from hardware.
+ *
+ * This class serves as the primary data container for raw waveforms before
+ * they are processed into the IntensityMap for visualization.
+ */
 class SignalBuffer {
 private:
-  std::vector<uint8_t> buffer;
-  size_t buffer_size;   // Size of the buffer
-  size_t valid_samples; // Number of valid samples in the buffer
+  std::vector<uint8_t> samples;
+  size_t buffer_size;
+  size_t valid_samples;
 
 public:
   /**
-   * @brief Constructor that pre-allocates memory for the signal data buffer.
-   * @param initial_size The number of 8-bit samples to reserve.
+   * @brief Constructor that pre-allocates memory for the sample buffer.
+   * @param initial_size The total number of 8-bit samples to reserve.
    */
   SignalBuffer(size_t initial_size);
 
@@ -24,27 +30,32 @@ public:
   ~SignalBuffer();
 
   /**
-   * @brief Get a pointer to the signal data buffer.
-   * @return A pointer to the signal data buffer.
+   * @brief Get a pointer to the raw sample data.
+   * @return A pointer to the uint8_t array.
    */
-  const uint8_t *getBuffer() const;
+  const uint8_t *getSamples() const;
 
   /**
-   * @brief Get the size of the signal data buffer.
-   * @return Size of the signal data buffer.
+   * @brief Get the total allocated size of the buffer.
+   * @return Total capacity in samples.
    */
   size_t getSize() const;
 
   /**
-   * @brief Get the number of valid samples in the buffer.
-   * @return Number of valid samples in the buffer.
+   * @brief Get the number of samples actually populated with data.
+   * @return Number of valid samples available for processing.
    */
   size_t getValidSamples() const;
 
   /**
-   * @brief Initialize the buffer with a square wave.
-   * @param
+   * @brief Populates the buffer with a full-swing (0-255) square wave.
    */
   void createTestBufferSquare();
+
+  /**
+   * @brief Populates the buffer with a full-swing (0-255) sine wave.
+   */
+  void createTestBufferSine();
 };
+
 } // namespace Scoped

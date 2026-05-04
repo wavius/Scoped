@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vector>
 
-#include <signalbuffer.hpp>
+#include <displayframe.hpp>
 
 namespace Scoped {
 
@@ -88,7 +88,7 @@ public:
    * samples.
    * @param buffer The input signal data from the hardware.
    */
-  void processBuffer(const SignalBuffer &buffer);
+  void processBuffer(const DisplayFrame &buffer);
 
   void updateTexture();
 };

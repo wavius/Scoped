@@ -5,9 +5,9 @@
 #include <SDL_opengl.h>
 #include <stdio.h>
 
+#include <displayframe.hpp>
 #include <implot.h>
 #include <intensitymap.hpp>
-#include <signalbuffer.hpp>
 #include <ui.hpp>
 
 int main(int, char **) {
@@ -52,7 +52,7 @@ int main(int, char **) {
   ImGui_ImplOpenGL3_Init(glsl_version);
 
   // PERSISTENT OBJECTS
-  Scoped::SignalBuffer mySignal(1024);
+  Scoped::DisplayFrame mySignal(1024);
   Scoped::IntensityMap myMap(1024, 512);
   Scoped::setupChannelColormap(ImVec4(0, 1, 1, 1)); // Cyan trace
 

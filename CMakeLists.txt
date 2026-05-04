@@ -35,7 +35,7 @@ find_package(OpenGL REQUIRED)
 # Using ${CMAKE_CURRENT_SOURCE_DIR} makes paths relative to the project root.
 set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/core/src/main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/core/src/signalbuffer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/src/displayframe.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/core/src/intensitymap.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/core/src/ui.cpp
 

@@ -95,7 +95,7 @@ void IntensityMap::decay(float factor) {
 }
 
 // Fill intensity map from buffer
-void IntensityMap::processBuffer(const SignalBuffer &buffer) {
+void IntensityMap::processBuffer(const DisplayFrame &buffer) {
   const uint8_t *samples = buffer.getSamples();
   const size_t length = buffer.getValidSamples();
   if (length == 0)

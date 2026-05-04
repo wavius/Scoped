@@ -8,10 +8,10 @@ namespace Scoped {
 /**
  * @brief Manages a collection of 8-bit signal samples captured from hardware.
  *
- * This class serves as the primary data container for raw waveforms before
+ * This class serves as the final data container for raw waveforms before
  * they are processed into the IntensityMap for visualization.
  */
-class SignalBuffer {
+class DisplayFrame {
 private:
   std::vector<uint8_t> samples;
   size_t buffer_size;
@@ -22,12 +22,12 @@ public:
    * @brief Constructor that pre-allocates memory for the sample buffer.
    * @param initial_size The total number of 8-bit samples to reserve.
    */
-  SignalBuffer(size_t initial_size);
+  DisplayFrame(size_t initial_size);
 
   /**
    * @brief Destructor.
    */
-  ~SignalBuffer();
+  ~DisplayFrame();
 
   /**
    * @brief Get a pointer to the raw sample data.

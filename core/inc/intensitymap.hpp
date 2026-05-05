@@ -13,83 +13,67 @@ struct RGBA {
 };
 
 /**
- * @brief Manages a 2D grid of intensity values for digital phosphor display.
+ * @brief A 2D accumulation grid for digital phosphor display.
  *
- * This class handles the accumulation of signal samples and the temporal
- * decay required to simulate an oscilloscope's phosphor persistence.
+ * Converts 1D waveform data into a 2D hit-count grid, then maps
+ * the grid to an OpenGL texture for rendering.
  */
 class IntensityMap {
 private:
-  std::vector<uint32_t> grid;
-  size_t width;
-  size_t height;
-  std::vector<RGBA> texture_data;
-  GLuint texture_id = 0;
+  size_t m_width;
+  size_t m_height;
+  std::vector<uint32_t> m_grid;
+  std::vector<RGBA> m_texture_data;
+  GLuint m_texture_id = 0;
 
   void initTexture();
 
 public:
   /**
-   * @brief Constructor that pre-allocates memory for the intensity map.
-   * @param initial_width The horizontal resolution of the map.
-   * @param initial_height The vertical resolution of the map.
+   * @brief Constructs an intensity map with the given resolution.
+   * @param width Horizontal resolution in pixels.
+   * @param height Vertical resolution in pixels.
    */
-  IntensityMap(size_t initial_width, size_t initial_height);
+  IntensityMap(size_t width, size_t height);
 
-  /**
-   * @brief Destructor.
-   */
   ~IntensityMap();
 
-  /**
-   * @brief Get a pointer to the raw intensity data.
-   * @return Pointer to the uint32_t grid array.
-   */
   const uint32_t *getMap() const;
-
-  /**
-   * @brief Get the width of the intensity map.
-   * @return Width in pixels.
-   */
   size_t getWidth() const;
-
-  /**
-   * @brief Get the height of the intensity map.
-   * @return Height in pixels.
-   */
   size_t getHeight() const;
-
-  /**
-   * @brief Get texture ID.
-   * @return Texture ID.
-   */
   GLuint getTextureID() const;
 
   /**
-   * @brief Resets all pixels in the intensity map to zero.
+   * @brief Resets all intensity values to zero.
    */
   void clear();
 
   /**
-   * @brief Increments the intensity at a specific coordinate.
-   * @param x Horizontal coordinate.
-   * @param y Vertical coordinate.
+   * @brief Bilinearly distributes intensity at a sub-pixel coordinate.
+   * @param x Horizontal coordinate (can be fractional).
+   * @param y Vertical coordinate (can be fractional).
    */
   void addSample(float x, float y);
 
   /**
-   * @brief Reduces the intensity of all samples to simulate persistence decay.
-   * @param factor Multiplying factor (typically 0.0 to 1.0).
+   * @brief Multiplies all intensity values by a decay factor.
+   * @param factor Decay multiplier (typically 0.0–1.0).
    */
   void decay(float factor);
 
   /**
-   * @brief Processes a signal buffer and updates the map with interpolated
-   * samples.
-   * @param buffer The input signal data from the hardware.
+   * @brief Rasterizes a waveform frame into the intensity grid.
+   *
+   * Maps each sample to a Y coordinate and draws vertical lines
+   * between consecutive samples to fill gaps.
+   *
+   * @param frame The triggered waveform data.
    */
-  void processBuffer(const DisplayFrame &buffer);
+  void processFrame(const DisplayFrame &frame);
 
+  /**
+   * @brief Uploads the current intensity data to the GPU texture.
+   */
   void updateTexture();
 };
 

@@ -6,56 +6,39 @@
 namespace Scoped {
 
 /**
- * @brief Manages a collection of 8-bit signal samples captured from hardware.
+ * @brief A fixed-size container for a single triggered waveform frame.
  *
- * This class serves as the final data container for raw waveforms before
- * they are processed into the IntensityMap for visualization.
+ * Holds raw 8-bit samples captured from hardware. Serves as the
+ * intermediate data container between the Trigger and the IntensityMap.
  */
 class DisplayFrame {
 private:
-  std::vector<uint8_t> samples;
-  size_t buffer_size;
-  size_t valid_samples;
+  std::vector<uint8_t> m_samples;
 
 public:
   /**
-   * @brief Constructor that pre-allocates memory for the sample buffer.
-   * @param initial_size The total number of 8-bit samples to reserve.
+   * @brief Constructs a frame with the given capacity, zero-filled.
+   * @param size Number of samples to allocate.
    */
-  DisplayFrame(size_t initial_size);
+  explicit DisplayFrame(size_t size);
 
   /**
-   * @brief Destructor.
-   */
-  ~DisplayFrame();
-
-  /**
-   * @brief Get a pointer to the raw sample data.
-   * @return A pointer to the uint8_t array.
+   * @brief Returns a pointer to the raw sample data.
+   * @return Constant pointer to the sample array.
    */
   const uint8_t *getSamples() const;
 
   /**
-   * @brief Get the total allocated size of the buffer.
-   * @return Total capacity in samples.
+   * @brief Returns the number of samples in the frame.
+   * @return Sample count.
    */
   size_t getSize() const;
 
   /**
-   * @brief Get the number of samples actually populated with data.
-   * @return Number of valid samples available for processing.
+   * @brief Replaces the frame contents with data from a vector.
+   * @param data Source vector to copy from.
    */
-  size_t getValidSamples() const;
-
-  /**
-   * @brief Populates the buffer with a full-swing (0-255) square wave.
-   */
-  void createTestBufferSquare();
-
-  /**
-   * @brief Populates the buffer with a full-swing (0-255) sine wave.
-   */
-  void createTestBufferSine();
+  void copyFrom(const std::vector<uint8_t> &data);
 };
 
 } // namespace Scoped

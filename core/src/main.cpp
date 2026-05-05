@@ -3,11 +3,13 @@
 #include "imgui_impl_sdl2.h"
 #include <SDL.h>
 #include <SDL_opengl.h>
-#include <stdio.h>
+#include <cstdio>
 
+#include <circularbuffer.hpp>
 #include <displayframe.hpp>
 #include <implot.h>
 #include <intensitymap.hpp>
+#include <trigger.hpp>
 #include <ui.hpp>
 
 int main(int, char **) {
@@ -22,7 +24,6 @@ int main(int, char **) {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
@@ -36,7 +37,7 @@ int main(int, char **) {
 
   SDL_GLContext gl_context = SDL_GL_CreateContext(window);
   SDL_GL_MakeCurrent(window, gl_context);
-  SDL_GL_SetSwapInterval(1); // Vsync
+  SDL_GL_SetSwapInterval(1);
 
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
@@ -47,37 +48,58 @@ int main(int, char **) {
       ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_DockingEnable;
 
   ImGui::StyleColorsDark();
-
   ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
   ImGui_ImplOpenGL3_Init(glsl_version);
 
-  // PERSISTENT OBJECTS
-  Scoped::DisplayFrame mySignal(1024);
-  Scoped::IntensityMap myMap(1024, 512);
-  Scoped::setupChannelColormap(ImVec4(0, 1, 1, 1)); // Cyan trace
+  // Core pipeline objects
+  Scoped::CircularBuffer ring_buffer(8192);
+  Scoped::Trigger trigger(1024, 128);
+  Scoped::DisplayFrame frame(1024);
+  Scoped::IntensityMap intensity_map(1024, 512);
+  Scoped::setupChannelColormap(ImVec4(0, 1, 1, 1));
 
-  bool done = false;
-  while (!done) {
+  bool running = true;
+  while (running) {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       ImGui_ImplSDL2_ProcessEvent(&event);
       if (event.type == SDL_QUIT)
-        done = true;
+        running = false;
     }
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    // --- SCOPE LOGIC ---
-    myMap.decay(0.9f);               // Apply persistence
-    mySignal.createTestBufferSine(); // Get new data
-    myMap.processBuffer(mySignal);   // Interpolate and plot
+    // Simulate incoming hardware data
+    ring_buffer.fillTestSineWave();
 
-    ImGui::Begin("Oscilloscope");
-    Scoped::renderIntensityMap(myMap);
+    // Trigger controls
+    ImGui::Begin("Scope Controls");
+
+    static int trigger_level = 128;
+    static int edge_selection = 0;
+    const char *edge_options[] = {"Rising Edge", "Falling Edge"};
+
+    ImGui::SliderInt("Trigger Level", &trigger_level, 0, 255);
+    ImGui::Combo("Trigger Edge", &edge_selection, edge_options, 2);
+
+    trigger.setThreshold(static_cast<uint8_t>(trigger_level));
+    trigger.setType(edge_selection == 0 ? Scoped::TriggerType::RISING_EDGE
+                                        : Scoped::TriggerType::FALLING_EDGE);
     ImGui::End();
-    // -------------------
+
+    // Signal processing pipeline
+    if (trigger.processStream(ring_buffer)) {
+      frame.copyFrom(trigger.getOutput());
+      intensity_map.clear();
+      intensity_map.processFrame(frame);
+    }
+
+    // Oscilloscope display
+    ImGui::Begin("Oscilloscope");
+    Scoped::renderIntensityMap(intensity_map);
+    ImGui::End();
 
     ImGui::Render();
     glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);

@@ -2,6 +2,9 @@
 
 #include <implot.h> // IWYU pragma: keep
 #include <intensitymap.hpp>
+#include <trigger.hpp>
+#include <usb.hpp>
+#include <circularbuffer.hpp>
 
 namespace Scoped {
 
@@ -20,5 +23,12 @@ void setupChannelColormap(ImVec4 color);
  * @param map The IntensityMap to render.
  */
 void renderIntensityMap(IntensityMap &map);
+
+/**
+ * @brief Renders the complete oscilloscope UI including plot and controls.
+ * @param trigger The trigger object to configure.
+ * @param map The intensity map to display.
+ */
+void renderOscilloscopeUI(Trigger &trigger, IntensityMap &map, USBDevice &usb, CircularBuffer &buffer);
 
 } // namespace Scoped

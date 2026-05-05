@@ -80,6 +80,14 @@ public:
    * @return The read index value.
    */
   size_t getReadIdx() const { return m_read_idx.load(); }
+
+  /**
+   * @brief Resets read and write indices to zero, effectively clearing the buffer.
+   */
+  void clear() {
+    m_read_idx.store(0);
+    m_write_idx.store(0);
+  }
 };
 
 } // namespace Scoped

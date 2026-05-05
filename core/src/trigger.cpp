@@ -1,16 +1,25 @@
+#include <SDL.h>
 #include <trigger.hpp>
 
 namespace Scoped {
 
 Trigger::Trigger(size_t width, uint8_t level)
-    : m_threshold(level), m_type(TriggerType::RISING_EDGE), m_prev_sample(0),
-      m_frame_width(width), m_output(width, 0) {}
+    : m_threshold(level), m_type(TriggerType::RISING_EDGE),
+      m_mode(TriggerMode::AUTO), m_prev_sample(0), m_frame_width(width),
+      m_output(width, 0), m_last_trigger_time(0) {}
 
 void Trigger::setThreshold(uint8_t level) { m_threshold = level; }
 
 void Trigger::setType(TriggerType type) { m_type = type; }
 
+void Trigger::setMode(TriggerMode mode) { m_mode = mode; }
+
 const std::vector<uint8_t> &Trigger::getOutput() const { return m_output; }
+
+void Trigger::clear() {
+  m_prev_sample = 0;
+  // No need to clear m_output as it's overwritten by extractFrame
+}
 
 bool Trigger::checkEdge(uint8_t current) const {
   if (m_type == TriggerType::RISING_EDGE) {
@@ -45,26 +54,33 @@ void Trigger::extractFrame(CircularBuffer &buffer, size_t trigger_offset) {
 
 bool Trigger::processStream(CircularBuffer &buffer) {
   size_t unread = buffer.getUnreadCount();
-  if (unread == 0)
+  if (unread < m_frame_width)
     return false;
 
-  for (size_t i = 0; i < unread; ++i) {
+  // Process a chunk of data to look for a trigger
+  for (size_t i = 0; i < unread - m_frame_width; ++i) {
     uint8_t current = buffer.peekAhead(i);
 
     if (checkEdge(current)) {
-      if (unread - i >= m_frame_width) {
-        extractFrame(buffer, i);
-        return true;
-      }
-      // Trigger found but frame incomplete — advance past scanned data
-      buffer.advanceReadIdx(i);
-      return false;
+      extractFrame(buffer, i);
+      m_last_trigger_time = SDL_GetTicks();
+      return true;
     }
-
     m_prev_sample = current;
   }
 
-  // No trigger found — discard old data, keep one frame's worth for continuity
+  // Handle Auto-Trigger timeout
+  if (m_mode == TriggerMode::AUTO) {
+    uint32_t now = SDL_GetTicks();
+    if (now - m_last_trigger_time > AUTO_TIMEOUT_MS) {
+      // Force a frame capture from the current position
+      extractFrame(buffer, 0);
+      m_last_trigger_time = now;
+      return true;
+    }
+  }
+
+  // No trigger found in this chunk — advance read pointer to keep the buffer from filling
   if (unread > m_frame_width) {
     buffer.advanceReadIdx(unread - m_frame_width);
   }

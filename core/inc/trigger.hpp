@@ -12,6 +12,13 @@ namespace Scoped {
 enum class TriggerType { RISING_EDGE, FALLING_EDGE };
 
 /**
+ * @brief Represents the triggering strategy.
+ *        AUTO: Captures a frame even if no edge is found after a timeout.
+ *        NORMAL: Only captures a frame when a valid edge is detected.
+ */
+enum class TriggerMode { AUTO, NORMAL };
+
+/**
  * @brief Scans a CircularBuffer for edge-triggered events and extracts
  *        fixed-width waveform frames.
  */
@@ -19,9 +26,14 @@ class Trigger {
 private:
   uint8_t m_threshold;
   TriggerType m_type;
+  TriggerMode m_mode;
   uint8_t m_prev_sample;
   size_t m_frame_width;
   std::vector<uint8_t> m_output;
+
+  // For Auto trigger timeout
+  uint32_t m_last_trigger_time; // Using milliseconds from SDL_GetTicks or similar
+  static constexpr uint32_t AUTO_TIMEOUT_MS = 100;
 
   static constexpr uint8_t HYSTERESIS_MARGIN = 2;
 
@@ -38,6 +50,8 @@ public:
 
   void setThreshold(uint8_t level);
   void setType(TriggerType type);
+  void setMode(TriggerMode mode);
+  void clear();
 
   /**
    * @brief Scans the buffer for a trigger event and extracts a frame.

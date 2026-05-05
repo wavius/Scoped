@@ -11,6 +11,7 @@
 #include <intensitymap.hpp>
 #include <trigger.hpp>
 #include <ui.hpp>
+#include <usb.hpp>
 
 int main(int, char **) {
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
@@ -32,7 +33,7 @@ int main(int, char **) {
       (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE |
                         SDL_WINDOW_ALLOW_HIGHDPI);
   SDL_Window *window =
-      SDL_CreateWindow("Scoped Oscilloscope", SDL_WINDOWPOS_CENTERED,
+      SDL_CreateWindow("Scoped", SDL_WINDOWPOS_CENTERED,
                        SDL_WINDOWPOS_CENTERED, 1280, 800, window_flags);
 
   SDL_GLContext gl_context = SDL_GL_CreateContext(window);
@@ -56,6 +57,7 @@ int main(int, char **) {
   Scoped::Trigger trigger(1024, 128);
   Scoped::DisplayFrame frame(1024);
   Scoped::IntensityMap intensity_map(1024, 512);
+  Scoped::USBDevice usb;
   Scoped::setupChannelColormap(ImVec4(0, 1, 1, 1));
 
   bool running = true;
@@ -71,23 +73,10 @@ int main(int, char **) {
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    // Simulate incoming hardware data
-    ring_buffer.fillTestSineWave();
-
-    // Trigger controls
-    ImGui::Begin("Scope Controls");
-
-    static int trigger_level = 128;
-    static int edge_selection = 0;
-    const char *edge_options[] = {"Rising Edge", "Falling Edge"};
-
-    ImGui::SliderInt("Trigger Level", &trigger_level, 0, 255);
-    ImGui::Combo("Trigger Edge", &edge_selection, edge_options, 2);
-
-    trigger.setThreshold(static_cast<uint8_t>(trigger_level));
-    trigger.setType(edge_selection == 0 ? Scoped::TriggerType::RISING_EDGE
-                                        : Scoped::TriggerType::FALLING_EDGE);
-    ImGui::End();
+    // Simulate incoming hardware data if not connected
+    if (!usb.isConnected()) {
+      ring_buffer.fillTestSineWave();
+    }
 
     // Signal processing pipeline
     if (trigger.processStream(ring_buffer)) {
@@ -96,10 +85,8 @@ int main(int, char **) {
       intensity_map.processFrame(frame);
     }
 
-    // Oscilloscope display
-    ImGui::Begin("Oscilloscope");
-    Scoped::renderIntensityMap(intensity_map);
-    ImGui::End();
+    // Render fixed UI layout
+    Scoped::renderOscilloscopeUI(trigger, intensity_map, usb, ring_buffer);
 
     ImGui::Render();
     glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);

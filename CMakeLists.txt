@@ -30,6 +30,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # find_package looks for libraries in the system paths of the current machine.
 find_package(SDL2 REQUIRED)
 find_package(OpenGL REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
 
 # 5. List the Source Files
 # Using ${CMAKE_CURRENT_SOURCE_DIR} makes paths relative to the project root.
@@ -37,7 +39,10 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/core/src/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/core/src/displayframe.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/core/src/intensitymap.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/src/circularbuffer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/src/trigger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/core/src/ui.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/src/usb.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/imgui.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/imgui_draw.cpp
@@ -63,6 +68,7 @@ target_include_directories(Scoped PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/backends
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/implot
     ${SDL2_INCLUDE_DIRS}
+    ${LIBUSB_INCLUDE_DIRS}
 )
 
 # 8. Link Libraries
@@ -70,4 +76,5 @@ target_link_libraries(Scoped PRIVATE
     SDL2::SDL2
     OpenGL::GL
     ${CMAKE_DL_LIBS}
+    ${LIBUSB_LIBRARIES}
 )

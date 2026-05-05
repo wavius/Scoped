@@ -16,22 +16,17 @@ bool USBDevice::connect() {
   if (!m_handle)
     return false;
 
-  // Interface 2 is Data, Interface 1 is Control/Management
   int data_iface = 2;
   int ctrl_iface = 1;
 
-  // 1. Detach and Claim interfaces
   for (int i : {ctrl_iface, data_iface}) {
     if (libusb_kernel_driver_active(m_handle, i))
       libusb_detach_kernel_driver(m_handle, i);
     libusb_claim_interface(m_handle, i);
   }
 
-  // 2. Set Baud Rate (115200, 8N1) - Required manual request for CDC
   uint8_t encoding[] = {0x00, 0xC2, 0x01, 0x00, 0x00, 0x00, 0x08};
   libusb_control_transfer(m_handle, 0x21, 0x20, 0, ctrl_iface, encoding, 7, 1000);
-
-  // 3. Set Control Line State (DTR & RTS High) - Starts the FPGA stream
   libusb_control_transfer(m_handle, 0x21, 0x22, 0x03, ctrl_iface, NULL, 0, 1000);
 
   return true;
@@ -86,7 +81,6 @@ void USBDevice::streamLoop(CircularBuffer &buffer) {
       buffer.pushBlock(temp_buffer, transferred);
       total_received += transferred;
 
-      // Log progress every second
       auto now = std::chrono::steady_clock::now();
       if (std::chrono::duration_cast<std::chrono::seconds>(now - last_log_time)
               .count() >= 1) {

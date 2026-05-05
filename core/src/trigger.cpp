@@ -18,7 +18,6 @@ const std::vector<uint8_t> &Trigger::getOutput() const { return m_output; }
 
 void Trigger::clear() {
   m_prev_sample = 0;
-  // No need to clear m_output as it's overwritten by extractFrame
 }
 
 bool Trigger::checkEdge(uint8_t current) const {
@@ -35,11 +34,9 @@ void Trigger::extractFrame(CircularBuffer &buffer, size_t trigger_offset) {
   size_t start = (buffer.getReadIdx() + trigger_offset) % buf_capacity;
 
   if (start + m_frame_width <= buf_capacity) {
-    // Contiguous: single copy
     std::copy(buffer.getRawData() + start,
               buffer.getRawData() + start + m_frame_width, m_output.begin());
   } else {
-    // Wraps around the end of the ring buffer
     size_t first_len = buf_capacity - start;
     size_t second_len = m_frame_width - first_len;
     std::copy(buffer.getRawData() + start,
@@ -57,7 +54,6 @@ bool Trigger::processStream(CircularBuffer &buffer) {
   if (unread < m_frame_width)
     return false;
 
-  // Process a chunk of data to look for a trigger
   for (size_t i = 0; i < unread - m_frame_width; ++i) {
     uint8_t current = buffer.peekAhead(i);
 
@@ -69,18 +65,15 @@ bool Trigger::processStream(CircularBuffer &buffer) {
     m_prev_sample = current;
   }
 
-  // Handle Auto-Trigger timeout
   if (m_mode == TriggerMode::AUTO) {
     uint32_t now = SDL_GetTicks();
     if (now - m_last_trigger_time > AUTO_TIMEOUT_MS) {
-      // Force a frame capture from the current position
       extractFrame(buffer, 0);
       m_last_trigger_time = now;
       return true;
     }
   }
 
-  // No trigger found in this chunk — advance read pointer to keep the buffer from filling
   if (unread > m_frame_width) {
     buffer.advanceReadIdx(unread - m_frame_width);
   }

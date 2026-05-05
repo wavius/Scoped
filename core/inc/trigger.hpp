@@ -31,8 +31,7 @@ private:
   size_t m_frame_width;
   std::vector<uint8_t> m_output;
 
-  // For Auto trigger timeout
-  uint32_t m_last_trigger_time; // Using milliseconds from SDL_GetTicks or similar
+  uint32_t m_last_trigger_time;
   static constexpr uint32_t AUTO_TIMEOUT_MS = 100;
 
   static constexpr uint8_t HYSTERESIS_MARGIN = 2;

@@ -53,12 +53,14 @@ int main(int, char **) {
   ImGui_ImplOpenGL3_Init(glsl_version);
 
   // Core pipeline objects
-  Scoped::CircularBuffer ring_buffer(8192);
-  Scoped::Trigger trigger(1024, 128);
-  Scoped::DisplayFrame frame(1024);
-  Scoped::IntensityMap intensity_map(1024, 512);
+  Scoped::CircularBuffer ring_buffer(16384 * 4); // Larger ring buffer to accommodate larger frames
+  Scoped::Trigger trigger(16384, 128);
+  Scoped::DisplayFrame frame(16384);
+  Scoped::IntensityMap intensity_map(1280, 720);
   Scoped::USBDevice usb;
   Scoped::setupChannelColormap(ImVec4(0, 1, 1, 1));
+
+  size_t visible_samples = 2048;
 
   bool running = true;
   while (running) {
@@ -75,18 +77,20 @@ int main(int, char **) {
 
     // Simulate incoming hardware data if not connected
     if (!usb.isConnected()) {
-      ring_buffer.fillTestSineWave();
+      for (int i = 0; i < 16; ++i) {
+        ring_buffer.fillTestSineWave();
+      }
     }
 
     // Signal processing pipeline
     if (trigger.processStream(ring_buffer)) {
       frame.copyFrom(trigger.getOutput());
       intensity_map.clear();
-      intensity_map.processFrame(frame);
+      intensity_map.processFrame(frame, visible_samples);
     }
 
     // Render fixed UI layout
-    Scoped::renderOscilloscopeUI(trigger, intensity_map, usb, ring_buffer);
+    Scoped::renderOscilloscopeUI(trigger, intensity_map, usb, ring_buffer, visible_samples);
 
     ImGui::Render();
     glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);

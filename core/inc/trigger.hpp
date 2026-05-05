@@ -64,6 +64,18 @@ public:
    * @return Constant reference to the output sample vector.
    */
   const std::vector<uint8_t> &getOutput() const;
+
+  /**
+   * @brief Returns the number of samples per triggered frame.
+   * @return The frame width.
+   */
+  size_t getFrameWidth() const;
+
+  /**
+   * @brief Returns the trigger threshold.
+   * @return The trigger threshold.
+   */
+  uint8_t getThreshold() const;
 };
 
 } // namespace Scoped

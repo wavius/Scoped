@@ -82,35 +82,73 @@ void IntensityMap::decay(float factor) {
   }
 }
 
-void IntensityMap::processFrame(const DisplayFrame &frame) {
+void IntensityMap::processFrame(const DisplayFrame &frame, size_t visible_samples) {
   const uint8_t *samples = frame.getSamples();
-  const size_t length = frame.getSize();
-  if (length == 0)
+  const size_t length = std::min(visible_samples, frame.getSize());
+  if (length < 2 || m_width == 0 || m_height == 0)
     return;
 
-  const uint32_t max_y = static_cast<uint32_t>(m_height - 1);
+  const float x_scale = static_cast<float>(m_width - 1) / static_cast<float>(length - 1);
+  const int max_y = static_cast<int>(m_height - 1);
   uint32_t *const grid_data = m_grid.data();
-  const size_t cols = std::min(length, m_width);
 
-  // Plot the first sample
-  uint32_t prev_y = (static_cast<uint32_t>(samples[0]) * max_y) >> 8;
-  grid_data[prev_y * m_width]++;
+  // Bresenham's line algorithm to draw a solid trace between samples
+  auto plot_line = [&](int x1, int y1, int x2, int y2) {
+    int dx = std::abs(x2 - x1);
+    int dy = std::abs(y2 - y1);
+    int sx = (x1 < x2) ? 1 : -1;
+    int sy = (y1 < y2) ? 1 : -1;
+    int err = dx - dy;
 
-  // For each subsequent column, draw a vertical line connecting
-  // the previous Y to the current Y to avoid gaps.
-  for (size_t x = 1; x < cols; ++x) {
-    uint32_t cur_y = (static_cast<uint32_t>(samples[x]) * max_y) >> 8;
-
-    uint32_t y_start = std::min(prev_y, cur_y);
-    uint32_t y_end = std::max(prev_y, cur_y);
-
-    uint32_t *col = &grid_data[x];
-    for (uint32_t y = y_start; y <= y_end; ++y) {
-      col[y * m_width]++;
+    while (true) {
+      // Add a "hit" to the intensity grid at the current coordinate
+      if (x1 >= 0 && x1 < (int)m_width && y1 >= 0 && y1 < (int)m_height) {
+        grid_data[y1 * m_width + x1]++;
+      }
+      if (x1 == x2 && y1 == y2)
+        break;
+      int e2 = 2 * err;
+      if (e2 > -dy) {
+        err -= dy;
+        x1 += sx;
+      }
+      if (e2 < dx) {
+        err += dx;
+        y1 += sy;
+      }
     }
+  };
 
+  int prev_x = 0;
+  // Apply vertical scale to first sample as well
+  float centered0 = static_cast<float>(samples[0]) - 128.0f;
+  float scaled0 = centered0 * m_vertical_scale + 128.0f;
+  int prev_y = (static_cast<int>(std::clamp(scaled0, 0.0f, 255.0f)) * max_y) >> 8;
+
+  // Iterate through all samples and draw lines between consecutive points
+  for (size_t i = 1; i < length; ++i) {
+    // Map sample index to X pixel coordinate
+    int cur_x = static_cast<int>(i * x_scale);
+    
+    // Apply vertical scale centered at 128 (mid-scale) to simulate Volts/Div zoom
+    float centered = static_cast<float>(samples[i]) - 128.0f;
+    float scaled = centered * m_vertical_scale + 128.0f;
+    
+    // Clamp to 0-255 range and map to pixel height
+    int cur_y = static_cast<int>(std::clamp(scaled, 0.0f, 255.0f));
+    cur_y = (cur_y * max_y) >> 8;
+
+    // Draw the segment using Bresenham's algorithm to ensure a continuous trace
+    plot_line(prev_x, prev_y, cur_x, cur_y);
+
+    prev_x = cur_x;
     prev_y = cur_y;
   }
+}
+
+
+void IntensityMap::setVerticalScale(float scale) {
+  m_vertical_scale = scale;
 }
 
 } // namespace Scoped

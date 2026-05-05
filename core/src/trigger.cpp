@@ -16,9 +16,11 @@ void Trigger::setMode(TriggerMode mode) { m_mode = mode; }
 
 const std::vector<uint8_t> &Trigger::getOutput() const { return m_output; }
 
-void Trigger::clear() {
-  m_prev_sample = 0;
-}
+size_t Trigger::getFrameWidth() const { return m_frame_width; }
+
+uint8_t Trigger::getThreshold() const { return m_threshold; }
+
+void Trigger::clear() { m_prev_sample = 0; }
 
 bool Trigger::checkEdge(uint8_t current) const {
   if (m_type == TriggerType::RISING_EDGE) {

@@ -25,6 +25,7 @@ private:
   std::vector<uint32_t> m_grid;
   std::vector<RGBA> m_texture_data;
   GLuint m_texture_id = 0;
+  float m_vertical_scale = 1.0f;
 
   void initTexture();
 
@@ -42,6 +43,8 @@ public:
   size_t getWidth() const;
   size_t getHeight() const;
   GLuint getTextureID() const;
+
+  void setVerticalScale(float scale);
 
   /**
    * @brief Resets all intensity values to zero.
@@ -68,13 +71,15 @@ public:
    * between consecutive samples to fill gaps.
    *
    * @param frame The triggered waveform data.
+   * @param visible_samples Number of samples from the start of the frame to display.
    */
-  void processFrame(const DisplayFrame &frame);
+  void processFrame(const DisplayFrame &frame, size_t visible_samples);
 
   /**
    * @brief Uploads the current intensity data to the GPU texture.
    */
   void updateTexture();
+
 };
 
 } // namespace Scoped

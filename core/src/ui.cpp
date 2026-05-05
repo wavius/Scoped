@@ -122,7 +122,11 @@ static void renderTriggerControls(Trigger &trigger, IntensityMap &map) {
 }
 
 void renderTriggerIndicator(Trigger &trigger, IntensityMap &map) {
-  double y_level = (double)trigger.getThreshold() * map.getHeight() / 256.0;
+  // Scale the trigger level relative to the center (128) just like the waveform
+  double threshold = static_cast<double>(trigger.getThreshold());
+  double scaled_threshold = (threshold - 128.0) * map.getVerticalScale() + 128.0;
+
+  double y_level = scaled_threshold * map.getHeight() / 256.0;
   double x[] = {0, (double)map.getWidth()};
   double y[] = {y_level, y_level};
   
@@ -184,6 +188,105 @@ static void renderDivisionControls(IntensityMap &map, size_t &visible_samples) {
   }
 }
 
+/**
+ * @brief Renders the status bar with full Trigger and Horizontal controls.
+ */
+static void renderStatusBar(Trigger &trigger, size_t &visible_samples) {
+  ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.11f, 0.14f, 0.18f, 1.0f));
+  ImGui::BeginChild("StatusBar", ImVec2(0, 45), false);
+
+  // Trigger Section
+  ImGui::SetCursorPos(ImVec2(10, 12));
+  ImGui::TextDisabled("TRG:");
+  ImGui::SameLine();
+  
+  ImGui::SetNextItemWidth(100);
+  int level = trigger.getThreshold();
+  if (ImGui::SliderInt("##Level", &level, 0, 255, "L: %d")) {
+    trigger.setThreshold(level);
+  } 
+  // Show trigger line when slider is being interacted with
+  // Used in renderIntensityMap
+  s_show_trigger_line = ImGui::IsItemActive() || ImGui::IsItemHovered();
+
+  ImGui::SameLine();
+  const char* edges[] = {"Rising", "Falling"};
+  int edge = (trigger.getType() == TriggerType::RISING_EDGE ? 0 : 1);
+  ImGui::SetNextItemWidth(90);
+  if (ImGui::Combo("##Edge", &edge, edges, 2)) {
+    trigger.setType(edge == 0 ? TriggerType::RISING_EDGE : TriggerType::FALLING_EDGE);
+  }
+
+  ImGui::SameLine();
+  const char* modes[] = {"Auto", "Norm"};
+  int mode = (trigger.getMode() == TriggerMode::AUTO ? 0 : 1);
+  ImGui::SetNextItemWidth(70);
+  if (ImGui::Combo("##Mode", &mode, modes, 2)) {
+    trigger.setMode(mode == 0 ? TriggerMode::AUTO : TriggerMode::NORMAL);
+  }
+
+  // Horizontal Section
+  ImGui::SameLine(ImGui::GetWindowWidth() - 250);
+  ImGui::TextDisabled("HORIZ:");
+  ImGui::SameLine();
+  int samples = static_cast<int>(visible_samples);
+  ImGui::SetNextItemWidth(150);
+  if (ImGui::SliderInt("##Time", &samples, 256, 16384, "%d smp")) {
+    visible_samples = samples;
+  }
+
+  ImGui::EndChild();
+  ImGui::PopStyleColor();
+}
+
+/**
+ * @brief Renders the bottom channel and hardware bar.
+ */
+static void renderChannelBar(IntensityMap &map, USBDevice &usb, CircularBuffer &buffer, Trigger &trigger) {
+  ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.08f, 0.1f, 0.12f, 1.0f));
+  ImGui::BeginChild("ChannelBar", ImVec2(0, 50), false);
+
+  // Channel 1 Block
+  ImGui::SetCursorPos(ImVec2(10, 7));
+  ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
+  ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1));
+  ImGui::BeginChild("C1", ImVec2(180, 36), true);
+  ImGui::Text("C1");
+  ImGui::SameLine(40);
+  float gain = map.getVerticalScale();
+  ImGui::SetNextItemWidth(120);
+  if (ImGui::SliderFloat("##Gain", &gain, 0.1f, 10.0f, "G: %.1fx")) {
+    map.setVerticalScale(gain);
+  }
+  ImGui::EndChild();
+  ImGui::PopStyleColor(2);
+
+  // Hardware Section
+  ImGui::SameLine(ImGui::GetWindowWidth() - 320);
+  ImGui::SetCursorPosY(12);
+  if (usb.isConnected()) {
+    ImGui::TextColored(ImVec4(0, 1, 0, 1), "CONNECTED");
+    ImGui::SameLine();
+    if (ImGui::Button("Disconnect")) {
+      usb.stopStreaming();
+      usb.disconnect();
+    }
+  } else {
+    ImGui::TextColored(ImVec4(1, 0, 0, 1), "OFFLINE");
+    ImGui::SameLine();
+    if (ImGui::Button("Connect")) {
+      if (usb.connect()) {
+        buffer.clear();
+        trigger.clear();
+        usb.startStreaming(buffer);
+      }
+    }
+  }
+
+  ImGui::EndChild();
+  ImGui::PopStyleColor();
+}
+
 void renderOscilloscopeUI(Trigger &trigger, IntensityMap &map, USBDevice &usb,
                           CircularBuffer &buffer, size_t &visible_samples) {
   const ImGuiViewport *viewport = ImGui::GetMainViewport();
@@ -204,39 +307,16 @@ void renderOscilloscopeUI(Trigger &trigger, IntensityMap &map, USBDevice &usb,
   ImGui::Begin("OscilloscopeMain", nullptr, window_flags);
   ImGui::PopStyleVar(3);
 
-  if (ImGui::BeginTable("Split", 2, ImGuiTableFlags_BordersInnerV)) {
-    ImGui::TableSetupColumn("Plot", ImGuiTableColumnFlags_WidthStretch, 0.8f);
-    ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthFixed,
-                            250.0f);
+  // Layout Stack
+  renderStatusBar(trigger, visible_samples);
 
-    ImGui::TableNextRow();
-    ImGui::TableSetColumnIndex(0);
+  // Main Plot Area
+  float available_height = ImGui::GetContentRegionAvail().y - 50; 
+  ImGui::BeginChild("PlotContainer", ImVec2(0, available_height), false);
+  renderIntensityMap(map, trigger);
+  ImGui::EndChild();
 
-    renderIntensityMap(map, trigger);
-
-    ImGui::TableSetColumnIndex(1);
-
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(16.0f, 16.0f));
-    ImGui::BeginChild("ControlsChild", ImVec2(0, 0),
-                      ImGuiChildFlags_AlwaysUseWindowPadding, 0);
-
-    renderHardwareSection(usb, buffer, trigger);
-
-    ImGui::Spacing();
-    ImGui::Spacing();
-
-    renderTriggerControls(trigger, map);
-
-    ImGui::Spacing();
-    ImGui::Spacing();
-
-    renderDivisionControls(map, visible_samples);
-
-    ImGui::EndChild();
-    ImGui::PopStyleVar();
-
-    ImGui::EndTable();
-  }
+  renderChannelBar(map, usb, buffer, trigger);
 
   ImGui::End();
 }

@@ -49,6 +49,7 @@ public:
 
   void setThreshold(uint8_t level);
   void setType(TriggerType type);
+  TriggerType getType() const;
   void setMode(TriggerMode mode);
   void clear();
 
@@ -63,6 +64,7 @@ public:
    * @brief Returns the most recently extracted frame data.
    * @return Constant reference to the output sample vector.
    */
+  TriggerMode getMode() const;
   const std::vector<uint8_t> &getOutput() const;
 
   /**

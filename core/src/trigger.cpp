@@ -12,9 +12,13 @@ void Trigger::setThreshold(uint8_t level) { m_threshold = level; }
 
 void Trigger::setType(TriggerType type) { m_type = type; }
 
+TriggerType Trigger::getType() const { return m_type; }
+
 void Trigger::setMode(TriggerMode mode) { m_mode = mode; }
 
 const std::vector<uint8_t> &Trigger::getOutput() const { return m_output; }
+
+TriggerMode Trigger::getMode() const { return m_mode; }
 
 size_t Trigger::getFrameWidth() const { return m_frame_width; }
 

@@ -24,6 +24,8 @@ size_t IntensityMap::getHeight() const { return m_height; }
 
 GLuint IntensityMap::getTextureID() const { return m_texture_id; }
 
+float IntensityMap::getVerticalScale() const { return m_vertical_scale; }
+
 void IntensityMap::initTexture() {
   glGenTextures(1, &m_texture_id);
   glBindTexture(GL_TEXTURE_2D, m_texture_id);

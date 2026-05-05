@@ -43,6 +43,7 @@ public:
   size_t getWidth() const;
   size_t getHeight() const;
   GLuint getTextureID() const;
+  float getVerticalScale() const;
 
   void setVerticalScale(float scale);
 

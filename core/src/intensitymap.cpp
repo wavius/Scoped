@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <intensitymap.hpp>
 
@@ -16,15 +17,13 @@ IntensityMap::~IntensityMap() {
   }
 }
 
-const uint32_t *IntensityMap::getMap() const { return m_grid.data(); }
-
 size_t IntensityMap::getWidth() const { return m_width; }
-
 size_t IntensityMap::getHeight() const { return m_height; }
-
 GLuint IntensityMap::getTextureID() const { return m_texture_id; }
 
-float IntensityMap::getVerticalScale() const { return m_vertical_scale; }
+// ---------------------------------------------------------------------------
+// OpenGL texture
+// ---------------------------------------------------------------------------
 
 void IntensityMap::initTexture() {
   glGenTextures(1, &m_texture_id);
@@ -53,6 +52,10 @@ void IntensityMap::updateTexture() {
                   GL_UNSIGNED_BYTE, m_texture_data.data());
 }
 
+// ---------------------------------------------------------------------------
+// Grid operations
+// ---------------------------------------------------------------------------
+
 void IntensityMap::clear() {
   std::fill(m_grid.begin(), m_grid.end(), 0);
 }
@@ -67,7 +70,7 @@ void IntensityMap::addSample(float x, float y) {
   float fx = x - x0;
   float fy = y - y0;
 
-  // Bilinear distribution across the 4 nearest pixels
+  // Bilinear distribution across 4 nearest pixels
   m_grid[y0 * m_width + x0] +=
       static_cast<uint32_t>((1.0f - fx) * (1.0f - fy) * 10);
   m_grid[y0 * m_width + (x0 + 1)] +=
@@ -84,73 +87,61 @@ void IntensityMap::decay(float factor) {
   }
 }
 
-void IntensityMap::processFrame(const DisplayFrame &frame, size_t visible_samples) {
-  const uint8_t *samples = frame.getSamples();
-  const size_t length = std::min(visible_samples, frame.getSize());
-  if (length < 2 || m_width == 0 || m_height == 0)
+// ---------------------------------------------------------------------------
+// Frame rasterization
+// ---------------------------------------------------------------------------
+
+static void plotLine(uint32_t *grid, int width, int height,
+                     int x1, int y1, int x2, int y2) {
+  int dx = std::abs(x2 - x1);
+  int dy = std::abs(y2 - y1);
+  int sx = (x1 < x2) ? 1 : -1;
+  int sy = (y1 < y2) ? 1 : -1;
+  int err = dx - dy;
+
+  while (true) {
+    if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height) {
+      grid[y1 * width + x1]++;
+    }
+    if (x1 == x2 && y1 == y2)
+      break;
+    int e2 = 2 * err;
+    if (e2 > -dy) {
+      err -= dy;
+      x1 += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      y1 += sy;
+    }
+  }
+}
+
+void IntensityMap::processFrame(const float *normalized, size_t count) {
+  if (count < 2 || m_width == 0 || m_height == 0)
     return;
 
-  const float x_scale = static_cast<float>(m_width - 1) / static_cast<float>(length - 1);
+  const float x_scale =
+      static_cast<float>(m_width - 1) / static_cast<float>(count - 1);
   const int max_y = static_cast<int>(m_height - 1);
-  uint32_t *const grid_data = m_grid.data();
 
-  // Bresenham's line algorithm to draw a solid trace between samples
-  auto plot_line = [&](int x1, int y1, int x2, int y2) {
-    int dx = std::abs(x2 - x1);
-    int dy = std::abs(y2 - y1);
-    int sx = (x1 < x2) ? 1 : -1;
-    int sy = (y1 < y2) ? 1 : -1;
-    int err = dx - dy;
-
-    while (true) {
-      // Add a "hit" to the intensity grid at the current coordinate
-      if (x1 >= 0 && x1 < (int)m_width && y1 >= 0 && y1 < (int)m_height) {
-        grid_data[y1 * m_width + x1]++;
-      }
-      if (x1 == x2 && y1 == y2)
-        break;
-      int e2 = 2 * err;
-      if (e2 > -dy) {
-        err -= dy;
-        x1 += sx;
-      }
-      if (e2 < dx) {
-        err += dx;
-        y1 += sy;
-      }
-    }
+  auto toPixelY = [max_y](float n) -> int {
+    return static_cast<int>(std::clamp(n, 0.0f, 1.0f) * max_y);
   };
 
   int prev_x = 0;
-  // Apply vertical scale to first sample as well
-  float centered0 = static_cast<float>(samples[0]) - 128.0f;
-  float scaled0 = centered0 * m_vertical_scale + 128.0f;
-  int prev_y = (static_cast<int>(std::clamp(scaled0, 0.0f, 255.0f)) * max_y) >> 8;
+  int prev_y = toPixelY(normalized[0]);
 
-  // Iterate through all samples and draw lines between consecutive points
-  for (size_t i = 1; i < length; ++i) {
-    // Map sample index to X pixel coordinate
+  for (size_t i = 1; i < count; ++i) {
     int cur_x = static_cast<int>(i * x_scale);
-    
-    // Apply vertical scale centered at 128 (mid-scale) to simulate Volts/Div zoom
-    float centered = static_cast<float>(samples[i]) - 128.0f;
-    float scaled = centered * m_vertical_scale + 128.0f;
-    
-    // Clamp to 0-255 range and map to pixel height
-    int cur_y = static_cast<int>(std::clamp(scaled, 0.0f, 255.0f));
-    cur_y = (cur_y * max_y) >> 8;
+    int cur_y = toPixelY(normalized[i]);
 
-    // Draw the segment using Bresenham's algorithm to ensure a continuous trace
-    plot_line(prev_x, prev_y, cur_x, cur_y);
+    plotLine(m_grid.data(), static_cast<int>(m_width),
+             static_cast<int>(m_height), prev_x, prev_y, cur_x, cur_y);
 
     prev_x = cur_x;
     prev_y = cur_y;
   }
-}
-
-
-void IntensityMap::setVerticalScale(float scale) {
-  m_vertical_scale = scale;
 }
 
 } // namespace Scoped

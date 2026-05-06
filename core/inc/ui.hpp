@@ -1,47 +1,52 @@
 #pragma once
 
+#include <channel.hpp>
 #include <implot.h> // IWYU pragma: keep
 #include <intensitymap.hpp>
-#include <trigger.hpp>
-#include <usb.hpp>
-#include <circularbuffer.hpp>
+#include <oscilloscope.hpp>
+#include <vector>
+#include <memory>
 
 namespace Scoped {
 
-/**
- * @brief Registers a custom colormap for the oscilloscope display.
- *
- * Creates a two-point gradient from black (zero intensity)
- * to the specified channel color (maximum intensity).
- *
- * @param color The color assigned to the signal trace.
- */
+/// Registers a black-to-color gradient colormap for the display.
 void setupChannelColormap(ImVec4 color);
 
-/**
- * @brief Renders the intensity map as a textured quad inside an ImPlot region.
- * @param map The IntensityMap to render.
- * @param trigger The trigger object to pull threshold from.
- */
-void renderIntensityMap(IntensityMap &map, Trigger &trigger);
+/// Owns the display state and renders the complete oscilloscope UI.
+class OscilloscopeUI {
+private:
+  std::vector<std::unique_ptr<IntensityMap>> m_displays;
+  size_t m_display_width;
+  size_t m_display_height;
+  std::vector<float> m_normalized;
+  bool m_show_trigger_line = false;
 
-/**
- * @brief Renders the complete oscilloscope UI including plot and controls.
- * @param trigger The trigger object to configure.
- * @param map The intensity map to display.
- */
-void renderOscilloscopeUI(Trigger &trigger, IntensityMap &map, USBDevice &usb, CircularBuffer &buffer, size_t &visible_samples);
+  void updateDisplay(Oscilloscope &osc);
 
-/**
- * @brief Renders a horizontal line indicator at the trigger level.
- * @param trigger The trigger object containing the threshold level.
- * @param map The intensity map used to determine the scale.
- */
-void renderTriggerIndicator(Trigger &trigger, IntensityMap &map);
+  void drawGrid(double w, double h);
+  void drawTriggerLine(Oscilloscope &osc);
+  void renderPlot(Oscilloscope &osc);
 
-/**
- * @brief Renders a standard 10x8 oscilloscope grid.
- */
-void renderGrid(IntensityMap &map);
+  void drawModeCombo(Oscilloscope &osc);
+  void drawTimebaseControl(Oscilloscope &osc);
+  void renderTopBar(Oscilloscope &osc);
+
+  void drawChannelBlock(IChannel &channel);
+  void drawHardwareStatus(Oscilloscope &osc);
+  void renderBottomBar(Oscilloscope &osc);
+
+public:
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
+
+  OscilloscopeUI(size_t display_width, size_t display_height);
+
+  // ---------------------------------------------------------------------------
+  // Rendering
+  // ---------------------------------------------------------------------------
+
+  void render(Oscilloscope &osc);
+};
 
 } // namespace Scoped

@@ -1,10 +1,13 @@
 #include "implot.h"
-#include "intensitymap.hpp"
-#include <alloca.h>
+#include <algorithm>
 #include <cmath>
 #include <ui.hpp>
 
 namespace Scoped {
+
+// ---------------------------------------------------------------------------
+// Colormap
+// ---------------------------------------------------------------------------
 
 void setupChannelColormap(ImVec4 color) {
   static bool initialized = false;
@@ -16,42 +19,145 @@ void setupChannelColormap(ImVec4 color) {
   initialized = true;
 }
 
-static bool s_show_trigger_line = false;
+// ---------------------------------------------------------------------------
+// OscilloscopeUI
+// ---------------------------------------------------------------------------
 
-void renderIntensityMap(IntensityMap &map, Trigger &trigger) {
-  map.updateTexture();
+OscilloscopeUI::OscilloscopeUI(size_t display_width, size_t display_height)
+    : m_display_width(display_width), m_display_height(display_height) {}
 
-  size_t w = map.getWidth();
-  size_t h = map.getHeight();
-  ImVec2 plot_size(-1.0f, -1.0f);
+// ---------------------------------------------------------------------------
+// Display pipeline
+// ---------------------------------------------------------------------------
 
-  ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(0.0f, 0.0f));
+void OscilloscopeUI::updateDisplay(Oscilloscope &osc) {
+  const auto& channels = osc.getChannels();
+  
+  // Ensure we have an intensity map per channel
+  while (m_displays.size() < channels.size()) {
+      m_displays.push_back(std::make_unique<IntensityMap>(m_display_width, m_display_height));
+  }
+
+  for (size_t i = 0; i < channels.size(); ++i) {
+      auto& channel = *channels[i];
+      if (!channel.hasNewFrame())
+          continue;
+
+      const auto &traces = channel.getTraces();
+      for (const auto& trace : traces) {
+          if (trace.domain == Domain::Time) {
+              size_t visible = std::min(channel.getVisibleSamples(), trace.data.size());
+              m_normalized.resize(visible);
+              for (size_t j = 0; j < visible; ++j) {
+                m_normalized[j] = trace.normalizeToIntensity(trace.data[j]);
+              }
+
+              m_displays[i]->clear();
+              m_displays[i]->processFrame(m_normalized.data(), visible);
+          }
+      }
+      channel.clearNewFrame();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Plot overlays
+// ---------------------------------------------------------------------------
+
+void OscilloscopeUI::drawGrid(double w, double h) {
+  const ImVec4 color(0.3f, 0.3f, 0.3f, 0.4f);
+
+  for (int i = 0; i <= 10; ++i) {
+    double x   = (w * i) / 10.0;
+    double vx[] = {x, x};
+    double vy[] = {0, h};
+    float  wt   = (i == 5) ? 3.0f : 1.0f;
+    ImPlot::PlotLine("##vgrid", vx, vy, 2,
+                     {ImPlotProp_LineColor, color, ImPlotProp_LineWeight, wt});
+  }
+
+  for (int i = 0; i <= 8; ++i) {
+    double y   = (h * i) / 8.0;
+    double hx[] = {0, w};
+    double hy[] = {y, y};
+    float  wt   = (i == 4) ? 3.0f : 1.0f;
+    ImPlot::PlotLine("##hgrid", hx, hy, 2,
+                     {ImPlotProp_LineColor, color, ImPlotProp_LineWeight, wt});
+  }
+}
+
+void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
+  auto *trigger = osc.getTrigger();
+  if (!trigger || osc.getChannels().empty())
+    return;
+
+  auto levels = trigger->getTriggerLevels();
+  if (levels.empty()) return;
+
+  auto& ch = osc.getChannels()[0];
+  auto traces = ch->getTraces();
+  if (traces.empty()) return;
+  auto& trace = traces[0];
+
+  for (float level : levels) {
+      float y_normalized = trace.normalizeToIntensity(level);
+      double y_level = y_normalized * m_display_height;
+
+      double x[] = {0.0, static_cast<double>(m_display_width)};
+      double y[] = {y_level, y_level};
+
+      ImPlot::PlotLine("##TriggerLine", x, y, 2,
+                       {ImPlotProp_LineColor, ImVec4(1, 0, 0, 0.5f),
+                        ImPlotProp_LineWeight, 2.0f});
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Plot
+// ---------------------------------------------------------------------------
+
+void OscilloscopeUI::renderPlot(Oscilloscope &osc) {
+  const double w = static_cast<double>(m_display_width);
+  const double h = static_cast<double>(m_display_height);
+
+  ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(0, 0));
   ImPlot::PushStyleVar(ImPlotStyleVar_PlotBorderSize, 0.0f);
 
-  ImPlotFlags flags = ImPlotFlags_CanvasOnly | ImPlotFlags_NoLegend;
-
-  // Snap cursor to pixel boundary to avoid sub-pixel blurring
+  // Snap to pixel boundary to avoid sub-pixel blurring
   ImVec2 cursor = ImGui::GetCursorScreenPos();
   cursor.x = std::floor(cursor.x);
   cursor.y = std::floor(cursor.y);
   ImGui::SetCursorScreenPos(cursor);
 
-  if (ImPlot::BeginPlot("##OscilloscopeImage", plot_size, flags)) {
+  ImPlotFlags flags = ImPlotFlags_CanvasOnly | ImPlotFlags_NoLegend;
+
+  if (ImPlot::BeginPlot("##OscilloscopeImage", ImVec2(-1, -1), flags)) {
     ImPlot::SetupAxesLimits(0, w, 0, h, ImGuiCond_Always);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0, w);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, h);
-
     ImPlot::SetupAxis(ImAxis_X1, nullptr, ImPlotAxisFlags_NoDecorations);
     ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_NoDecorations);
 
-    ImPlot::PlotImage("OscilloscopeTrace",
-                      (ImTextureID)(intptr_t)map.getTextureID(),
-                      ImPlotPoint(0, 0), ImPlotPoint(w, h));
+    for (size_t i = 0; i < m_displays.size(); ++i) {
+        m_displays[i]->updateTexture();
+        ImPlot::PlotImage(("OscilloscopeTrace" + std::to_string(i)).c_str(),
+                          (ImTextureID)(intptr_t)m_displays[i]->getTextureID(),
+                          ImPlotPoint(0, 0), ImPlotPoint(w, h));
+    }
 
-    renderGrid(map);
+    for (const auto& ch : osc.getChannels()) {
+        for (const auto& trace : ch->getTraces()) {
+            if (trace.domain == Domain::Frequency) {
+                ImPlot::PlotLine(trace.name.c_str(), trace.data.data(), trace.data.size(), w / trace.data.size(), 0,
+                    {ImPlotProp_LineColor, ImVec4(1.0f, 1.0f, 0.0f, 1.0f), ImPlotProp_LineWeight, 2.0f});
+            }
+        }
+    }
 
-    if (s_show_trigger_line) {
-      renderTriggerIndicator(trigger, map);
+    drawGrid(w, h);
+
+    if (m_show_trigger_line) {
+      drawTriggerLine(osc);
     }
 
     ImPlot::EndPlot();
@@ -60,210 +166,108 @@ void renderIntensityMap(IntensityMap &map, Trigger &trigger) {
   ImPlot::PopStyleVar(2);
 }
 
-/**
- * @brief Renders the hardware connection status and connect/disconnect buttons.
- */
-static void renderHardwareSection(USBDevice &usb, CircularBuffer &buffer,
-                                  Trigger &trigger) {
-  ImGui::TextDisabled("HARDWARE");
-  ImGui::Separator();
-  ImGui::Spacing();
+// ---------------------------------------------------------------------------
+// Top bar
+// ---------------------------------------------------------------------------
 
-  if (usb.isConnected()) {
-    ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Status: Connected");
-    if (ImGui::Button("Disconnect", ImVec2(-1, 0))) {
-      usb.disconnect();
-    }
-  } else {
-    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Status: Disconnected");
-    if (ImGui::Button("Connect USB", ImVec2(-1, 0))) {
-      if (usb.connect()) {
-        buffer.clear();
-        trigger.clear();
-        usb.startStreaming(buffer);
-      }
-    }
+
+
+void OscilloscopeUI::drawModeCombo(Oscilloscope &osc) {
+  if (!osc.getTrigger()) return;
+  ImGui::SetNextItemWidth(70);
+  const char *items[] = {"Auto", "Norm"};
+  int sel = (osc.getTrigger()->getMode() == TriggerMode::AUTO) ? 0 : 1;
+  if (ImGui::Combo("##Mode", &sel, items, 2)) {
+    osc.getTrigger()->setMode(sel == 0 ? TriggerMode::AUTO
+                                       : TriggerMode::NORMAL);
   }
 }
 
-/**
- * @brief Renders controls for trigger level, edge type, and mode (Auto/Normal).
- */
-static void renderTriggerControls(Trigger &trigger, IntensityMap &map) {
-  ImGui::TextDisabled("TRIGGER CONTROLS");
-  ImGui::Separator();
-  ImGui::Spacing();
-
-  static int trigger_level = 128;
-  static int edge_selection = 0;
-  static int mode_selection = 0;
-  const char *edge_options[] = {"Rising Edge", "Falling Edge"};
-  const char *mode_options[] = {"Auto", "Normal"};
-
-  ImGui::SetNextItemWidth(-1);
-  ImGui::SliderInt("##Level", &trigger_level, 0, 255, "Level: %d");
-  s_show_trigger_line = ImGui::IsItemActive() || ImGui::IsItemHovered();
-
-  ImGui::Spacing();
-
-  ImGui::SetNextItemWidth(-1);
-  ImGui::Combo("##Edge", &edge_selection, edge_options, 2);
-
-  ImGui::Spacing();
-
-  ImGui::SetNextItemWidth(-1);
-  ImGui::Combo("##Mode", &mode_selection, mode_options, 2);
-
-  trigger.setThreshold(static_cast<uint8_t>(trigger_level));
-  trigger.setType(edge_selection == 0 ? Scoped::TriggerType::RISING_EDGE
-                                      : Scoped::TriggerType::FALLING_EDGE);
-  trigger.setMode(mode_selection == 0 ? Scoped::TriggerMode::AUTO
-                                      : Scoped::TriggerMode::NORMAL);
-}
-
-void renderTriggerIndicator(Trigger &trigger, IntensityMap &map) {
-  // Scale the trigger level relative to the center (128) just like the waveform
-  double threshold = static_cast<double>(trigger.getThreshold());
-  double scaled_threshold = (threshold - 128.0) * map.getVerticalScale() + 128.0;
-
-  double y_level = scaled_threshold * map.getHeight() / 256.0;
-  double x[] = {0, (double)map.getWidth()};
-  double y[] = {y_level, y_level};
+void OscilloscopeUI::drawTimebaseControl(Oscilloscope &osc) {
+  if (osc.getChannels().empty()) return;
+  auto& channel = *osc.getChannels()[0];
   
-  // Use ImPlotSpec to set color and weight inline
-  ImPlot::PlotLine("##TriggerIndicator", x, y, 2, 
-                  {ImPlotProp_LineColor, ImVec4(1, 0, 0, 0.5f), 
-                   ImPlotProp_LineWeight, 2.0f});
-}
-
-void renderGrid(IntensityMap &map) {
-  const double w = static_cast<double>(map.getWidth());
-  const double h = static_cast<double>(map.getHeight());
-  const ImVec4 grid_color(0.3f, 0.3f, 0.3f, 0.4f);
-
-  // 10 vertical divisions
-  for (int i = 0; i <= 10; ++i) {
-    double x_pos = (w * i) / 10.0;
-    double vx[] = {x_pos, x_pos};
-    double vy[] = {0, h};
-    float weight = (i == 5) ? 3.0f : 1.0f;
-    ImPlot::PlotLine("##vgrid", vx, vy, 2, {ImPlotProp_LineColor, grid_color, ImPlotProp_LineWeight, weight});
-  }
-
-  // 8 horizontal divisions
-  for (int i = 0; i <= 8; ++i) {
-    double y_pos = (h * i) / 8.0;
-    double hx[] = {0, w};
-    double hy[] = {y_pos, y_pos};
-    float weight = (i == 4) ? 3.0f : 1.0f;
-    ImPlot::PlotLine("##hgrid", hx, hy, 2, {ImPlotProp_LineColor, grid_color, ImPlotProp_LineWeight, weight});
+  int samples = static_cast<int>(channel.getVisibleSamples());
+  ImGui::SetNextItemWidth(150);
+  if (ImGui::SliderInt("##Time", &samples, 256, 16384, "%d smp")) {
+    // Apply timebase to all channels
+    for (auto& ch : osc.getChannels()) {
+        ch->setVisibleSamples(static_cast<size_t>(samples));
+    }
   }
 }
 
-/**
- * @brief Renders Timebase and Vertical Gain zoom controls.
- * @param visible_samples Reference to the number of samples to display from the
- * buffer.
- */
-static void renderDivisionControls(IntensityMap &map, size_t &visible_samples) {
-  ImGui::TextDisabled("DIVISION CONTROLS");
-  ImGui::Separator();
-  ImGui::Spacing();
-
-  // Horizontal (Timebase)
-  int samples = static_cast<int>(visible_samples);
-  ImGui::SetNextItemWidth(-1);
-  if (ImGui::SliderInt("##Timebase", &samples, 256, 16384,
-                       "Time: %d samples")) {
-    visible_samples = static_cast<size_t>(samples);
-  }
-
-  ImGui::Spacing();
-
-  // Vertical (Gain)
-  static float gain = 1.0f;
-  ImGui::SetNextItemWidth(-1);
-  if (ImGui::SliderFloat("##Gain", &gain, 0.1f, 10.0f, "Gain: %.1fx")) {
-    map.setVerticalScale(gain);
-  }
-}
-
-/**
- * @brief Renders the status bar with full Trigger and Horizontal controls.
- */
-static void renderStatusBar(Trigger &trigger, size_t &visible_samples) {
+void OscilloscopeUI::renderTopBar(Oscilloscope &osc) {
   ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.11f, 0.14f, 0.18f, 1.0f));
   ImGui::BeginChild("StatusBar", ImVec2(0, 45), false);
 
-  // Trigger Section
   ImGui::SetCursorPos(ImVec2(10, 12));
   ImGui::TextDisabled("TRG:");
   ImGui::SameLine();
-  
-  ImGui::SetNextItemWidth(100);
-  int level = trigger.getThreshold();
-  if (ImGui::SliderInt("##Level", &level, 0, 255, "L: %d")) {
-    trigger.setThreshold(level);
-  } 
-  // Show trigger line when slider is being interacted with
-  // Used in renderIntensityMap
-  s_show_trigger_line = ImGui::IsItemActive() || ImGui::IsItemHovered();
 
-  ImGui::SameLine();
-  const char* edges[] = {"Rising", "Falling"};
-  int edge = (trigger.getType() == TriggerType::RISING_EDGE ? 0 : 1);
-  ImGui::SetNextItemWidth(90);
-  if (ImGui::Combo("##Edge", &edge, edges, 2)) {
-    trigger.setType(edge == 0 ? TriggerType::RISING_EDGE : TriggerType::FALLING_EDGE);
+  bool any_hovered = false;
+  auto* trigger = osc.getTrigger();
+  if (trigger) {
+      auto params = trigger->getUIParameters();
+      for (const auto& param : params) {
+          ImGui::SetNextItemWidth(100);
+          int val = param.current_val;
+          if (param.combo_items.empty()) {
+              if (ImGui::SliderInt(("##" + param.name).c_str(), &val, param.min_val, param.max_val, (param.name + ": %d").c_str())) {
+                  trigger->setUIParameter(param.name, val);
+              }
+          } else {
+              std::vector<const char*> cstrs;
+              for (const auto& s : param.combo_items) cstrs.push_back(s.c_str());
+              if (ImGui::Combo(("##" + param.name).c_str(), &val, cstrs.data(), cstrs.size())) {
+                  trigger->setUIParameter(param.name, val);
+              }
+          }
+          if (ImGui::IsItemActive() || ImGui::IsItemHovered()) any_hovered = true;
+          ImGui::SameLine();
+      }
   }
+  m_show_trigger_line = any_hovered;
 
-  ImGui::SameLine();
-  const char* modes[] = {"Auto", "Norm"};
-  int mode = (trigger.getMode() == TriggerMode::AUTO ? 0 : 1);
-  ImGui::SetNextItemWidth(70);
-  if (ImGui::Combo("##Mode", &mode, modes, 2)) {
-    trigger.setMode(mode == 0 ? TriggerMode::AUTO : TriggerMode::NORMAL);
-  }
+  drawModeCombo(osc);
 
-  // Horizontal Section
   ImGui::SameLine(ImGui::GetWindowWidth() - 250);
   ImGui::TextDisabled("HORIZ:");
   ImGui::SameLine();
-  int samples = static_cast<int>(visible_samples);
-  ImGui::SetNextItemWidth(150);
-  if (ImGui::SliderInt("##Time", &samples, 256, 16384, "%d smp")) {
-    visible_samples = samples;
-  }
+  drawTimebaseControl(osc);
 
   ImGui::EndChild();
   ImGui::PopStyleColor();
 }
 
-/**
- * @brief Renders the bottom channel and hardware bar.
- */
-static void renderChannelBar(IntensityMap &map, USBDevice &usb, CircularBuffer &buffer, Trigger &trigger) {
-  ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.08f, 0.1f, 0.12f, 1.0f));
-  ImGui::BeginChild("ChannelBar", ImVec2(0, 50), false);
+// ---------------------------------------------------------------------------
+// Bottom bar
+// ---------------------------------------------------------------------------
 
-  // Channel 1 Block
-  ImGui::SetCursorPos(ImVec2(10, 7));
+void OscilloscopeUI::drawChannelBlock(IChannel &channel) {
   ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
   ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1));
-  ImGui::BeginChild("C1", ImVec2(180, 36), true);
-  ImGui::Text("C1");
+
+  ImGui::BeginChild(channel.getLabel().c_str(), ImVec2(180, 36), true);
+  ImGui::Text("%s", channel.getLabel().c_str());
   ImGui::SameLine(40);
-  float gain = map.getVerticalScale();
+  float gain = channel.getVerticalScale();
   ImGui::SetNextItemWidth(120);
   if (ImGui::SliderFloat("##Gain", &gain, 0.1f, 10.0f, "G: %.1fx")) {
-    map.setVerticalScale(gain);
+    channel.setVerticalScale(gain);
   }
   ImGui::EndChild();
-  ImGui::PopStyleColor(2);
 
-  // Hardware Section
+  ImGui::PopStyleColor(2);
+  ImGui::SameLine();
+}
+
+void OscilloscopeUI::drawHardwareStatus(Oscilloscope &osc) {
+  auto& usb = osc.getUSB();
+  
   ImGui::SameLine(ImGui::GetWindowWidth() - 320);
   ImGui::SetCursorPosY(12);
+
   if (usb.isConnected()) {
     ImGui::TextColored(ImVec4(0, 1, 0, 1), "CONNECTED");
     ImGui::SameLine();
@@ -276,25 +280,50 @@ static void renderChannelBar(IntensityMap &map, USBDevice &usb, CircularBuffer &
     ImGui::SameLine();
     if (ImGui::Button("Connect")) {
       if (usb.connect()) {
-        buffer.clear();
-        trigger.clear();
-        usb.startStreaming(buffer);
+        for (auto& ch : osc.getChannels()) {
+            if (ch->isHardwareChannel()) {
+                ch->clearBuffer();
+            }
+        }
+        if (osc.getTrigger()) osc.getTrigger()->clear();
+        if (!osc.getChannels().empty()) {
+            if (osc.getChannels()[0]->isHardwareChannel()) {
+                usb.startStreaming(osc.getChannels()[0].get());
+            }
+        }
       }
     }
   }
+}
+
+void OscilloscopeUI::renderBottomBar(Oscilloscope &osc) {
+  ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.08f, 0.1f, 0.12f, 1.0f));
+  ImGui::BeginChild("ChannelBar", ImVec2(0, 50), false);
+
+  ImGui::SetCursorPos(ImVec2(10, 7));
+  for (auto& ch : osc.getChannels()) {
+      drawChannelBlock(*ch);
+  }
+  
+  drawHardwareStatus(osc);
 
   ImGui::EndChild();
   ImGui::PopStyleColor();
 }
 
-void renderOscilloscopeUI(Trigger &trigger, IntensityMap &map, USBDevice &usb,
-                          CircularBuffer &buffer, size_t &visible_samples) {
-  const ImGuiViewport *viewport = ImGui::GetMainViewport();
-  ImGui::SetNextWindowPos(viewport->WorkPos);
-  ImGui::SetNextWindowSize(viewport->WorkSize);
-  ImGui::SetNextWindowViewport(viewport->ID);
+// ---------------------------------------------------------------------------
+// Entry point
+// ---------------------------------------------------------------------------
 
-  ImGuiWindowFlags window_flags =
+void OscilloscopeUI::render(Oscilloscope &osc) {
+  updateDisplay(osc);
+
+  const ImGuiViewport *vp = ImGui::GetMainViewport();
+  ImGui::SetNextWindowPos(vp->WorkPos);
+  ImGui::SetNextWindowSize(vp->WorkSize);
+  ImGui::SetNextWindowViewport(vp->ID);
+
+  constexpr ImGuiWindowFlags kFlags =
       ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
       ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
       ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
@@ -302,24 +331,21 @@ void renderOscilloscopeUI(Trigger &trigger, IntensityMap &map, USBDevice &usb,
 
   ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
   ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 
-  ImGui::Begin("OscilloscopeMain", nullptr, window_flags);
+  ImGui::Begin("OscilloscopeMain", nullptr, kFlags);
   ImGui::PopStyleVar(3);
 
-  // Layout Stack
-  renderStatusBar(trigger, visible_samples);
+  renderTopBar(osc);
 
-  // Main Plot Area
-  float available_height = ImGui::GetContentRegionAvail().y - 50; 
-  ImGui::BeginChild("PlotContainer", ImVec2(0, available_height), false);
-  renderIntensityMap(map, trigger);
+  float plot_height = ImGui::GetContentRegionAvail().y - 50;
+  ImGui::BeginChild("PlotContainer", ImVec2(0, plot_height), false);
+  renderPlot(osc);
   ImGui::EndChild();
 
-  renderChannelBar(map, usb, buffer, trigger);
+  renderBottomBar(osc);
 
   ImGui::End();
 }
-
 
 } // namespace Scoped

@@ -1,92 +1,112 @@
 #pragma once
 
 #include <atomic>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
 #include <vector>
 
 namespace Scoped {
 
+/// Lock-free single-producer single-consumer circular buffer.
+template <typename T>
 class CircularBuffer {
 private:
-  std::vector<uint8_t> m_buffer;
+  std::vector<T> m_buffer;
   size_t m_capacity;
   std::atomic<size_t> m_read_idx{0};
   std::atomic<size_t> m_write_idx{0};
+  float m_test_phase = 0.0f;
 
 public:
-  /**
-   * @brief Initializes the buffer memory.
-   * @param capacity Maximum number of samples the buffer can hold.
-   */
-  explicit CircularBuffer(size_t capacity = 8192);
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
 
-  /**
-   * @brief Writes a single byte and advances the write pointer.
-   * @param sample The 8-bit data point from hardware.
-   */
-  void pushSample(uint8_t sample);
+  explicit CircularBuffer(size_t capacity = 8192) : m_capacity(capacity) {
+    m_buffer.resize(m_capacity, T());
+  }
 
-  /**
-   * @brief Writes a contiguous array of bytes, handling wrap-around.
-   * @param data Pointer to the incoming data array.
-   * @param length Number of bytes to write.
-   */
-  void pushBlock(const uint8_t *data, size_t length);
+  // ---------------------------------------------------------------------------
+  // Write Operations
+  // ---------------------------------------------------------------------------
 
-  /**
-   * @brief Calculates how many unread samples are available.
-   * @return The count of unread samples.
-   */
-  size_t getUnreadCount() const;
+  void pushSample(T sample) {
+    m_buffer[m_write_idx] = sample;
+    m_write_idx = (m_write_idx + 1) % m_capacity;
+  }
 
-  /**
-   * @brief Reads a sample relative to the read head without consuming it.
-   * @param offset Index ahead of the read pointer to look.
-   * @return The 8-bit sample at the calculated wrap-around index.
-   */
-  uint8_t peekAhead(size_t offset) const;
+  void pushBlock(const T *data, size_t length) {
+    for (size_t i = 0; i < length; ++i) {
+      m_buffer[m_write_idx] = data[i];
+      m_write_idx = (m_write_idx + 1) % m_capacity;
+    }
+  }
 
-  /**
-   * @brief Marks data as consumed by moving the read head forward.
-   * @param amount The number of samples to advance past.
-   */
-  void advanceReadIdx(size_t amount);
+  // ---------------------------------------------------------------------------
+  // Read Operations
+  // ---------------------------------------------------------------------------
 
-  /**
-   * @brief Populates the buffer with a full-swing (0–255) square wave.
-   */
-  void fillTestSquareWave();
+  size_t getUnreadCount() const {
+    size_t w = m_write_idx.load();
+    size_t r = m_read_idx.load();
+    return (w >= r) ? (w - r) : (m_capacity - r + w);
+  }
 
-  /**
-   * @brief Pushes a chunk of continuous sine wave samples into the buffer.
-   */
-  void fillTestSineWave();
+  T peekAhead(size_t offset) const {
+    return m_buffer[(m_read_idx.load() + offset) % m_capacity];
+  }
 
-  /**
-   * @brief Returns a pointer to the underlying raw array.
-   * @return Constant pointer to the raw data.
-   */
-  const uint8_t *getRawData() const { return m_buffer.data(); }
+  void advanceReadIdx(size_t amount) {
+    m_read_idx = (m_read_idx.load() + amount) % m_capacity;
+  }
 
-  /**
-   * @brief Returns the total capacity of the buffer.
-   * @return Maximum number of samples the buffer can hold.
-   */
+  // ---------------------------------------------------------------------------
+  // Utilities & State
+  // ---------------------------------------------------------------------------
+
+  const T *getRawData() const { return m_buffer.data(); }
   size_t getCapacity() const { return m_capacity; }
-
-  /**
-   * @brief Returns the current read index.
-   * @return The read index value.
-   */
   size_t getReadIdx() const { return m_read_idx.load(); }
 
-  /**
-   * @brief Resets read and write indices to zero, effectively clearing the buffer.
-   */
   void clear() {
     m_read_idx.store(0);
     m_write_idx.store(0);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Test Signal Generators
+  // ---------------------------------------------------------------------------
+
+  void fillTestSquareWave() {
+    for (size_t i = 0; i < m_capacity; i++) {
+      if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
+        m_buffer[i] = ((i % 8) < 4) ? static_cast<T>(1.0) : static_cast<T>(-1.0);
+      } else {
+        m_buffer[i] = ((i % 8) < 4) ? static_cast<T>(255) : static_cast<T>(0);
+      }
+    }
+  }
+
+  void fillTestSineWave() {
+    constexpr float frequency = 5.23f;
+    constexpr size_t chunk_size = 1024;
+    constexpr float phase_step = (2.0f * M_PI * frequency) / chunk_size;
+
+    for (size_t i = 0; i < chunk_size; ++i) {
+      float val = std::sin(m_test_phase);
+      if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
+        pushSample(static_cast<T>(val));
+      } else {
+        pushSample(static_cast<T>((val * 127.5f) + 127.5f));
+      }
+      m_test_phase += phase_step;
+    }
+
+    if (m_test_phase > 2.0f * M_PI * 100.0f) {
+      m_test_phase = std::fmod(m_test_phase, 2.0f * M_PI);
+    }
   }
 };
 

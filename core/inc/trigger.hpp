@@ -8,10 +8,9 @@
 #include <vector>
 
 #include <string>
+#include "channel.hpp"
 
 namespace Scoped {
-
-class IChannel; // Forward declaration
 
 struct TriggerParameter {
     std::string name;

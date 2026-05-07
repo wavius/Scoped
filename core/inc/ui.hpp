@@ -3,9 +3,9 @@
 #include <channel.hpp>
 #include <implot.h> // IWYU pragma: keep
 #include <intensitymap.hpp>
+#include <memory>
 #include <oscilloscope.hpp>
 #include <vector>
-#include <memory>
 
 namespace Scoped {
 

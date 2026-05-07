@@ -10,8 +10,7 @@
 namespace Scoped {
 
 /// Lock-free single-producer single-consumer circular buffer.
-template <typename T>
-class CircularBuffer {
+template <typename T> class CircularBuffer {
 private:
   std::vector<T> m_buffer;
   size_t m_capacity;
@@ -82,7 +81,8 @@ public:
   void fillTestSquareWave() {
     for (size_t i = 0; i < m_capacity; i++) {
       if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
-        m_buffer[i] = ((i % 8) < 4) ? static_cast<T>(1.0) : static_cast<T>(-1.0);
+        m_buffer[i] =
+            ((i % 8) < 4) ? static_cast<T>(1.0) : static_cast<T>(-1.0);
       } else {
         m_buffer[i] = ((i % 8) < 4) ? static_cast<T>(255) : static_cast<T>(0);
       }

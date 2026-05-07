@@ -17,8 +17,7 @@ USBDevice::~USBDevice() {
 // ---------------------------------------------------------------------------
 
 bool USBDevice::connect() {
-  m_handle =
-      libusb_open_device_with_vid_pid(m_context, VENDOR_ID, PRODUCT_ID);
+  m_handle = libusb_open_device_with_vid_pid(m_context, VENDOR_ID, PRODUCT_ID);
   if (!m_handle)
     return false;
 
@@ -30,10 +29,10 @@ bool USBDevice::connect() {
 
   // CDC line encoding: 115200 baud, 8N1
   uint8_t encoding[] = {0x00, 0xC2, 0x01, 0x00, 0x00, 0x00, 0x08};
-  libusb_control_transfer(m_handle, 0x21, 0x20, 0, CTRL_INTERFACE,
-                          encoding, sizeof(encoding), 1000);
-  libusb_control_transfer(m_handle, 0x21, 0x22, 0x03, CTRL_INTERFACE,
-                          nullptr, 0, 1000);
+  libusb_control_transfer(m_handle, 0x21, 0x20, 0, CTRL_INTERFACE, encoding,
+                          sizeof(encoding), 1000);
+  libusb_control_transfer(m_handle, 0x21, 0x22, 0x03, CTRL_INTERFACE, nullptr,
+                          0, 1000);
 
   return true;
 }
@@ -54,15 +53,14 @@ void USBDevice::disconnect() {
 // Streaming
 // ---------------------------------------------------------------------------
 
-void USBDevice::startStreaming(IChannel* channel) {
+void USBDevice::startStreaming(IChannel *channel) {
   if (!m_handle || m_is_streaming || !channel)
     return;
 
   std::cout << "[USB] Starting stream on EP 0x" << std::hex
             << static_cast<int>(ENDPOINT_IN) << std::dec << "...\n";
   m_is_streaming = true;
-  m_stream_thread =
-      std::thread(&USBDevice::streamLoop, this, channel);
+  m_stream_thread = std::thread(&USBDevice::streamLoop, this, channel);
 }
 
 void USBDevice::stopStreaming() {
@@ -74,15 +72,15 @@ void USBDevice::stopStreaming() {
   }
 }
 
-void USBDevice::streamLoop(IChannel* channel) {
+void USBDevice::streamLoop(IChannel *channel) {
   uint8_t temp[4096];
   size_t total_received = 0;
   auto last_log = std::chrono::steady_clock::now();
 
   while (m_is_streaming) {
     int transferred = 0;
-    int result = libusb_bulk_transfer(m_handle, ENDPOINT_IN, temp,
-                                      sizeof(temp), &transferred, 100);
+    int result = libusb_bulk_transfer(m_handle, ENDPOINT_IN, temp, sizeof(temp),
+                                      &transferred, 100);
 
     if (result == 0 && transferred > 0) {
       channel->pushRawBytes(temp, transferred);
@@ -92,8 +90,7 @@ void USBDevice::streamLoop(IChannel* channel) {
       auto elapsed =
           std::chrono::duration_cast<std::chrono::seconds>(now - last_log);
       if (elapsed.count() >= 1) {
-        std::cout << "[USB] Received: " << (total_received / 1024)
-                  << " KB\n";
+        std::cout << "[USB] Received: " << (total_received / 1024) << " KB\n";
         last_log = now;
       }
     } else if (result == LIBUSB_ERROR_TIMEOUT) {

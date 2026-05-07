@@ -42,8 +42,7 @@ void IntensityMap::updateTexture() {
   const size_t pixel_count = m_width * m_height;
 
   for (size_t i = 0; i < pixel_count; ++i) {
-    uint8_t brightness =
-        static_cast<uint8_t>(std::min(m_grid[i] * 255, 255u));
+    uint8_t brightness = static_cast<uint8_t>(std::min(m_grid[i] * 255, 255u));
     m_texture_data[i] = {0, brightness, brightness, 255};
   }
 
@@ -56,9 +55,7 @@ void IntensityMap::updateTexture() {
 // Grid operations
 // ---------------------------------------------------------------------------
 
-void IntensityMap::clear() {
-  std::fill(m_grid.begin(), m_grid.end(), 0);
-}
+void IntensityMap::clear() { std::fill(m_grid.begin(), m_grid.end(), 0); }
 
 void IntensityMap::addSample(float x, float y) {
   uint32_t x0 = static_cast<uint32_t>(x);
@@ -77,8 +74,7 @@ void IntensityMap::addSample(float x, float y) {
       static_cast<uint32_t>(fx * (1.0f - fy) * 10);
   m_grid[(y0 + 1) * m_width + x0] +=
       static_cast<uint32_t>((1.0f - fx) * fy * 10);
-  m_grid[(y0 + 1) * m_width + (x0 + 1)] +=
-      static_cast<uint32_t>(fx * fy * 10);
+  m_grid[(y0 + 1) * m_width + (x0 + 1)] += static_cast<uint32_t>(fx * fy * 10);
 }
 
 void IntensityMap::decay(float factor) {
@@ -91,8 +87,8 @@ void IntensityMap::decay(float factor) {
 // Frame rasterization
 // ---------------------------------------------------------------------------
 
-static void plotLine(uint32_t *grid, int width, int height,
-                     int x1, int y1, int x2, int y2) {
+static void plotLine(uint32_t *grid, int width, int height, int x1, int y1,
+                     int x2, int y2) {
   int dx = std::abs(x2 - x1);
   int dy = std::abs(y2 - y1);
   int sx = (x1 < x2) ? 1 : -1;

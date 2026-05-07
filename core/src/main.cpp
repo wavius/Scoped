@@ -8,10 +8,10 @@
 #include <channel.hpp>
 #include <implot.h>
 #include <memory>
+#include <oscilloscope.hpp>
 #include <trigger.hpp>
 #include <ui.hpp>
 #include <usb.hpp>
-#include <oscilloscope.hpp>
 
 // ---------------------------------------------------------------------------
 // SDL / ImGui lifecycle
@@ -87,7 +87,7 @@ int main(int, char **) {
   initImGui(window, gl_context);
 
   Scoped::Oscilloscope osc;
-  
+
   auto ch1 = std::make_shared<Scoped::Channel<uint8_t>>("CH1", 16384 * 4, 2048);
   osc.addChannel(ch1);
 

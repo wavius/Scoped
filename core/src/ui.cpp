@@ -31,32 +31,34 @@ OscilloscopeUI::OscilloscopeUI(size_t display_width, size_t display_height)
 // ---------------------------------------------------------------------------
 
 void OscilloscopeUI::updateDisplay(Oscilloscope &osc) {
-  const auto& channels = osc.getChannels();
-  
+  const auto &channels = osc.getChannels();
+
   // Ensure we have an intensity map per channel
   while (m_displays.size() < channels.size()) {
-      m_displays.push_back(std::make_unique<IntensityMap>(m_display_width, m_display_height));
+    m_displays.push_back(
+        std::make_unique<IntensityMap>(m_display_width, m_display_height));
   }
 
   for (size_t i = 0; i < channels.size(); ++i) {
-      auto& channel = *channels[i];
-      if (!channel.hasNewFrame())
-          continue;
+    auto &channel = *channels[i];
+    if (!channel.hasNewFrame())
+      continue;
 
-      const auto &traces = channel.getTraces();
-      for (const auto& trace : traces) {
-          if (trace.domain == Domain::Time) {
-              size_t visible = std::min(channel.getVisibleSamples(), trace.data.size());
-              m_normalized.resize(visible);
-              for (size_t j = 0; j < visible; ++j) {
-                m_normalized[j] = trace.normalizeToIntensity(trace.data[j]);
-              }
+    const auto &traces = channel.getTraces();
+    for (const auto &trace : traces) {
+      if (trace.domain == Domain::Time) {
+        size_t visible =
+            std::min(channel.getVisibleSamples(), trace.data.size());
+        m_normalized.resize(visible);
+        for (size_t j = 0; j < visible; ++j) {
+          m_normalized[j] = trace.normalizeToIntensity(trace.data[j]);
+        }
 
-              m_displays[i]->clear();
-              m_displays[i]->processFrame(m_normalized.data(), visible);
-          }
+        m_displays[i]->clear();
+        m_displays[i]->processFrame(m_normalized.data(), visible);
       }
-      channel.clearNewFrame();
+    }
+    channel.clearNewFrame();
   }
 }
 
@@ -68,19 +70,19 @@ void OscilloscopeUI::drawGrid(double w, double h) {
   const ImVec4 color(0.3f, 0.3f, 0.3f, 0.4f);
 
   for (int i = 0; i <= 10; ++i) {
-    double x   = (w * i) / 10.0;
+    double x = (w * i) / 10.0;
     double vx[] = {x, x};
     double vy[] = {0, h};
-    float  wt   = (i == 5) ? 3.0f : 1.0f;
+    float wt = (i == 5) ? 3.0f : 1.0f;
     ImPlot::PlotLine("##vgrid", vx, vy, 2,
                      {ImPlotProp_LineColor, color, ImPlotProp_LineWeight, wt});
   }
 
   for (int i = 0; i <= 8; ++i) {
-    double y   = (h * i) / 8.0;
+    double y = (h * i) / 8.0;
     double hx[] = {0, w};
     double hy[] = {y, y};
-    float  wt   = (i == 4) ? 3.0f : 1.0f;
+    float wt = (i == 4) ? 3.0f : 1.0f;
     ImPlot::PlotLine("##hgrid", hx, hy, 2,
                      {ImPlotProp_LineColor, color, ImPlotProp_LineWeight, wt});
   }
@@ -92,23 +94,25 @@ void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
     return;
 
   auto levels = trigger->getTriggerLevels();
-  if (levels.empty()) return;
+  if (levels.empty())
+    return;
 
-  auto& ch = osc.getChannels()[0];
+  auto &ch = osc.getChannels()[0];
   auto traces = ch->getTraces();
-  if (traces.empty()) return;
-  auto& trace = traces[0];
+  if (traces.empty())
+    return;
+  auto &trace = traces[0];
 
   for (float level : levels) {
-      float y_normalized = trace.normalizeToIntensity(level);
-      double y_level = y_normalized * m_display_height;
+    float y_normalized = trace.normalizeToIntensity(level);
+    double y_level = y_normalized * m_display_height;
 
-      double x[] = {0.0, static_cast<double>(m_display_width)};
-      double y[] = {y_level, y_level};
+    double x[] = {0.0, static_cast<double>(m_display_width)};
+    double y[] = {y_level, y_level};
 
-      ImPlot::PlotLine("##TriggerLine", x, y, 2,
-                       {ImPlotProp_LineColor, ImVec4(1, 0, 0, 0.5f),
-                        ImPlotProp_LineWeight, 2.0f});
+    ImPlot::PlotLine("##TriggerLine", x, y, 2,
+                     {ImPlotProp_LineColor, ImVec4(1, 0, 0, 0.5f),
+                      ImPlotProp_LineWeight, 2.0f});
   }
 }
 
@@ -139,19 +143,22 @@ void OscilloscopeUI::renderPlot(Oscilloscope &osc) {
     ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_NoDecorations);
 
     for (size_t i = 0; i < m_displays.size(); ++i) {
-        m_displays[i]->updateTexture();
-        ImPlot::PlotImage(("OscilloscopeTrace" + std::to_string(i)).c_str(),
-                          (ImTextureID)(intptr_t)m_displays[i]->getTextureID(),
-                          ImPlotPoint(0, 0), ImPlotPoint(w, h));
+      m_displays[i]->updateTexture();
+      ImPlot::PlotImage(("OscilloscopeTrace" + std::to_string(i)).c_str(),
+                        (ImTextureID)(intptr_t)m_displays[i]->getTextureID(),
+                        ImPlotPoint(0, 0), ImPlotPoint(w, h));
     }
 
-    for (const auto& ch : osc.getChannels()) {
-        for (const auto& trace : ch->getTraces()) {
-            if (trace.domain == Domain::Frequency) {
-                ImPlot::PlotLine(trace.name.c_str(), trace.data.data(), trace.data.size(), w / trace.data.size(), 0,
-                    {ImPlotProp_LineColor, ImVec4(1.0f, 1.0f, 0.0f, 1.0f), ImPlotProp_LineWeight, 2.0f});
-            }
+    for (const auto &ch : osc.getChannels()) {
+      for (const auto &trace : ch->getTraces()) {
+        if (trace.domain == Domain::Frequency) {
+          ImPlot::PlotLine(trace.name.c_str(), trace.data.data(),
+                           trace.data.size(), w / trace.data.size(), 0,
+                           {ImPlotProp_LineColor,
+                            ImVec4(1.0f, 1.0f, 0.0f, 1.0f),
+                            ImPlotProp_LineWeight, 2.0f});
         }
+      }
     }
 
     drawGrid(w, h);
@@ -170,10 +177,9 @@ void OscilloscopeUI::renderPlot(Oscilloscope &osc) {
 // Top bar
 // ---------------------------------------------------------------------------
 
-
-
 void OscilloscopeUI::drawModeCombo(Oscilloscope &osc) {
-  if (!osc.getTrigger()) return;
+  if (!osc.getTrigger())
+    return;
   ImGui::SetNextItemWidth(70);
   const char *items[] = {"Auto", "Norm"};
   int sel = (osc.getTrigger()->getMode() == TriggerMode::AUTO) ? 0 : 1;
@@ -184,15 +190,16 @@ void OscilloscopeUI::drawModeCombo(Oscilloscope &osc) {
 }
 
 void OscilloscopeUI::drawTimebaseControl(Oscilloscope &osc) {
-  if (osc.getChannels().empty()) return;
-  auto& channel = *osc.getChannels()[0];
-  
+  if (osc.getChannels().empty())
+    return;
+  auto &channel = *osc.getChannels()[0];
+
   int samples = static_cast<int>(channel.getVisibleSamples());
   ImGui::SetNextItemWidth(150);
   if (ImGui::SliderInt("##Time", &samples, 256, 16384, "%d smp")) {
     // Apply timebase to all channels
-    for (auto& ch : osc.getChannels()) {
-        ch->setVisibleSamples(static_cast<size_t>(samples));
+    for (auto &ch : osc.getChannels()) {
+      ch->setVisibleSamples(static_cast<size_t>(samples));
     }
   }
 }
@@ -206,26 +213,30 @@ void OscilloscopeUI::renderTopBar(Oscilloscope &osc) {
   ImGui::SameLine();
 
   bool any_hovered = false;
-  auto* trigger = osc.getTrigger();
+  auto *trigger = osc.getTrigger();
   if (trigger) {
-      auto params = trigger->getUIParameters();
-      for (const auto& param : params) {
-          ImGui::SetNextItemWidth(100);
-          int val = param.current_val;
-          if (param.combo_items.empty()) {
-              if (ImGui::SliderInt(("##" + param.name).c_str(), &val, param.min_val, param.max_val, (param.name + ": %d").c_str())) {
-                  trigger->setUIParameter(param.name, val);
-              }
-          } else {
-              std::vector<const char*> cstrs;
-              for (const auto& s : param.combo_items) cstrs.push_back(s.c_str());
-              if (ImGui::Combo(("##" + param.name).c_str(), &val, cstrs.data(), cstrs.size())) {
-                  trigger->setUIParameter(param.name, val);
-              }
-          }
-          if (ImGui::IsItemActive() || ImGui::IsItemHovered()) any_hovered = true;
-          ImGui::SameLine();
+    auto params = trigger->getUIParameters();
+    for (const auto &param : params) {
+      ImGui::SetNextItemWidth(100);
+      int val = param.current_val;
+      if (param.combo_items.empty()) {
+        if (ImGui::SliderInt(("##" + param.name).c_str(), &val, param.min_val,
+                             param.max_val, (param.name + ": %d").c_str())) {
+          trigger->setUIParameter(param.name, val);
+        }
+      } else {
+        std::vector<const char *> cstrs;
+        for (const auto &s : param.combo_items)
+          cstrs.push_back(s.c_str());
+        if (ImGui::Combo(("##" + param.name).c_str(), &val, cstrs.data(),
+                         cstrs.size())) {
+          trigger->setUIParameter(param.name, val);
+        }
       }
+      if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+        any_hovered = true;
+      ImGui::SameLine();
+    }
   }
   m_show_trigger_line = any_hovered;
 
@@ -263,8 +274,8 @@ void OscilloscopeUI::drawChannelBlock(IChannel &channel) {
 }
 
 void OscilloscopeUI::drawHardwareStatus(Oscilloscope &osc) {
-  auto& usb = osc.getUSB();
-  
+  auto &usb = osc.getUSB();
+
   ImGui::SameLine(ImGui::GetWindowWidth() - 320);
   ImGui::SetCursorPosY(12);
 
@@ -280,16 +291,17 @@ void OscilloscopeUI::drawHardwareStatus(Oscilloscope &osc) {
     ImGui::SameLine();
     if (ImGui::Button("Connect")) {
       if (usb.connect()) {
-        for (auto& ch : osc.getChannels()) {
-            if (ch->isHardwareChannel()) {
-                ch->clearBuffer();
-            }
+        for (auto &ch : osc.getChannels()) {
+          if (ch->isHardwareChannel()) {
+            ch->clearBuffer();
+          }
         }
-        if (osc.getTrigger()) osc.getTrigger()->clear();
+        if (osc.getTrigger())
+          osc.getTrigger()->clear();
         if (!osc.getChannels().empty()) {
-            if (osc.getChannels()[0]->isHardwareChannel()) {
-                usb.startStreaming(osc.getChannels()[0].get());
-            }
+          if (osc.getChannels()[0]->isHardwareChannel()) {
+            usb.startStreaming(osc.getChannels()[0].get());
+          }
         }
       }
     }
@@ -301,10 +313,10 @@ void OscilloscopeUI::renderBottomBar(Oscilloscope &osc) {
   ImGui::BeginChild("ChannelBar", ImVec2(0, 50), false);
 
   ImGui::SetCursorPos(ImVec2(10, 7));
-  for (auto& ch : osc.getChannels()) {
-      drawChannelBlock(*ch);
+  for (auto &ch : osc.getChannels()) {
+    drawChannelBlock(*ch);
   }
-  
+
   drawHardwareStatus(osc);
 
   ImGui::EndChild();

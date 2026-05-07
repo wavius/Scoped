@@ -1,7 +1,7 @@
 #pragma once
 
-#include <atomic>
 #include "channel.hpp"
+#include <atomic>
 #include <libusb-1.0/libusb.h>
 #include <thread>
 
@@ -22,7 +22,7 @@ private:
   std::thread m_stream_thread;
   std::atomic<bool> m_is_streaming{false};
 
-  void streamLoop(IChannel* channel);
+  void streamLoop(IChannel *channel);
 
 public:
   // ---------------------------------------------------------------------------
@@ -44,7 +44,7 @@ public:
   // Streaming
   // ---------------------------------------------------------------------------
 
-  void startStreaming(IChannel* channel);
+  void startStreaming(IChannel *channel);
   void stopStreaming();
 };
 

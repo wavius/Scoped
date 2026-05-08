@@ -6,10 +6,9 @@
 
 namespace Scoped {
 
-/// 2D accumulation grid for digital phosphor display.
-///
-/// Accepts normalized waveform data [0.0, 1.0] and rasterizes it into
-/// a hit-count grid using Bresenham lines, then uploads to an OpenGL texture.
+// 2D accumulation grid for digital phosphor display.
+// Accepts normalized waveform data [0.0, 1.0] and rasterizes it into
+// a hit-count grid using Bresenham lines, then uploads to an OpenGL texture.
 class IntensityMap {
 private:
   struct RGBA {
@@ -25,35 +24,26 @@ private:
   void initTexture();
 
 public:
-  // ---------------------------------------------------------------------------
   // Lifecycle
-  // ---------------------------------------------------------------------------
-
   IntensityMap(size_t width, size_t height);
   ~IntensityMap();
 
-  // ---------------------------------------------------------------------------
-  // Getters & Setters
-  // ---------------------------------------------------------------------------
-
+  // Accessors
   size_t getWidth() const;
   size_t getHeight() const;
   GLuint getTextureID() const;
 
-  // ---------------------------------------------------------------------------
   // Rendering
-  // ---------------------------------------------------------------------------
-
   void clear();
 
-  /// Bilinearly distributes intensity at a sub-pixel coordinate.
+  // Bilinearly distributes intensity at a sub-pixel coordinate.
   void addSample(float x, float y);
 
-  /// Multiplies all intensity values by a decay factor (0.0–1.0).
+  // Multiplies all intensity values by a decay factor (0.0–1.0).
   void decay(float factor);
 
-  /// Rasterizes normalized waveform data into the intensity grid.
-  /// Values in [0.0, 1.0] map to [bottom, top] of the display.
+  // Rasterizes normalized waveform data into the intensity grid.
+  // Values in [0.0, 1.0] map to [bottom, top] of the display.
   void processFrame(const float *normalized, size_t count);
 
   void updateTexture();

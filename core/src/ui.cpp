@@ -1,3 +1,4 @@
+#include "imgui.h"
 #include "implot.h"
 #include <algorithm>
 #include <cmath>
@@ -5,10 +6,7 @@
 
 namespace Scoped {
 
-// ---------------------------------------------------------------------------
 // Colormap
-// ---------------------------------------------------------------------------
-
 void setupChannelColormap(ImVec4 color) {
   static bool initialized = false;
   if (initialized)
@@ -19,21 +17,14 @@ void setupChannelColormap(ImVec4 color) {
   initialized = true;
 }
 
-// ---------------------------------------------------------------------------
-// OscilloscopeUI
-// ---------------------------------------------------------------------------
-
+// OscilloscopeUI Lifecycle
 OscilloscopeUI::OscilloscopeUI(size_t display_width, size_t display_height)
     : m_display_width(display_width), m_display_height(display_height) {}
 
-// ---------------------------------------------------------------------------
 // Display pipeline
-// ---------------------------------------------------------------------------
-
 void OscilloscopeUI::updateDisplay(Oscilloscope &osc) {
   const auto &channels = osc.getChannels();
 
-  // Ensure we have an intensity map per channel
   while (m_displays.size() < channels.size()) {
     m_displays.push_back(
         std::make_unique<IntensityMap>(m_display_width, m_display_height));
@@ -62,10 +53,7 @@ void OscilloscopeUI::updateDisplay(Oscilloscope &osc) {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Plot overlays
-// ---------------------------------------------------------------------------
-
 void OscilloscopeUI::drawGrid(double w, double h) {
   const ImVec4 color(0.3f, 0.3f, 0.3f, 0.4f);
 
@@ -116,10 +104,7 @@ void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Plot
-// ---------------------------------------------------------------------------
-
+// Plot Rendering
 void OscilloscopeUI::renderPlot(Oscilloscope &osc) {
   const double w = static_cast<double>(m_display_width);
   const double h = static_cast<double>(m_display_height);
@@ -127,7 +112,6 @@ void OscilloscopeUI::renderPlot(Oscilloscope &osc) {
   ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(0, 0));
   ImPlot::PushStyleVar(ImPlotStyleVar_PlotBorderSize, 0.0f);
 
-  // Snap to pixel boundary to avoid sub-pixel blurring
   ImVec2 cursor = ImGui::GetCursorScreenPos();
   cursor.x = std::floor(cursor.x);
   cursor.y = std::floor(cursor.y);
@@ -163,6 +147,7 @@ void OscilloscopeUI::renderPlot(Oscilloscope &osc) {
 
     drawGrid(w, h);
 
+    // Trigger line
     if (m_show_trigger_line) {
       drawTriggerLine(osc);
     }
@@ -173,10 +158,7 @@ void OscilloscopeUI::renderPlot(Oscilloscope &osc) {
   ImPlot::PopStyleVar(2);
 }
 
-// ---------------------------------------------------------------------------
-// Top bar
-// ---------------------------------------------------------------------------
-
+// Top Bar Controls
 void OscilloscopeUI::drawModeCombo(Oscilloscope &osc) {
   if (!osc.getTrigger())
     return;
@@ -197,9 +179,29 @@ void OscilloscopeUI::drawTimebaseControl(Oscilloscope &osc) {
   int samples = static_cast<int>(channel.getVisibleSamples());
   ImGui::SetNextItemWidth(150);
   if (ImGui::SliderInt("##Time", &samples, 256, 16384, "%d smp")) {
-    // Apply timebase to all channels
     for (auto &ch : osc.getChannels()) {
       ch->setVisibleSamples(static_cast<size_t>(samples));
+    }
+  }
+}
+
+void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
+  if (osc.getChannels().empty())
+    return;
+  // TODO: Use getProcessors() to toggle FFT
+  for (auto &channel : osc.getChannels()) {
+    for (auto &proc : channel->getProcessors()) {
+      if (proc->getName() == "FFT") {
+        if (proc->isEnabled()) {
+          if (ImGui::Button("ON")) {
+            proc->setEnabled(false);
+          }
+        } else {
+          if (ImGui::Button("OFF")) {
+            proc->setEnabled(true);
+          }
+        }
+      }
     }
   }
 }
@@ -242,6 +244,11 @@ void OscilloscopeUI::renderTopBar(Oscilloscope &osc) {
 
   drawModeCombo(osc);
 
+  ImGui::SameLine(ImGui::GetWindowWidth() - 400);
+  ImGui::TextDisabled("FFT:");
+  ImGui::SameLine();
+  drawFFTControl(osc);
+
   ImGui::SameLine(ImGui::GetWindowWidth() - 250);
   ImGui::TextDisabled("HORIZ:");
   ImGui::SameLine();
@@ -251,10 +258,7 @@ void OscilloscopeUI::renderTopBar(Oscilloscope &osc) {
   ImGui::PopStyleColor();
 }
 
-// ---------------------------------------------------------------------------
-// Bottom bar
-// ---------------------------------------------------------------------------
-
+// Bottom Bar Controls
 void OscilloscopeUI::drawChannelBlock(IChannel &channel) {
   ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
   ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1));
@@ -323,10 +327,7 @@ void OscilloscopeUI::renderBottomBar(Oscilloscope &osc) {
   ImGui::PopStyleColor();
 }
 
-// ---------------------------------------------------------------------------
-// Entry point
-// ---------------------------------------------------------------------------
-
+// Entry Point
 void OscilloscopeUI::render(Oscilloscope &osc) {
   updateDisplay(osc);
 

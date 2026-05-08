@@ -5,6 +5,7 @@
 
 namespace Scoped {
 
+// Lifecycle
 USBDevice::USBDevice() { libusb_init(&m_context); }
 
 USBDevice::~USBDevice() {
@@ -12,10 +13,7 @@ USBDevice::~USBDevice() {
   libusb_exit(m_context);
 }
 
-// ---------------------------------------------------------------------------
 // Connection
-// ---------------------------------------------------------------------------
-
 bool USBDevice::connect() {
   m_handle = libusb_open_device_with_vid_pid(m_context, VENDOR_ID, PRODUCT_ID);
   if (!m_handle)
@@ -49,10 +47,7 @@ void USBDevice::disconnect() {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Streaming
-// ---------------------------------------------------------------------------
-
 void USBDevice::startStreaming(IChannel *channel) {
   if (!m_handle || m_is_streaming || !channel)
     return;

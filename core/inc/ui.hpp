@@ -9,10 +9,10 @@
 
 namespace Scoped {
 
-/// Registers a black-to-color gradient colormap for the display.
+// Registers a black-to-color gradient colormap for the display.
 void setupChannelColormap(ImVec4 color);
 
-/// Owns the display state and renders the complete oscilloscope UI.
+// Owns the display state and renders the complete oscilloscope UI.
 class OscilloscopeUI {
 private:
   std::vector<std::unique_ptr<IntensityMap>> m_displays;
@@ -29,6 +29,7 @@ private:
 
   void drawModeCombo(Oscilloscope &osc);
   void drawTimebaseControl(Oscilloscope &osc);
+  void drawFFTControl(Oscilloscope &osc);
   void renderTopBar(Oscilloscope &osc);
 
   void drawChannelBlock(IChannel &channel);
@@ -36,16 +37,10 @@ private:
   void renderBottomBar(Oscilloscope &osc);
 
 public:
-  // ---------------------------------------------------------------------------
   // Lifecycle
-  // ---------------------------------------------------------------------------
-
   OscilloscopeUI(size_t display_width, size_t display_height);
 
-  // ---------------------------------------------------------------------------
   // Rendering
-  // ---------------------------------------------------------------------------
-
   void render(Oscilloscope &osc);
 };
 

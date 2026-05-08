@@ -15,6 +15,7 @@ struct Trace {
   float scale = 1.0f;
   float offset = 0.0f;
 
+  // Pipeline
   float normalizeToIntensity(float sample) const {
     if (domain == Domain::Time) {
       float centered = sample - 128.0f;

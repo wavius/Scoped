@@ -7,7 +7,7 @@
 
 namespace Scoped {
 
-/// USB CDC bulk-transfer interface for the iCESugar-Pro FPGA.
+// USB CDC bulk-transfer interface for the iCESugar-Pro FPGA.
 class USBDevice {
 private:
   static constexpr uint16_t VENDOR_ID = 0x1d50;
@@ -25,25 +25,18 @@ private:
   void streamLoop(IChannel *channel);
 
 public:
-  // ---------------------------------------------------------------------------
   // Lifecycle
-  // ---------------------------------------------------------------------------
-
   USBDevice();
   ~USBDevice();
 
-  // ---------------------------------------------------------------------------
-  // Connection
-  // ---------------------------------------------------------------------------
-
-  bool connect();
-  void disconnect();
+  // Accessors
   bool isConnected() const { return m_handle != nullptr; }
 
-  // ---------------------------------------------------------------------------
-  // Streaming
-  // ---------------------------------------------------------------------------
+  // Connection
+  bool connect();
+  void disconnect();
 
+  // Streaming
   void startStreaming(IChannel *channel);
   void stopStreaming();
 };

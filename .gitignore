@@ -13,5 +13,5 @@ compile_commands.json
 .cache/
 
 # Internal docs
-ARCHITECTURE.md
-REFACTORING_ROADMAP.md
+NOTES.md
+.markdownlint.json

@@ -5,6 +5,7 @@
 
 namespace Scoped {
 
+// Lifecycle
 IntensityMap::IntensityMap(size_t width, size_t height)
     : m_width(width), m_height(height), m_grid(width * height, 0),
       m_texture_data(width * height, {0, 0, 0, 255}) {
@@ -17,14 +18,12 @@ IntensityMap::~IntensityMap() {
   }
 }
 
+// Accessors
 size_t IntensityMap::getWidth() const { return m_width; }
 size_t IntensityMap::getHeight() const { return m_height; }
 GLuint IntensityMap::getTextureID() const { return m_texture_id; }
 
-// ---------------------------------------------------------------------------
 // OpenGL texture
-// ---------------------------------------------------------------------------
-
 void IntensityMap::initTexture() {
   glGenTextures(1, &m_texture_id);
   glBindTexture(GL_TEXTURE_2D, m_texture_id);
@@ -51,10 +50,7 @@ void IntensityMap::updateTexture() {
                   GL_UNSIGNED_BYTE, m_texture_data.data());
 }
 
-// ---------------------------------------------------------------------------
 // Grid operations
-// ---------------------------------------------------------------------------
-
 void IntensityMap::clear() { std::fill(m_grid.begin(), m_grid.end(), 0); }
 
 void IntensityMap::addSample(float x, float y) {
@@ -83,10 +79,7 @@ void IntensityMap::decay(float factor) {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Frame rasterization
-// ---------------------------------------------------------------------------
-
 static void plotLine(uint32_t *grid, int width, int height, int x1, int y1,
                      int x2, int y2) {
   int dx = std::abs(x2 - x1);

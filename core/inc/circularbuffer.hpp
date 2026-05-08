@@ -9,7 +9,7 @@
 
 namespace Scoped {
 
-/// Lock-free single-producer single-consumer circular buffer.
+// Lock-free single-producer single-consumer circular buffer.
 template <typename T> class CircularBuffer {
 private:
   std::vector<T> m_buffer;
@@ -19,18 +19,12 @@ private:
   float m_test_phase = 0.0f;
 
 public:
-  // ---------------------------------------------------------------------------
   // Lifecycle
-  // ---------------------------------------------------------------------------
-
   explicit CircularBuffer(size_t capacity = 8192) : m_capacity(capacity) {
     m_buffer.resize(m_capacity, T());
   }
 
-  // ---------------------------------------------------------------------------
   // Write Operations
-  // ---------------------------------------------------------------------------
-
   void pushSample(T sample) {
     m_buffer[m_write_idx] = sample;
     m_write_idx = (m_write_idx + 1) % m_capacity;
@@ -43,10 +37,7 @@ public:
     }
   }
 
-  // ---------------------------------------------------------------------------
   // Read Operations
-  // ---------------------------------------------------------------------------
-
   size_t getUnreadCount() const {
     size_t w = m_write_idx.load();
     size_t r = m_read_idx.load();
@@ -61,23 +52,18 @@ public:
     m_read_idx = (m_read_idx.load() + amount) % m_capacity;
   }
 
-  // ---------------------------------------------------------------------------
-  // Utilities & State
-  // ---------------------------------------------------------------------------
-
+  // Accessors
   const T *getRawData() const { return m_buffer.data(); }
   size_t getCapacity() const { return m_capacity; }
   size_t getReadIdx() const { return m_read_idx.load(); }
 
+  // Setters
   void clear() {
     m_read_idx.store(0);
     m_write_idx.store(0);
   }
 
-  // ---------------------------------------------------------------------------
   // Test Signal Generators
-  // ---------------------------------------------------------------------------
-
   void fillTestSquareWave() {
     for (size_t i = 0; i < m_capacity; i++) {
       if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {

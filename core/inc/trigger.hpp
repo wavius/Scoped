@@ -7,22 +7,22 @@
 #include <type_traits>
 #include <vector>
 
-#include <string>
 #include "channel.hpp"
+#include <string>
 
 namespace Scoped {
 
 struct TriggerParameter {
-    std::string name;
-    int min_val;
-    int max_val;
-    int current_val;
-    std::vector<std::string> combo_items;
+  std::string name;
+  int min_val;
+  int max_val;
+  int current_val;
+  std::vector<std::string> combo_items;
 };
 
 enum class TriggerMode { AUTO, NORMAL };
 
-/// Base class for all trigger strategies.
+// Base class for all trigger strategies.
 class ITrigger {
 protected:
   using Clock = std::chrono::steady_clock;
@@ -32,41 +32,34 @@ protected:
   Clock::time_point m_last_trigger_time;
   static constexpr std::chrono::milliseconds AUTO_TIMEOUT{100};
 
-  virtual bool scanForTrigger(IChannel* channel, size_t &trigger_offset) = 0;
+  virtual bool scanForTrigger(IChannel *channel, size_t &trigger_offset) = 0;
   virtual void onTriggerFired() {}
 
 public:
-  // ---------------------------------------------------------------------------
   // Lifecycle
-  // ---------------------------------------------------------------------------
-
   explicit ITrigger(size_t width)
       : m_mode(TriggerMode::AUTO), m_frame_width(width),
         m_last_trigger_time(Clock::now()) {}
 
   virtual ~ITrigger() = default;
 
-  // ---------------------------------------------------------------------------
-  // Getters & Setters
-  // ---------------------------------------------------------------------------
-
+  // Accessors
   TriggerMode getMode() const { return m_mode; }
-  void setMode(TriggerMode mode) { m_mode = mode; }
   size_t getFrameWidth() const { return m_frame_width; }
-
-  virtual void clear() = 0;
 
   virtual std::vector<float> getTriggerLevels() const = 0;
   virtual std::vector<TriggerParameter> getUIParameters() = 0;
-  virtual void setUIParameter(const std::string& name, int val) = 0;
 
-  // ---------------------------------------------------------------------------
-  // Processing
-  // ---------------------------------------------------------------------------
+  // Setters
+  void setMode(TriggerMode mode) { m_mode = mode; }
+  virtual void setUIParameter(const std::string &name, int val) = 0;
+  virtual void clear() = 0;
 
-  /// Scans the buffer and determines if a trigger has occurred.
-  bool processStream(IChannel* channel, size_t &out_trigger_offset) {
-    if (!channel) return false;
+  // Pipeline
+  // Scans the buffer and determines if a trigger has occurred.
+  bool processStream(IChannel *channel, size_t &out_trigger_offset) {
+    if (!channel)
+      return false;
     size_t unread = channel->getUnreadSampleCount();
     if (unread < m_frame_width)
       return false;
@@ -89,10 +82,11 @@ public:
 
     return false;
   }
-  
-  /// Checks if stale data should be discarded.
-  bool shouldDiscardStale(IChannel* channel, size_t &discard_amount) {
-    if (!channel) return false;
+
+  // Checks if stale data should be discarded.
+  bool shouldDiscardStale(IChannel *channel, size_t &discard_amount) {
+    if (!channel)
+      return false;
     size_t unread = channel->getUnreadSampleCount();
     if (unread > m_frame_width) {
       discard_amount = unread - m_frame_width;
@@ -102,7 +96,7 @@ public:
   }
 };
 
-/// Edge trigger: fires when a sample crosses the threshold with hysteresis.
+// Edge trigger: fires when a sample crosses the threshold with hysteresis.
 class EdgeTrigger : public ITrigger {
 public:
   enum class EdgeDirection { RISING, FALLING };
@@ -123,7 +117,7 @@ private:
   }
 
 protected:
-  bool scanForTrigger(IChannel* channel, size_t &trigger_offset) override {
+  bool scanForTrigger(IChannel *channel, size_t &trigger_offset) override {
     size_t unread = channel->getUnreadSampleCount();
     for (size_t i = 0; i < unread - this->m_frame_width; ++i) {
       float current = channel->getNormalizedSample(i);
@@ -138,48 +132,38 @@ protected:
   }
 
 public:
-  // ---------------------------------------------------------------------------
   // Lifecycle
-  // ---------------------------------------------------------------------------
-
   explicit EdgeTrigger(size_t width = 1024, float level = 128.0f)
-      : ITrigger(width), m_threshold(level),
-        m_direction(EdgeDirection::RISING), m_prev_sample(0) {
+      : ITrigger(width), m_threshold(level), m_direction(EdgeDirection::RISING),
+        m_prev_sample(0) {
     m_hysteresis_margin = 2.0f;
   }
 
-  void clear() override { m_prev_sample = 0; }
-
-  std::vector<float> getTriggerLevels() const override {
-      return { m_threshold };
-  }
-
-  std::vector<TriggerParameter> getUIParameters() override {
-      std::vector<TriggerParameter> params;
-      params.push_back({"Level", 0, 255, static_cast<int>(m_threshold), {}});
-      
-      std::vector<std::string> dirs = {"Rising", "Falling"};
-      int dir_idx = (m_direction == EdgeDirection::RISING) ? 0 : 1;
-      params.push_back({"Edge", 0, 1, dir_idx, dirs});
-      return params;
-  }
-
-  void setUIParameter(const std::string& name, int val) override {
-      if (name == "Level") {
-          m_threshold = static_cast<float>(val);
-      } else if (name == "Edge") {
-          m_direction = (val == 0) ? EdgeDirection::RISING : EdgeDirection::FALLING;
-      }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Getters & Setters
-  // ---------------------------------------------------------------------------
-
+  // Accessors
   float getThreshold() const { return m_threshold; }
-  void setThreshold(float level) { m_threshold = level; }
   EdgeDirection getDirection() const { return m_direction; }
+  std::vector<float> getTriggerLevels() const override { return {m_threshold}; }
+  std::vector<TriggerParameter> getUIParameters() override {
+    std::vector<TriggerParameter> params;
+    params.push_back({"Level", 0, 255, static_cast<int>(m_threshold), {}});
+
+    std::vector<std::string> dirs = {"Rising", "Falling"};
+    int dir_idx = (m_direction == EdgeDirection::RISING) ? 0 : 1;
+    params.push_back({"Edge", 0, 1, dir_idx, dirs});
+    return params;
+  }
+
+  // Setters
+  void setThreshold(float level) { m_threshold = level; }
   void setDirection(EdgeDirection dir) { m_direction = dir; }
+  void setUIParameter(const std::string &name, int val) override {
+    if (name == "Level") {
+      m_threshold = static_cast<float>(val);
+    } else if (name == "Edge") {
+      m_direction = (val == 0) ? EdgeDirection::RISING : EdgeDirection::FALLING;
+    }
+  }
+  void clear() override { m_prev_sample = 0; }
 };
 
 } // namespace Scoped

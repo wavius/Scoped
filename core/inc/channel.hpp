@@ -13,43 +13,37 @@
 
 namespace Scoped {
 
+// Interface for oscilloscope channels.
 class IChannel {
 public:
+  // Lifecycle
   virtual ~IChannel() = default;
 
+  // Accessors
   virtual const std::string &getLabel() const = 0;
   virtual const std::vector<Trace> &getTraces() const = 0;
-
   virtual bool hasNewFrame() const = 0;
+  virtual float getVerticalScale() const = 0;
+  virtual size_t getVisibleSamples() const = 0;
+  virtual size_t getUnreadSampleCount() const = 0;
+  virtual bool isHardwareChannel() const = 0;
+  virtual std::vector<IProcessorControl *> getProcessors() const = 0;
+
+  // Setters
+  virtual void setVerticalScale(float scale) = 0;
+  virtual void setVisibleSamples(size_t n) = 0;
   virtual void clearNewFrame() = 0;
 
-  virtual float getVerticalScale() const = 0;
-  virtual void setVerticalScale(float scale) = 0;
-  virtual size_t getVisibleSamples() const = 0;
-  virtual void setVisibleSamples(size_t n) = 0;
-
-  // Hardware interaction methods
+  // Pipeline
   virtual float getNormalizedSample(size_t index_offset) const = 0;
-  virtual size_t getUnreadSampleCount() const = 0;
   virtual void extractAndProcessFrame(size_t trigger_offset,
                                       size_t frame_width) = 0;
   virtual void consumeBuffer(size_t amount) = 0;
-
   virtual void pushRawBytes(const uint8_t *data, size_t size) = 0;
   virtual void clearBuffer() = 0;
-
-  virtual bool isHardwareChannel() const = 0;
 };
 
-/// Base for processors operating across multiple channels.
-class IVirtualProcessor {
-public:
-  virtual ~IVirtualProcessor() = default;
-  virtual void process(const std::vector<IChannel *> &sources,
-                       std::vector<Trace> &traces) = 0;
-};
-
-/// Encapsulates a channel that pulls data from other channels' traces.
+// Encapsulates a channel that pulls data from other channels' traces.
 class VirtualChannel : public IChannel {
 private:
   std::string m_label;
@@ -61,49 +55,59 @@ private:
   size_t m_visible_samples;
 
 public:
+  // Lifecycle
   VirtualChannel(const std::string &label, size_t visible)
       : m_label(label), m_visible_samples(visible) {}
 
-  void addSource(IChannel *source) { m_sources.push_back(source); }
+  // Accessors
+  const std::string &getLabel() const override { return m_label; }
+  const std::vector<Trace> &getTraces() const override { return m_traces; }
+  bool hasNewFrame() const override { return m_has_new_frame; }
+  float getVerticalScale() const override { return m_vertical_scale; }
+  size_t getVisibleSamples() const override { return m_visible_samples; }
+  size_t getUnreadSampleCount() const override { return 0; }
+  bool isHardwareChannel() const override { return false; }
 
+  std::vector<IProcessorControl *> getProcessors() const override {
+    std::vector<IProcessorControl *> list;
+    for (auto &p : m_processors) {
+      list.push_back(p.get());
+    }
+    return list;
+  }
+
+  // Setters
+  void setVerticalScale(float scale) override { m_vertical_scale = scale; }
+  void setVisibleSamples(size_t n) override { m_visible_samples = n; }
+  void clearNewFrame() override { m_has_new_frame = false; }
+
+  // Configuration
+  void addSource(IChannel *source) { m_sources.push_back(source); }
   void addProcessor(std::unique_ptr<IVirtualProcessor> proc) {
     m_processors.push_back(std::move(proc));
   }
 
-  // IChannel impl
-  const std::string &getLabel() const override { return m_label; }
-  const std::vector<Trace> &getTraces() const override { return m_traces; }
-  bool hasNewFrame() const override { return m_has_new_frame; }
-  void clearNewFrame() override { m_has_new_frame = false; }
-
-  float getVerticalScale() const override { return m_vertical_scale; }
-  void setVerticalScale(float scale) override { m_vertical_scale = scale; }
-  size_t getVisibleSamples() const override { return m_visible_samples; }
-  void setVisibleSamples(size_t n) override { m_visible_samples = n; }
-
+  // Pipeline
   float getNormalizedSample(size_t /*index_offset*/) const override {
     return 0.0f;
   }
-  size_t getUnreadSampleCount() const override { return 0; }
-  bool isHardwareChannel() const override { return false; }
-
-  void pushRawBytes(const uint8_t * /*data*/, size_t /*size*/) override {}
-  void clearBuffer() override {}
-
   void extractAndProcessFrame(size_t /*trigger_offset*/,
                               size_t /*frame_width*/) override {
     m_traces.clear();
     for (auto &proc : m_processors) {
-      proc->process(m_sources, m_traces);
+      if (proc->isEnabled()) {
+        proc->process(m_sources, m_traces);
+      }
     }
     m_has_new_frame = true;
   }
-
   void consumeBuffer(size_t /*amount*/) override {}
+  void pushRawBytes(const uint8_t * /*data*/, size_t /*size*/) override {}
+  void clearBuffer() override {}
 };
 
-/// Encapsulates the acquisition and processing pipeline for a single hardware
-/// channel.
+// Encapsulates the acquisition and processing pipeline for a single hardware
+// channel.
 template <typename HardwareT> class Channel : public IChannel {
 private:
   std::string m_label;
@@ -119,16 +123,51 @@ private:
   bool m_has_new_frame = false;
 
 public:
-  // ---------------------------------------------------------------------------
   // Lifecycle
-  // ---------------------------------------------------------------------------
-
   Channel(const std::string &label, size_t buffer_size, size_t visible)
-      : m_label(label), m_buffer(buffer_size), m_visible_samples(visible) {}
+      : m_label(label), m_buffer(buffer_size), m_visible_samples(visible) {
 
-  // ---------------------------------------------------------------------------
+    auto fft_proc = std::make_unique<FFTProcessor<unsigned char>>();
+    addProcessor(std::move(fft_proc));
+  }
+
+  // Accessors
+  const std::string &getLabel() const override { return m_label; }
+  const std::vector<Trace> &getTraces() const override { return m_traces; }
+  bool hasNewFrame() const override { return m_has_new_frame; }
+  float getVerticalScale() const override { return m_vertical_scale; }
+  size_t getVisibleSamples() const override { return m_visible_samples; }
+  size_t getUnreadSampleCount() const override {
+    return m_buffer.getUnreadCount();
+  }
+  bool isHardwareChannel() const override { return true; }
+  const std::vector<HardwareT> &getRawFrame() const { return m_raw_frame; }
+
+  std::vector<IProcessorControl *> getProcessors() const override {
+    std::vector<IProcessorControl *> list;
+    for (auto &p : m_processors) {
+      list.push_back(p.get());
+    }
+    return list;
+  }
+
+  // Setters
+  void setVerticalScale(float scale) override { m_vertical_scale = scale; }
+  void setVisibleSamples(size_t n) override { m_visible_samples = n; }
+  void clearNewFrame() override { m_has_new_frame = false; }
+
+  // Configuration
+  void addProcessor(std::unique_ptr<IProcessor<HardwareT>> proc) {
+    m_processors.push_back(std::move(proc));
+  }
+  void clearProcessors() { m_processors.clear(); }
+
   // Pipeline
-  // ---------------------------------------------------------------------------
+  float getNormalizedSample(size_t index_offset) const override {
+    if (index_offset >= m_buffer.getUnreadCount())
+      return 0.0f;
+    return static_cast<float>(m_buffer.peekAhead(index_offset));
+  }
 
   void extractAndProcessFrame(size_t trigger_offset,
                               size_t frame_width) override {
@@ -164,7 +203,10 @@ public:
     m_traces.push_back(std::move(base_trace));
 
     for (auto &proc : m_processors) {
-      proc->process(m_raw_frame, m_traces);
+      // Only process if Processor is enabled
+      if (proc->isEnabled()) {
+        proc->process(m_raw_frame, m_traces);
+      }
     }
 
     m_has_new_frame = true;
@@ -174,40 +216,10 @@ public:
     m_buffer.advanceReadIdx(amount);
   }
 
-  // ---------------------------------------------------------------------------
-  // Getters & Setters
-  // ---------------------------------------------------------------------------
-
-  bool hasNewFrame() const override { return m_has_new_frame; }
-  void clearNewFrame() override { m_has_new_frame = false; }
-
-  void addProcessor(std::unique_ptr<IProcessor<HardwareT>> proc) {
-    m_processors.push_back(std::move(proc));
-  }
-  void clearProcessors() { m_processors.clear(); }
-
-  const std::string &getLabel() const override { return m_label; }
-
-  CircularBuffer<HardwareT> &getBuffer() { return m_buffer; }
-
-  float getNormalizedSample(size_t index_offset) const override {
-    if (index_offset >= m_buffer.getUnreadCount())
-      return 0.0f;
-    return static_cast<float>(m_buffer.peekAhead(index_offset));
-  }
-
-  size_t getUnreadSampleCount() const override {
-    return m_buffer.getUnreadCount();
-  }
-
-  bool isHardwareChannel() const override { return true; }
-
   void pushRawBytes(const uint8_t *data, size_t size) override {
-    // Very simplistic casting. In a real scenario, handle endianness and types.
     if constexpr (std::is_same_v<HardwareT, uint8_t>) {
       m_buffer.pushBlock(data, size);
     } else {
-      // Hardware conversion logic
       for (size_t i = 0; i < size; ++i) {
         m_buffer.pushSample(static_cast<HardwareT>(data[i]));
       }
@@ -216,13 +228,8 @@ public:
 
   void clearBuffer() override { m_buffer.clear(); }
 
-  float getVerticalScale() const override { return m_vertical_scale; }
-  void setVerticalScale(float scale) override { m_vertical_scale = scale; }
-  size_t getVisibleSamples() const override { return m_visible_samples; }
-  void setVisibleSamples(size_t n) override { m_visible_samples = n; }
-
-  const std::vector<Trace> &getTraces() const override { return m_traces; }
-  const std::vector<HardwareT> &getRawFrame() const { return m_raw_frame; }
+  // Hardware
+  CircularBuffer<HardwareT> &getBuffer() { return m_buffer; }
 };
 
 } // namespace Scoped

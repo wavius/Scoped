@@ -13,12 +13,9 @@
 #include <ui.hpp>
 #include <usb.hpp>
 
-// ---------------------------------------------------------------------------
-// SDL / ImGui lifecycle
-// ---------------------------------------------------------------------------
-
 static const char *GLSL_VERSION = "#version 130";
 
+// SDL / ImGui lifecycle
 static SDL_Window *initSDL() {
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
     printf("SDL error: %s\n", SDL_GetError());
@@ -74,10 +71,7 @@ static void shutdownSDL(SDL_Window *window, SDL_GLContext gl_context) {
   SDL_Quit();
 }
 
-// ---------------------------------------------------------------------------
 // Main
-// ---------------------------------------------------------------------------
-
 int main(int, char **) {
   SDL_Window *window = initSDL();
   if (!window)
@@ -130,7 +124,7 @@ int main(int, char **) {
     SDL_GL_SwapWindow(window);
   }
 
-  // UI destroyed here (before GL context teardown) — clean lifetime
+  // UI destroyed here (before GL context teardown)
   shutdownImGui();
   shutdownSDL(window, gl_context);
 

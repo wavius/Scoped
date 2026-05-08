@@ -6,8 +6,8 @@
 
 namespace Scoped {
 
-/// The central hub of the application. Owns all channels, hardware links, and
-/// the global trigger engine.
+// The central hub of the application. Owns all channels, hardware links, and
+// the global trigger engine.
 class Oscilloscope {
 private:
   std::vector<std::shared_ptr<IChannel>> m_channels;
@@ -16,42 +16,28 @@ private:
   size_t m_trigger_source_idx = 0;
 
 public:
-  // ---------------------------------------------------------------------------
   // Lifecycle
-  // ---------------------------------------------------------------------------
-
   Oscilloscope() = default;
 
-  // ---------------------------------------------------------------------------
   // Configuration
-  // ---------------------------------------------------------------------------
-
   void addChannel(std::shared_ptr<IChannel> channel) {
     m_channels.push_back(std::move(channel));
   }
-
   void setTrigger(std::unique_ptr<ITrigger> trigger) {
     m_trigger = std::move(trigger);
   }
-
   void setTriggerSource(size_t channel_index) {
     m_trigger_source_idx = channel_index;
   }
 
-  // ---------------------------------------------------------------------------
-  // Getters
-  // ---------------------------------------------------------------------------
-
+  // Accessors
   USBDevice &getUSB() { return m_usb; }
   ITrigger *getTrigger() { return m_trigger.get(); }
   const std::vector<std::shared_ptr<IChannel>> &getChannels() const {
     return m_channels;
   }
 
-  // ---------------------------------------------------------------------------
-  // Core Update
-  // ---------------------------------------------------------------------------
-
+  // Core
   void update() {
     if (m_channels.empty())
       return;

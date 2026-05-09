@@ -133,6 +133,7 @@ void OscilloscopeUI::renderPlot(Oscilloscope &osc) {
                         ImPlotPoint(0, 0), ImPlotPoint(w, h));
     }
 
+    // Draw frequency traces with ImGui::PlotLine
     for (const auto &ch : osc.getChannels()) {
       for (const auto &trace : ch->getTraces()) {
         if (trace.domain == Domain::Frequency) {
@@ -186,23 +187,17 @@ void OscilloscopeUI::drawTimebaseControl(Oscilloscope &osc) {
 }
 
 void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
-  if (osc.getChannels().empty())
-    return;
-  // TODO: Use getProcessors() to toggle FFT
   for (auto &channel : osc.getChannels()) {
+    ImGui::PushID(channel->getLabel().c_str());
     for (auto &proc : channel->getProcessors()) {
       if (proc->getName() == "FFT") {
-        if (proc->isEnabled()) {
-          if (ImGui::Button("ON")) {
-            proc->setEnabled(false);
-          }
-        } else {
-          if (ImGui::Button("OFF")) {
-            proc->setEnabled(true);
-          }
+        bool enabled = proc->isEnabled();
+        if (ImGui::Checkbox("FFT", &enabled)) {
+          proc->setEnabled(enabled);
         }
       }
     }
+    ImGui::PopID();
   }
 }
 

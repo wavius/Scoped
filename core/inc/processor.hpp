@@ -56,13 +56,14 @@ private:
   bool m_enabled;
   std::string m_name = "FFT";
   std::vector<std::complex<float>> m_fft_output;
+  std::vector<float> m_window_lut;
 
   static constexpr std::complex<float> I_COMPLEX{0.0f, 1.0f};
   static constexpr float PI = 3.141592653589f;
 
   // Plotting constants
-  static constexpr float m_scale = 2.0;
-  static constexpr float m_offset = 0;
+  static constexpr float m_scale = 8.0;
+  static constexpr float m_offset = 0.0;
 
 public:
   // Lifecycle
@@ -79,26 +80,38 @@ public:
   void process(const std::vector<HardwareT> &raw_frame,
                std::vector<Trace> &traces) override {
 
-    m_fft_output.resize(raw_frame.size());
+    size_t frame_size = raw_frame.size();
+    m_fft_output.resize(frame_size);
 
-    calculateFFT(raw_frame, m_fft_output);
+    std::vector<float> centered_frame;
+    centered_frame.resize(frame_size);
+    prepareWindow(frame_size);
+    float mean = calculateMean(raw_frame);
+    for (size_t i = 0; i < frame_size; i++) {
+      centered_frame[i] =
+          (static_cast<float>(raw_frame[i]) - mean) * m_window_lut[i];
+    }
+
+    calculateFFT(centered_frame, m_fft_output);
 
     Trace fft_trace;
     fft_trace.name = this->m_name; // TODO: Add channel to name
     fft_trace.domain = Domain::Frequency;
     fft_trace.scale = m_scale;
     fft_trace.offset = m_offset;
-    fft_trace.data.resize(m_fft_output.size());
+    fft_trace.data.resize(frame_size / 2);
 
-    for (size_t i = 0; i < m_fft_output.size(); i++) {
-      fft_trace.data[i] = std::abs(m_fft_output[i]);
+    // Find magnitude, normalize, and scale + offset for plotting
+    for (size_t i = 0; i < frame_size / 2; i++) {
+      fft_trace.data[i] =
+          (std::abs(m_fft_output[i]) / frame_size) * 2.0f * m_scale + m_offset;
     }
 
     traces.push_back(std::move(fft_trace));
   }
 
   // Logic
-  void calculateFFT(const std::vector<HardwareT> &frame,
+  void calculateFFT(const std::vector<float> &frame,
                     std::vector<std::complex<float>> &fft_frame) {
     size_t n = frame.size();
     if (n == 1) {
@@ -107,8 +120,8 @@ public:
     }
     auto w = std::exp(-I_COMPLEX * (2.0f * PI / static_cast<float>(n)));
 
-    std::vector<HardwareT> even_frame;
-    std::vector<HardwareT> odd_frame;
+    std::vector<float> even_frame;
+    std::vector<float> odd_frame;
     even_frame.resize(n / 2);
     odd_frame.resize(n / 2);
     size_t e_idx = 0;
@@ -138,6 +151,26 @@ public:
       fft_frame[j + (n / 2)] = even_fft_frame[j] - twiddle * odd_fft_frame[j];
 
       twiddle *= w;
+    }
+  }
+
+  float calculateMean(const std::vector<HardwareT> &frame) {
+    double sum = 0;
+    for (auto i : frame) {
+      sum += i;
+    }
+    return static_cast<float>(sum / frame.size());
+  }
+
+  void prepareWindow(size_t size) {
+    if (m_window_lut.size() == size)
+      return;
+
+    m_window_lut.resize(size);
+    for (size_t i = 0; i < size; i++) {
+      m_window_lut[i] =
+          0.5f *
+          (1.0f - std::cos(2.0f * PI * i / (static_cast<float>(size) - 1.0f)));
     }
   }
 };

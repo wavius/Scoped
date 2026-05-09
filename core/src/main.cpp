@@ -82,7 +82,11 @@ int main(int, char **) {
 
   Scoped::Oscilloscope osc;
 
+  // CH1
   auto ch1 = std::make_shared<Scoped::Channel<uint8_t>>("CH1", 16384 * 4, 2048);
+  // FFT processor
+  auto fft_proc = std::make_unique<Scoped::FFTProcessor<unsigned char>>();
+  ch1->addProcessor(std::move(fft_proc));
   osc.addChannel(ch1);
 
   auto trigger = std::make_unique<Scoped::EdgeTrigger>(16384, 128.0f);

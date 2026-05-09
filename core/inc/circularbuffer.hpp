@@ -65,18 +65,23 @@ public:
 
   // Test Signal Generators
   void fillTestSquareWave() {
-    for (size_t i = 0; i < m_capacity; i++) {
+    size_t count = 1024;
+    constexpr size_t frequency = 6;
+    size_t x = std::pow(2, frequency);
+    for (size_t i = 0; i < count; i++) {
+      T val;
       if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
-        m_buffer[i] =
-            ((i % 8) < 4) ? static_cast<T>(1.0) : static_cast<T>(-1.0);
+        val = (i % (x * 2)) < x ? static_cast<T>(1.0) : static_cast<T>(-1.0);
       } else {
-        m_buffer[i] = ((i % 8) < 4) ? static_cast<T>(255) : static_cast<T>(0);
+        val = (i % (x * 2)) < x ? static_cast<T>(255) : static_cast<T>(0);
       }
+      pushSample(val);
+      pushSample(val);
     }
   }
 
   void fillTestSineWave() {
-    constexpr float frequency = 5.23f;
+    constexpr float frequency = 5.00f;
     constexpr size_t chunk_size = 1024;
     constexpr float phase_step = (2.0f * M_PI * frequency) / chunk_size;
 

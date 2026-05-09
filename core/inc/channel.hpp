@@ -125,11 +125,7 @@ private:
 public:
   // Lifecycle
   Channel(const std::string &label, size_t buffer_size, size_t visible)
-      : m_label(label), m_buffer(buffer_size), m_visible_samples(visible) {
-
-    auto fft_proc = std::make_unique<FFTProcessor<unsigned char>>();
-    addProcessor(std::move(fft_proc));
-  }
+      : m_label(label), m_buffer(buffer_size), m_visible_samples(visible) {}
 
   // Accessors
   const std::string &getLabel() const override { return m_label; }

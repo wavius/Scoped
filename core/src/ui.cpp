@@ -6,13 +6,25 @@
 
 namespace Scoped {
 
+namespace Colors {
+const ImVec4 Black          = ImVec4(0, 0, 0, 1);
+const ImVec4 Grid           = ImVec4(0.3f, 0.3f, 0.3f, 0.4f);
+const ImVec4 Trigger        = ImVec4(1, 0, 0, 0.5f);
+const ImVec4 FFTLine        = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
+const ImVec4 TopBarBg       = ImVec4(0.11f, 0.14f, 0.18f, 1.0f);
+const ImVec4 ChannelBlockBg = ImVec4(1.0f, 0.8f, 0.0f, 1.0f);
+const ImVec4 StatusOk       = ImVec4(0, 1, 0, 1);
+const ImVec4 StatusError    = ImVec4(1, 0, 0, 1);
+const ImVec4 BottomBarBg    = ImVec4(0.08f, 0.1f, 0.12f, 1.0f);
+} // namespace Colors
+
 // Colormap
 void setupChannelColormap(ImVec4 color) {
   static bool initialized = false;
   if (initialized)
     return;
 
-  ImVec4 gradient[2] = {ImVec4(0, 0, 0, 1), color};
+  ImVec4 gradient[2] = {Colors::Black, color};
   ImPlot::AddColormap("ChannelMap", gradient, 2);
   initialized = true;
 }
@@ -55,7 +67,7 @@ void OscilloscopeUI::updateDisplay(Oscilloscope &osc) {
 
 // Plot overlays
 void OscilloscopeUI::drawGrid(double w, double h) {
-  const ImVec4 color(0.3f, 0.3f, 0.3f, 0.4f);
+  const ImVec4 color = Colors::Grid;
 
   for (int i = 0; i <= 10; ++i) {
     double x = (w * i) / 10.0;
@@ -99,7 +111,7 @@ void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
     double y[] = {y_level, y_level};
 
     ImPlot::PlotLine("##TriggerLine", x, y, 2,
-                     {ImPlotProp_LineColor, ImVec4(1, 0, 0, 0.5f),
+                     {ImPlotProp_LineColor, Colors::Trigger,
                       ImPlotProp_LineWeight, 2.0f});
   }
 }
@@ -137,11 +149,15 @@ void OscilloscopeUI::renderPlot(Oscilloscope &osc) {
     for (const auto &ch : osc.getChannels()) {
       for (const auto &trace : ch->getTraces()) {
         if (trace.domain == Domain::Frequency) {
-          ImPlot::PlotLine(trace.name.c_str(), trace.data.data(),
-                           trace.data.size(), w / trace.data.size(), 0,
-                           {ImPlotProp_LineColor,
-                            ImVec4(1.0f, 1.0f, 0.0f, 1.0f),
-                            ImPlotProp_LineWeight, 2.0f});
+          auto getter = [](int idx, void *data) {
+            const auto *t = static_cast<const Trace *>(data);
+            return ImPlotPoint(idx, (t->data[idx] * t->scale) + t->offset);
+          };
+
+          ImPlot::PlotLineG(trace.name.c_str(), getter, (void *)&trace,
+                            trace.data.size(),
+                            {ImPlotProp_LineColor, Colors::FFTLine,
+                             ImPlotProp_LineWeight, 2.0f});
         }
       }
     }
@@ -191,9 +207,24 @@ void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
     ImGui::PushID(channel->getLabel().c_str());
     for (auto &proc : channel->getProcessors()) {
       if (proc->getName() == "FFT") {
+        // Enable toggle
         bool enabled = proc->isEnabled();
         if (ImGui::Checkbox("FFT", &enabled)) {
           proc->setEnabled(enabled);
+        }
+        // Scale slider
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(150);
+        float scale = proc->getScale();
+        if (ImGui::SliderFloat("##Scale", &scale, 0.01, 1.00, "%.2f")) {
+          proc->setScale(scale);
+        }
+
+        // Mode toggle
+        ImGui::SameLine();
+        bool mode = proc->getIsModeLinear();
+        if (ImGui::Checkbox("Linear", &mode)) {
+          proc->setIsModeLinear(mode);
         }
       }
     }
@@ -202,7 +233,7 @@ void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
 }
 
 void OscilloscopeUI::renderTopBar(Oscilloscope &osc) {
-  ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.11f, 0.14f, 0.18f, 1.0f));
+  ImGui::PushStyleColor(ImGuiCol_ChildBg, Colors::TopBarBg);
   ImGui::BeginChild("StatusBar", ImVec2(0, 45), false);
 
   ImGui::SetCursorPos(ImVec2(10, 12));
@@ -239,7 +270,7 @@ void OscilloscopeUI::renderTopBar(Oscilloscope &osc) {
 
   drawModeCombo(osc);
 
-  ImGui::SameLine(ImGui::GetWindowWidth() - 400);
+  ImGui::SameLine(ImGui::GetWindowWidth() - 700);
   ImGui::TextDisabled("FFT:");
   ImGui::SameLine();
   drawFFTControl(osc);
@@ -255,8 +286,8 @@ void OscilloscopeUI::renderTopBar(Oscilloscope &osc) {
 
 // Bottom Bar Controls
 void OscilloscopeUI::drawChannelBlock(IChannel &channel) {
-  ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
-  ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1));
+  ImGui::PushStyleColor(ImGuiCol_ChildBg, Colors::ChannelBlockBg);
+  ImGui::PushStyleColor(ImGuiCol_Text, Colors::Black);
 
   ImGui::BeginChild(channel.getLabel().c_str(), ImVec2(180, 36), true);
   ImGui::Text("%s", channel.getLabel().c_str());
@@ -279,14 +310,14 @@ void OscilloscopeUI::drawHardwareStatus(Oscilloscope &osc) {
   ImGui::SetCursorPosY(12);
 
   if (usb.isConnected()) {
-    ImGui::TextColored(ImVec4(0, 1, 0, 1), "CONNECTED");
+    ImGui::TextColored(Colors::StatusOk, "CONNECTED");
     ImGui::SameLine();
     if (ImGui::Button("Disconnect")) {
       usb.stopStreaming();
       usb.disconnect();
     }
   } else {
-    ImGui::TextColored(ImVec4(1, 0, 0, 1), "OFFLINE");
+    ImGui::TextColored(Colors::StatusError, "OFFLINE");
     ImGui::SameLine();
     if (ImGui::Button("Connect")) {
       if (usb.connect()) {
@@ -308,7 +339,7 @@ void OscilloscopeUI::drawHardwareStatus(Oscilloscope &osc) {
 }
 
 void OscilloscopeUI::renderBottomBar(Oscilloscope &osc) {
-  ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.08f, 0.1f, 0.12f, 1.0f));
+  ImGui::PushStyleColor(ImGuiCol_ChildBg, Colors::BottomBarBg);
   ImGui::BeginChild("ChannelBar", ImVec2(0, 50), false);
 
   ImGui::SetCursorPos(ImVec2(10, 7));

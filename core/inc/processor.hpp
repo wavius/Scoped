@@ -18,9 +18,13 @@ public:
   // Accessors
   virtual std::string getName() const = 0;
   virtual bool isEnabled() const = 0;
+  virtual float getScale() const = 0;
+  virtual bool getIsModeLinear() const = 0;
 
   // Setters
   virtual void setEnabled(bool enabled) = 0;
+  virtual void setScale(float scale) = 0;
+  virtual void setIsModeLinear(bool mode) = 0;
 };
 
 // Base for processors operating across multiple channels.
@@ -61,20 +65,28 @@ private:
   static constexpr std::complex<float> I_COMPLEX{0.0f, 1.0f};
   static constexpr float PI = 3.141592653589f;
 
-  // Plotting constants
-  static constexpr float m_scale = 8.0;
-  static constexpr float m_offset = 0.0;
+  // Plotting vars
+  bool m_isLinearMode = false;
+  float m_scale = 0.9f;
+  float m_max_scale = 1.0f;
+  size_t m_max_height;
+  static constexpr float m_offset = 0.0f;
+  static constexpr float EPSILON = 1e-8f;
 
 public:
   // Lifecycle
-  FFTProcessor() = default;
+  FFTProcessor(size_t display_height) { m_max_height = display_height; }
 
   // Accessors
   std::string getName() const override { return m_name; }
   bool isEnabled() const override { return m_enabled; }
+  float getScale() const override { return m_scale; }
+  bool getIsModeLinear() const override { return m_isLinearMode; }
 
   // Setters
   void setEnabled(bool enabled) override { m_enabled = enabled; }
+  void setScale(float scale) override { m_scale = scale; }
+  void setIsModeLinear(bool mode) override { m_isLinearMode = mode; }
 
   // Pipeline
   void process(const std::vector<HardwareT> &raw_frame,
@@ -92,27 +104,40 @@ public:
           (static_cast<float>(raw_frame[i]) - mean) * m_window_lut[i];
     }
 
-    calculateFFT(centered_frame, m_fft_output);
+    calculateFFTRecursive(centered_frame, m_fft_output);
 
     Trace fft_trace;
     fft_trace.name = this->m_name; // TODO: Add channel to name
     fft_trace.domain = Domain::Frequency;
-    fft_trace.scale = m_scale;
-    fft_trace.offset = m_offset;
+
     fft_trace.data.resize(frame_size / 2);
 
-    // Find magnitude, normalize, and scale + offset for plotting
+    // Find magnitude and normalize
+    float max = 0;
     for (size_t i = 0; i < frame_size / 2; i++) {
-      fft_trace.data[i] =
-          (std::abs(m_fft_output[i]) / frame_size) * 2.0f * m_scale + m_offset;
+      float mag = std::abs(m_fft_output[i]) / frame_size * 2.0f;
+      if (m_isLinearMode) {
+        fft_trace.data[i] = mag;
+      } else {
+        fft_trace.data[i] = 20.0f * std::log10(mag + EPSILON);
+      }
+      if (fft_trace.data[i] > max) {
+        max = fft_trace.data[i];
+      }
     }
+
+    // Scale + offset
+    m_max_scale = static_cast<float>(m_max_height) / max;
+    fft_trace.scale = m_max_scale * m_scale;
+    fft_trace.offset = m_offset;
 
     traces.push_back(std::move(fft_trace));
   }
 
   // Logic
-  void calculateFFT(const std::vector<float> &frame,
-                    std::vector<std::complex<float>> &fft_frame) {
+  [[deprecated("Recursive implementation is slow, use iterative FFT.")]]
+  void calculateFFTRecursive(const std::vector<float> &frame,
+                             std::vector<std::complex<float>> &fft_frame) {
     size_t n = frame.size();
     if (n == 1) {
       fft_frame[0] = static_cast<std::complex<float>>(frame[0]);
@@ -141,8 +166,8 @@ public:
     even_fft_frame.resize(n / 2);
     odd_fft_frame.resize(n / 2);
 
-    calculateFFT(even_frame, even_fft_frame);
-    calculateFFT(odd_frame, odd_fft_frame);
+    calculateFFTRecursive(even_frame, even_fft_frame);
+    calculateFFTRecursive(odd_frame, odd_fft_frame);
 
     std::complex<float> twiddle(1.0f, 0.0f);
 
@@ -173,6 +198,7 @@ public:
           (1.0f - std::cos(2.0f * PI * i / (static_cast<float>(size) - 1.0f)));
     }
   }
-};
+
+}; // namespace Scoped
 
 } // namespace Scoped

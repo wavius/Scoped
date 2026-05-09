@@ -9,9 +9,7 @@
 ## Signal Processing
 
 - [ ] Refactor `calculateFFT` to use an **Iterative Cooley-Tukey** algorithm (avoid recursive allocations).
-- [ ] Add **Logarithmic Scaling (dB)** for the FFT magnitude display.
 - [ ] Add support for multiple FFT traces (one per channel).
-- [ ] Add ability to switch between different FFT algorithms (e.g. Recursive vs Iterative).
 
 ## Hardware
 

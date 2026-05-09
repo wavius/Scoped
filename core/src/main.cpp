@@ -80,22 +80,23 @@ int main(int, char **) {
   SDL_GLContext gl_context = initOpenGL(window);
   initImGui(window, gl_context);
 
+  // UI created after OpenGL is ready, destroyed before shutdown
+  Scoped::OscilloscopeUI ui(1280, 720);
+  Scoped::setupChannelColormap(ImVec4(0, 1, 1, 1));
+
   Scoped::Oscilloscope osc;
 
   // CH1
   auto ch1 = std::make_shared<Scoped::Channel<uint8_t>>("CH1", 16384 * 4, 2048);
   // FFT processor
-  auto fft_proc = std::make_unique<Scoped::FFTProcessor<unsigned char>>();
+  auto fft_proc = std::make_unique<Scoped::FFTProcessor<unsigned char>>(
+      ui.getDisplayHeight());
   ch1->addProcessor(std::move(fft_proc));
   osc.addChannel(ch1);
 
   auto trigger = std::make_unique<Scoped::EdgeTrigger>(16384, 128.0f);
   osc.setTrigger(std::move(trigger));
   osc.setTriggerSource(0);
-
-  // UI created after OpenGL is ready, destroyed before shutdown
-  Scoped::OscilloscopeUI ui(1280, 720);
-  Scoped::setupChannelColormap(ImVec4(0, 1, 1, 1));
 
   ImGuiIO &io = ImGui::GetIO();
 

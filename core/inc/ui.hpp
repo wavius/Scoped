@@ -40,6 +40,9 @@ public:
   // Lifecycle
   OscilloscopeUI(size_t display_width, size_t display_height);
 
+  // Accessors
+  size_t getDisplayHeight() { return m_display_height; }
+
   // Rendering
   void render(Oscilloscope &osc);
 };

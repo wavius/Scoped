@@ -21,6 +21,8 @@ struct Trace {
       float centered = sample - 128.0f;
       float scaled = centered * scale + offset + 128.0f;
       return std::clamp(scaled / 256.0f, 0.0f, 1.0f);
+    } else if (domain == Domain::Frequency) {
+      return sample * scale + offset;
     }
     return sample;
   }

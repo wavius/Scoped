@@ -7,16 +7,25 @@
 namespace Scoped {
 
 namespace Colors {
-const ImVec4 Black          = ImVec4(0, 0, 0, 1);
-const ImVec4 Grid           = ImVec4(0.3f, 0.3f, 0.3f, 0.4f);
-const ImVec4 Trigger        = ImVec4(1, 0, 0, 0.5f);
-const ImVec4 FFTLine        = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
-const ImVec4 TopBarBg       = ImVec4(0.11f, 0.14f, 0.18f, 1.0f);
+const ImVec4 Black = ImVec4(0, 0, 0, 1);
+const ImVec4 Grid = ImVec4(0.3f, 0.3f, 0.3f, 0.4f);
+const ImVec4 Trigger = ImVec4(1, 0, 0, 0.5f);
+const ImVec4 FFTLine = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
+const ImVec4 TopBarBg = ImVec4(0.11f, 0.14f, 0.18f, 1.0f);
 const ImVec4 ChannelBlockBg = ImVec4(1.0f, 0.8f, 0.0f, 1.0f);
-const ImVec4 StatusOk       = ImVec4(0, 1, 0, 1);
-const ImVec4 StatusError    = ImVec4(1, 0, 0, 1);
-const ImVec4 BottomBarBg    = ImVec4(0.08f, 0.1f, 0.12f, 1.0f);
+const ImVec4 StatusOk = ImVec4(0, 1, 0, 1);
+const ImVec4 StatusError = ImVec4(1, 0, 0, 1);
+const ImVec4 BottomBarBg = ImVec4(0.08f, 0.1f, 0.12f, 1.0f);
 } // namespace Colors
+
+// Draws a single two-point line segment on the current ImPlot canvas.
+static void plotLineSegment(const char *label, double x0, double y0, double x1,
+                            double y1, ImVec4 color, float weight) {
+  double xs[] = {x0, x1};
+  double ys[] = {y0, y1};
+  ImPlot::PlotLine(label, xs, ys, 2,
+                   {ImPlotProp_LineColor, color, ImPlotProp_LineWeight, weight});
+}
 
 // Colormap
 void setupChannelColormap(ImVec4 color) {
@@ -33,8 +42,8 @@ void setupChannelColormap(ImVec4 color) {
 OscilloscopeUI::OscilloscopeUI(size_t display_width, size_t display_height)
     : m_display_width(display_width), m_display_height(display_height) {}
 
-// Display pipeline
-void OscilloscopeUI::updateDisplay(Oscilloscope &osc) {
+// Data pipeline
+void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
   const auto &channels = osc.getChannels();
 
   while (m_displays.size() < channels.size()) {
@@ -52,13 +61,13 @@ void OscilloscopeUI::updateDisplay(Oscilloscope &osc) {
       if (trace.domain == Domain::Time) {
         size_t visible =
             std::min(channel.getVisibleSamples(), trace.data.size());
-        m_normalized.resize(visible);
+        m_normalized_time.resize(visible);
         for (size_t j = 0; j < visible; ++j) {
-          m_normalized[j] = trace.normalizeToIntensity(trace.data[j]);
+          m_normalized_time[j] = trace.normalizeToIntensity(trace.data[j]);
         }
 
         m_displays[i]->clear();
-        m_displays[i]->processFrame(m_normalized.data(), visible);
+        m_displays[i]->processFrame(m_normalized_time.data(), visible);
       }
     }
     channel.clearNewFrame();
@@ -66,25 +75,17 @@ void OscilloscopeUI::updateDisplay(Oscilloscope &osc) {
 }
 
 // Plot overlays
-void OscilloscopeUI::drawGrid(double w, double h) {
-  const ImVec4 color = Colors::Grid;
-
+void OscilloscopeUI::drawGridLines(double w, double h) {
   for (int i = 0; i <= 10; ++i) {
     double x = (w * i) / 10.0;
-    double vx[] = {x, x};
-    double vy[] = {0, h};
     float wt = (i == 5) ? 3.0f : 1.0f;
-    ImPlot::PlotLine("##vgrid", vx, vy, 2,
-                     {ImPlotProp_LineColor, color, ImPlotProp_LineWeight, wt});
+    plotLineSegment("##vgrid", x, 0, x, h, Colors::Grid, wt);
   }
 
   for (int i = 0; i <= 8; ++i) {
     double y = (h * i) / 8.0;
-    double hx[] = {0, w};
-    double hy[] = {y, y};
     float wt = (i == 4) ? 3.0f : 1.0f;
-    ImPlot::PlotLine("##hgrid", hx, hy, 2,
-                     {ImPlotProp_LineColor, color, ImPlotProp_LineWeight, wt});
+    plotLineSegment("##hgrid", 0, y, w, y, Colors::Grid, wt);
   }
 }
 
@@ -106,18 +107,34 @@ void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
   for (float level : levels) {
     float y_normalized = trace.normalizeToIntensity(level);
     double y_level = y_normalized * m_display_height;
-
-    double x[] = {0.0, static_cast<double>(m_display_width)};
-    double y[] = {y_level, y_level};
-
-    ImPlot::PlotLine("##TriggerLine", x, y, 2,
-                     {ImPlotProp_LineColor, Colors::Trigger,
-                      ImPlotProp_LineWeight, 2.0f});
+    plotLineSegment("##TriggerLine", 0.0, y_level,
+                    static_cast<double>(m_display_width), y_level,
+                    Colors::Trigger, 2.0f);
   }
 }
 
-// Plot Rendering
-void OscilloscopeUI::renderPlot(Oscilloscope &osc) {
+void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
+  for (const auto &channel : osc.getChannels()) {
+    for (const auto &trace : channel->getTraces()) {
+      if (trace.domain == Domain::Frequency) {
+        size_t visible =
+            std::min(channel->getVisibleSamples(), trace.data.size());
+        m_normalized_freq.resize(visible);
+
+        for (size_t i = 0; i < visible; i++) {
+          m_normalized_freq[i] = trace.normalizeToIntensity(trace.data[i]);
+        }
+        ImPlot::PlotLine(trace.name.c_str(), m_normalized_freq.data(),
+                         m_normalized_freq.size(), 1.0, 0.0,
+                         {ImPlotProp_LineColor, Colors::FFTLine,
+                          ImPlotProp_LineWeight, 2.0f});
+      }
+    }
+  }
+}
+
+// Plot canvas
+void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
   const double w = static_cast<double>(m_display_width);
   const double h = static_cast<double>(m_display_height);
 
@@ -145,26 +162,9 @@ void OscilloscopeUI::renderPlot(Oscilloscope &osc) {
                         ImPlotPoint(0, 0), ImPlotPoint(w, h));
     }
 
-    // Draw frequency traces with ImGui::PlotLine
-    for (const auto &ch : osc.getChannels()) {
-      for (const auto &trace : ch->getTraces()) {
-        if (trace.domain == Domain::Frequency) {
-          auto getter = [](int idx, void *data) {
-            const auto *t = static_cast<const Trace *>(data);
-            return ImPlotPoint(idx, (t->data[idx] * t->scale) + t->offset);
-          };
+    drawFrequencyTraces(osc);
+    drawGridLines(w, h);
 
-          ImPlot::PlotLineG(trace.name.c_str(), getter, (void *)&trace,
-                            trace.data.size(),
-                            {ImPlotProp_LineColor, Colors::FFTLine,
-                             ImPlotProp_LineWeight, 2.0f});
-        }
-      }
-    }
-
-    drawGrid(w, h);
-
-    // Trigger line
     if (m_show_trigger_line) {
       drawTriggerLine(osc);
     }
@@ -175,7 +175,7 @@ void OscilloscopeUI::renderPlot(Oscilloscope &osc) {
   ImPlot::PopStyleVar(2);
 }
 
-// Top Bar Controls
+// Top bar controls
 void OscilloscopeUI::drawModeCombo(Oscilloscope &osc) {
   if (!osc.getTrigger())
     return;
@@ -232,7 +232,7 @@ void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
   }
 }
 
-void OscilloscopeUI::renderTopBar(Oscilloscope &osc) {
+void OscilloscopeUI::drawTopBar(Oscilloscope &osc) {
   ImGui::PushStyleColor(ImGuiCol_ChildBg, Colors::TopBarBg);
   ImGui::BeginChild("StatusBar", ImVec2(0, 45), false);
 
@@ -284,7 +284,7 @@ void OscilloscopeUI::renderTopBar(Oscilloscope &osc) {
   ImGui::PopStyleColor();
 }
 
-// Bottom Bar Controls
+// Bottom bar controls
 void OscilloscopeUI::drawChannelBlock(IChannel &channel) {
   ImGui::PushStyleColor(ImGuiCol_ChildBg, Colors::ChannelBlockBg);
   ImGui::PushStyleColor(ImGuiCol_Text, Colors::Black);
@@ -338,7 +338,7 @@ void OscilloscopeUI::drawHardwareStatus(Oscilloscope &osc) {
   }
 }
 
-void OscilloscopeUI::renderBottomBar(Oscilloscope &osc) {
+void OscilloscopeUI::drawBottomBar(Oscilloscope &osc) {
   ImGui::PushStyleColor(ImGuiCol_ChildBg, Colors::BottomBarBg);
   ImGui::BeginChild("ChannelBar", ImVec2(0, 50), false);
 
@@ -353,9 +353,9 @@ void OscilloscopeUI::renderBottomBar(Oscilloscope &osc) {
   ImGui::PopStyleColor();
 }
 
-// Entry Point
+// Entry point
 void OscilloscopeUI::render(Oscilloscope &osc) {
-  updateDisplay(osc);
+  processNewFrames(osc);
 
   const ImGuiViewport *vp = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(vp->WorkPos);
@@ -375,14 +375,14 @@ void OscilloscopeUI::render(Oscilloscope &osc) {
   ImGui::Begin("OscilloscopeMain", nullptr, kFlags);
   ImGui::PopStyleVar(3);
 
-  renderTopBar(osc);
+  drawTopBar(osc);
 
   float plot_height = ImGui::GetContentRegionAvail().y - 50;
   ImGui::BeginChild("PlotContainer", ImVec2(0, plot_height), false);
-  renderPlot(osc);
+  drawPlotArea(osc);
   ImGui::EndChild();
 
-  renderBottomBar(osc);
+  drawBottomBar(osc);
 
   ImGui::End();
 }

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <complex>
 #include <cstdint>
+#include <limits>
 #include <vector>
 
 namespace Scoped {
@@ -66,9 +67,8 @@ private:
   static constexpr float PI = 3.141592653589f;
 
   // Plotting vars
-  bool m_isLinearMode = false;
+  bool m_isLinearMode = false; // Linear = true, dB = false
   float m_scale = 0.9f;
-  float m_max_scale = 1.0f;
   size_t m_max_height;
   static constexpr float m_offset = 0.0f;
   static constexpr float EPSILON = 1e-8f;
@@ -113,7 +113,8 @@ public:
     fft_trace.data.resize(frame_size / 2);
 
     // Find magnitude and normalize
-    float max = 0;
+    float max = std::numeric_limits<float>::lowest();
+    float min = std::numeric_limits<float>::max();
     for (size_t i = 0; i < frame_size / 2; i++) {
       float mag = std::abs(m_fft_output[i]) / frame_size * 2.0f;
       if (m_isLinearMode) {
@@ -121,15 +122,15 @@ public:
       } else {
         fft_trace.data[i] = 20.0f * std::log10(mag + EPSILON);
       }
-      if (fft_trace.data[i] > max) {
-        max = fft_trace.data[i];
-      }
+      max = fft_trace.data[i] > max ? fft_trace.data[i] : max;
+      min = fft_trace.data[i] < min ? fft_trace.data[i] : min;
     }
 
     // Scale + offset
-    m_max_scale = static_cast<float>(m_max_height) / max;
-    fft_trace.scale = m_max_scale * m_scale;
-    fft_trace.offset = m_offset;
+    float range =
+        (max - min) > 0.001f ? max - min : 1.0f; // Prevent division by 0
+    fft_trace.scale = (static_cast<float>(m_max_height) / range) * m_scale;
+    fft_trace.offset = -min * fft_trace.scale;
 
     traces.push_back(std::move(fft_trace));
   }
@@ -198,7 +199,6 @@ public:
           (1.0f - std::cos(2.0f * PI * i / (static_cast<float>(size) - 1.0f)));
     }
   }
-
-}; // namespace Scoped
+};
 
 } // namespace Scoped

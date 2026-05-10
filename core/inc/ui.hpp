@@ -18,23 +18,29 @@ private:
   std::vector<std::unique_ptr<IntensityMap>> m_displays;
   size_t m_display_width;
   size_t m_display_height;
-  std::vector<float> m_normalized;
+  std::vector<float> m_normalized_time;
+  std::vector<float> m_normalized_freq;
   bool m_show_trigger_line = false;
 
-  void updateDisplay(Oscilloscope &osc);
+  // Data pipeline — runs once per new frame
+  void processNewFrames(Oscilloscope &osc);
 
-  void drawGrid(double w, double h);
+  // Plot canvas helpers
+  void drawGridLines(double w, double h);
   void drawTriggerLine(Oscilloscope &osc);
-  void renderPlot(Oscilloscope &osc);
+  void drawFrequencyTraces(Oscilloscope &osc);
+  void drawPlotArea(Oscilloscope &osc);
 
+  // Top bar controls
   void drawModeCombo(Oscilloscope &osc);
   void drawTimebaseControl(Oscilloscope &osc);
   void drawFFTControl(Oscilloscope &osc);
-  void renderTopBar(Oscilloscope &osc);
+  void drawTopBar(Oscilloscope &osc);
 
+  // Bottom bar controls
   void drawChannelBlock(IChannel &channel);
   void drawHardwareStatus(Oscilloscope &osc);
-  void renderBottomBar(Oscilloscope &osc);
+  void drawBottomBar(Oscilloscope &osc);
 
 public:
   // Lifecycle

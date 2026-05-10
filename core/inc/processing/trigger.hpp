@@ -2,12 +2,12 @@
 
 #include <algorithm>
 #include <chrono>
-#include <circularbuffer.hpp>
+#include <common/circularbuffer.hpp>
 #include <cstdint>
 #include <type_traits>
 #include <vector>
 
-#include "channel.hpp"
+#include <common/channel.hpp>
 #include <string>
 
 namespace Scoped {

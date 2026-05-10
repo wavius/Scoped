@@ -1,6 +1,6 @@
 #pragma once
 
-#include "channel.hpp"
+#include <common/channel.hpp>
 #include <atomic>
 #include <libusb-1.0/libusb.h>
 #include <thread>

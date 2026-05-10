@@ -1,7 +1,7 @@
 #include <chrono>
 #include <iostream>
 #include <thread>
-#include <usb.hpp>
+#include <hardware/usb.hpp>
 
 namespace Scoped {
 

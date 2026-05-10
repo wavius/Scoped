@@ -1,8 +1,8 @@
 #pragma once
 
-#include "channel.hpp"
-#include "trigger.hpp"
-#include "usb.hpp"
+#include <common/channel.hpp>
+#include <processing/trigger.hpp>
+#include <hardware/usb.hpp>
 
 namespace Scoped {
 

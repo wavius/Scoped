@@ -1,10 +1,10 @@
 #pragma once
 
-#include <channel.hpp>
+#include <common/channel.hpp>
 #include <implot.h> // IWYU pragma: keep
-#include <intensitymap.hpp>
+#include <ui/intensitymap.hpp>
 #include <memory>
-#include <oscilloscope.hpp>
+#include <common/oscilloscope.hpp>
 #include <vector>
 
 namespace Scoped {

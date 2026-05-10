@@ -2,7 +2,7 @@
 #include "implot.h"
 #include <algorithm>
 #include <cmath>
-#include <ui.hpp>
+#include <ui/ui.hpp>
 
 namespace Scoped {
 

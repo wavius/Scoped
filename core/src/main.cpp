@@ -5,13 +5,14 @@
 #include <SDL_opengl.h>
 #include <cstdio>
 
-#include <channel.hpp>
+#include <common/channel.hpp>
 #include <implot.h>
 #include <memory>
-#include <oscilloscope.hpp>
-#include <trigger.hpp>
-#include <ui.hpp>
-#include <usb.hpp>
+#include <common/oscilloscope.hpp>
+#include <processing/trigger.hpp>
+#include <processing/fft_processor.hpp>
+#include <ui/ui.hpp>
+#include <hardware/usb.hpp>
 
 static const char *GLSL_VERSION = "#version 130";
 
@@ -115,7 +116,7 @@ int main(int, char **) {
 
     if (!osc.getUSB().isConnected()) {
       for (int i = 0; i < 16; ++i)
-        ch1->getBuffer().fillTestSineWave();
+        ch1->getBuffer().fillTestSquareWave();
     }
 
     osc.update();

@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-#include <intensitymap.hpp>
+#include <ui/intensitymap.hpp>
 
 namespace Scoped {
 

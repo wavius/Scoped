@@ -1,15 +1,15 @@
 #pragma once
 
 #include <algorithm>
-#include <circularbuffer.hpp>
+#include <common/circularbuffer.hpp>
 #include <cstdint>
 #include <memory>
-#include <processor.hpp>
+#include <processing/iprocessor.hpp>
 #include <string>
 #include <type_traits>
 #include <vector>
 
-#include "trace.hpp"
+#include <common/trace.hpp>
 
 namespace Scoped {
 

@@ -38,7 +38,7 @@ pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
 set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/core/src/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/core/src/ui/intensitymap.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/core/src/ui/ui.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/src/ui/ui_v2.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/core/src/hardware/usb.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/imgui.cpp

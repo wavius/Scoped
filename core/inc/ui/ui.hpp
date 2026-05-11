@@ -12,6 +12,7 @@ namespace Scoped {
 // Registers a black-to-color gradient colormap for the display.
 void setupChannelColormap(ImVec4 color);
 
+
 // Owns the display state and renders the complete oscilloscope UI.
 class OscilloscopeUI {
 private:
@@ -41,7 +42,17 @@ private:
   void drawChannelBlock(IChannel &channel);
   void drawHardwareStatus(Oscilloscope &osc);
   void drawBottomBar(Oscilloscope &osc);
-
+  
+  // Dockable v2 layout
+  void drawDockSpace();
+  void drawMainMenu();
+  void drawScopeWindow(Oscilloscope &osc);
+  void drawTriggerWindow(Oscilloscope &osc);
+  void drawFFTWindow(Oscilloscope &osc);
+  void drawChannelWindow(Oscilloscope &osc);
+  void drawHardwareWindow(Oscilloscope &osc);
+  void drawDebugWindow(Oscilloscope &osc);
+  
 public:
   // Lifecycle
   OscilloscopeUI(size_t display_width, size_t display_height);

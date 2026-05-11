@@ -15,3 +15,5 @@ compile_commands.json
 # Internal docs
 NOTES.md
 .markdownlint.json
+Notes/
+.obsidian/

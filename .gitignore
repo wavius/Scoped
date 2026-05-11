@@ -4,6 +4,7 @@ build/
 # external repos
 imgui/
 implot
+imgui.ini
 
 # Generated compiler database
 compile_commands.json

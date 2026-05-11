@@ -22,6 +22,7 @@ private:
   std::vector<float> m_normalized_time;
   std::vector<float> m_normalized_freq;
   bool m_show_trigger_line = false;
+  bool m_reset_dock_layout = true;
 
   // Data pipeline — runs once per new frame
   void processNewFrames(Oscilloscope &osc);
@@ -45,6 +46,7 @@ private:
   
   // Dockable v2 layout
   void drawDockSpace();
+  void buildDefaultDockLayout(ImGuiID dockspace_id, const ImVec2 &dockspace_size);
   void drawMainMenu();
   void drawScopeWindow(Oscilloscope &osc);
   void drawTriggerWindow(Oscilloscope &osc);
@@ -52,7 +54,7 @@ private:
   void drawChannelWindow(Oscilloscope &osc);
   void drawHardwareWindow(Oscilloscope &osc);
   void drawDebugWindow(Oscilloscope &osc);
-  
+
 public:
   // Lifecycle
   OscilloscopeUI(size_t display_width, size_t display_height);

@@ -1,4 +1,5 @@
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "implot.h"
 
 #include <algorithm>
@@ -12,8 +13,7 @@
 
 namespace Scoped {
 
-// This namespace is just a container for colour constants.
-// Instead of writing ImVec4(...) all over the file, we give colours names.
+// colors 
 namespace Colors {
 const ImVec4 Black = ImVec4(0, 0, 0, 1);
 const ImVec4 Grid = ImVec4(0.3f, 0.3f, 0.3f, 0.4f);
@@ -23,8 +23,7 @@ const ImVec4 StatusOk = ImVec4(0, 1, 0, 1);
 const ImVec4 StatusError = ImVec4(1, 0, 0, 1);
 } // namespace Colors
 
-// This helper draws one simple line on the ImPlot canvas.
-// static means this function is only visible inside this file.
+
 static void plotLineSegment(const char *label, double x0, double y0, double x1,
                             double y1, ImVec4 color, float weight) {
   double xs[] = {x0, x1};
@@ -35,8 +34,8 @@ static void plotLineSegment(const char *label, double x0, double y0, double x1,
                     weight});
 }
 
-// This function is called from main.cpp.
-// It creates a colour gradient for the oscilloscope trace image.
+
+// Colour gradient for the oscilloscope trace image
 void setupChannelColormap(ImVec4 color) {
   static bool initialized = false;
 
@@ -50,15 +49,11 @@ void setupChannelColormap(ImVec4 color) {
   initialized = true;
 }
 
-// Constructor.
-// This runs when main.cpp creates this object:
-//
-// Scoped::OscilloscopeUI ui(1280, 720);
+
 OscilloscopeUI::OscilloscopeUI(size_t display_width, size_t display_height)
     : m_display_width(display_width), m_display_height(display_height) {}
 
-// This function updates the display texture when a channel has new data.
-// For now, do not rewrite this. It is part of the actual scope drawing engine.
+
 void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
   const auto &channels = osc.getChannels();
 
@@ -169,8 +164,7 @@ void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
   }
 }
 
-// This draws the actual oscilloscope image.
-// We are keeping this mostly the same because it is the complex display part.
+
 void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
   const double w = static_cast<double>(m_display_width);
   const double h = static_cast<double>(m_display_height);
@@ -250,8 +244,6 @@ void OscilloscopeUI::drawTimebaseControl(Oscilloscope &osc) {
 }
 
 // FFT controls.
-// This looks through each channel, then each processor on that channel.
-// When it finds the processor named FFT, it draws controls for it.
 void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
   bool found_fft = false;
 
@@ -298,6 +290,40 @@ void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
   }
 }
 
+void OscilloscopeUI::buildDefaultDockLayout(ImGuiID dockspace_id,
+                                            const ImVec2 &dockspace_size) {
+  ImGui::DockBuilderRemoveNode(dockspace_id);
+
+  ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+  ImGui::DockBuilderSetNodeSize(dockspace_id, dockspace_size);
+
+  ImGuiID main_id = dockspace_id;
+
+  ImGuiID left_id =
+      ImGui::DockBuilderSplitNode(main_id, ImGuiDir_Left, 0.22f, nullptr,
+                                  &main_id);
+
+  ImGuiID right_id =
+      ImGui::DockBuilderSplitNode(main_id, ImGuiDir_Right, 0.22f, nullptr,
+                                  &main_id);
+
+  ImGuiID bottom_id =
+      ImGui::DockBuilderSplitNode(main_id, ImGuiDir_Down, 0.24f, nullptr,
+                                  &main_id);
+
+  ImGui::DockBuilderDockWindow("Scope View", main_id);
+
+  ImGui::DockBuilderDockWindow("Trigger", left_id);
+  ImGui::DockBuilderDockWindow("Channels", left_id);
+
+  ImGui::DockBuilderDockWindow("FFT", right_id);
+  ImGui::DockBuilderDockWindow("Hardware", right_id);
+
+  ImGui::DockBuilderDockWindow("Debug", bottom_id);
+
+  ImGui::DockBuilderFinish(dockspace_id);
+}
+
 // This creates the invisible docking area.
 // The mini windows can be dragged into this space.
 void OscilloscopeUI::drawDockSpace() {
@@ -326,13 +352,20 @@ void OscilloscopeUI::drawDockSpace() {
   ImGui::PopStyleVar(3);
 
   ImGuiID dockspace_id = ImGui::GetID("ScopedDockSpace");
-  ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
+
+  ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
+
+  if (m_reset_dock_layout) {
+    buildDefaultDockLayout(dockspace_id, viewport->WorkSize);
+    m_reset_dock_layout = false;
+  }
+
+  ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 
   ImGui::End();
 }
 
 // Top menu bar.
-// This is not required, but it makes the app feel more like a real tool.
 void OscilloscopeUI::drawMainMenu() {
   if (ImGui::BeginMainMenuBar()) {
     ImGui::Text("Scoped");
@@ -506,7 +539,6 @@ void OscilloscopeUI::drawHardwareWindow(Oscilloscope &osc) {
 }
 
 // Debug window.
-// This is handy while learning because it shows what the program thinks exists.
 void OscilloscopeUI::drawDebugWindow(Oscilloscope &osc) {
   ImGui::Begin("Debug");
 
@@ -529,9 +561,6 @@ void OscilloscopeUI::drawDebugWindow(Oscilloscope &osc) {
   ImGui::End();
 }
 
-// This is the main UI entry point.
-// main.cpp calls this every frame:
-//
 // ui.render(osc);
 void OscilloscopeUI::render(Oscilloscope &osc) {
   processNewFrames(osc);

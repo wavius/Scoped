@@ -42,7 +42,9 @@ void IntensityMap::updateTexture() {
 
   for (size_t i = 0; i < pixel_count; ++i) {
     uint8_t brightness = static_cast<uint8_t>(std::min(m_grid[i] * 255, 255u));
-    m_texture_data[i] = {0, brightness, brightness, 255};
+    m_texture_data[i] = {static_cast<uint8_t>(brightness * m_r),
+                         static_cast<uint8_t>(brightness * m_g),
+                         static_cast<uint8_t>(brightness * m_b), 255};
   }
 
   glBindTexture(GL_TEXTURE_2D, m_texture_id);

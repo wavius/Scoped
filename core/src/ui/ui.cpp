@@ -37,8 +37,14 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
   const auto &channels = osc.getChannels();
 
   while (m_displays.size() < channels.size()) {
-    m_displays.push_back(
-        std::make_unique<IntensityMap>(m_display_width, m_display_height));
+    size_t index = m_displays.size();
+    auto display = std::make_unique<IntensityMap>(m_display_width, m_display_height);
+    
+    // Assign color based on channel index
+    ImVec4 color = (index == 0) ? Colors::CH1 : (index == 1) ? Colors::CH2 : ImVec4(1, 1, 1, 1);
+    display->setColor(color.x, color.y, color.z);
+    
+    m_displays.push_back(std::move(display));
   }
 
   for (size_t i = 0; i < channels.size(); ++i) {

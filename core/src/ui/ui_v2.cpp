@@ -69,7 +69,7 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
     for (const auto &trace : traces) {
       if (trace.domain == Domain::Time) {
         size_t visible =
-            std::min(channel.getVisibleSamples(), trace.data.size());
+            std::min(channel.getHorizontalScale(), trace.data.size());
 
         m_normalized_time.resize(visible);
 
@@ -142,7 +142,7 @@ void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
     for (const auto &trace : channel->getTraces()) {
       if (trace.domain == Domain::Frequency) {
         size_t visible =
-            std::min(channel->getVisibleSamples(), trace.data.size());
+            std::min(channel->getHorizontalScale(), trace.data.size());
 
         m_normalized_freq.resize(visible);
 
@@ -223,12 +223,12 @@ void OscilloscopeUI::drawModeCombo(Oscilloscope &osc) {
 // Controls how many samples are visible horizontally.
 // TODO: Change this to time division instead of samples
 void OscilloscopeUI::drawHorizontalControls(IChannel &channel) {
-  int samples = static_cast<int>(channel.getVisibleSamples());
+  int samples = static_cast<int>(channel.getHorizontalScale());
 
   ImGui::SetNextItemWidth(-1);
-  ImGui::Text("Samples");
-  if (ImGui::SliderInt("##Samples", &samples, 256, 16384, "%d smp")) {
-    channel.setVisibleSamples(static_cast<size_t>(samples));
+  ImGui::Text("Horizontal Scale");
+  if (ImGui::SliderInt("##HorizontalScale", &samples, 256, 16384, "%d smp")) {
+    channel.setHorizontalScale(static_cast<size_t>(samples));
   }
 }
 
@@ -243,7 +243,7 @@ void OscilloscopeUI::drawVerticalControls(IChannel &channel) {
     channel.setVerticalScale(gain);
   }
 
-  ImGui::TextDisabled("Visible samples: %zu", channel.getVisibleSamples());
+  ImGui::TextDisabled("Horizontal scale: %zu", channel.getHorizontalScale());
 }
 
 // Control pannels
@@ -554,7 +554,7 @@ void OscilloscopeUI::drawDebugWindow(Oscilloscope &osc) {
     ImGui::Separator();
 
     ImGui::Text("First channel: %s", channel->getLabel().c_str());
-    ImGui::Text("Visible samples: %zu", channel->getVisibleSamples());
+    ImGui::Text("Horizontal scale: %zu", channel->getHorizontalScale());
     ImGui::Text("New frame waiting: %s", channel->hasNewFrame() ? "yes" : "no");
   }
 

@@ -56,7 +56,7 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
     for (const auto &trace : traces) {
       if (trace.domain == Domain::Time) {
         size_t visible =
-            std::min(channel.getVisibleSamples(), trace.data.size());
+            std::min(channel.getHorizontalScale(), trace.data.size());
         m_normalized_time.resize(visible);
         for (size_t j = 0; j < visible; ++j) {
           m_normalized_time[j] = trace.normalizeToIntensity(trace.data[j]);
@@ -114,7 +114,7 @@ void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
     for (const auto &trace : channel->getTraces()) {
       if (trace.domain == Domain::Frequency) {
         size_t visible =
-            std::min(channel->getVisibleSamples(), trace.data.size());
+            std::min(channel->getHorizontalScale(), trace.data.size());
         m_normalized_freq.resize(visible);
 
         for (size_t i = 0; i < visible; i++) {
@@ -185,10 +185,10 @@ void OscilloscopeUI::drawModeCombo(Oscilloscope &osc) {
 }
 
 void OscilloscopeUI::drawHorizontalControls(IChannel &channel) {
-  int samples = static_cast<int>(channel.getVisibleSamples());
+  int samples = static_cast<int>(channel.getHorizontalScale());
   ImGui::SetNextItemWidth(150);
-  if (ImGui::SliderInt("##Time", &samples, 256, 16384, "%d smp")) {
-    channel.setVisibleSamples(static_cast<size_t>(samples));
+  if (ImGui::SliderInt("##HorizontalScale", &samples, 256, 16384, "%d smp")) {
+    channel.setHorizontalScale(static_cast<size_t>(samples));
   }
 }
 

@@ -1,10 +1,10 @@
 #pragma once
 
-#include <processing/iprocessor.hpp>
+#include <../../extern/pocketfft/pocketfft_hdronly.h>
 #include <cmath>
 #include <complex>
-#include <cstdint>
 #include <limits>
+#include <processing/iprocessor.hpp>
 #include <vector>
 
 namespace Scoped {
@@ -15,18 +15,25 @@ class FFTProcessor : public IProcessor<HardwareT> {
 private:
   bool m_enabled;
   std::string m_name = "FFT";
-  std::vector<std::complex<float>> m_fft_output;
-  std::vector<float> m_window_lut;
 
+  std::vector<std::complex<float>> m_fft_output; // FFT output
+  std::vector<float> m_window_lut;               // LUT for windowing function
+
+  // Constants
   static constexpr std::complex<float> I_COMPLEX{0.0f, 1.0f};
   static constexpr float PI = 3.141592653589f;
+  static constexpr float EPSILON = 1e-8f;
 
   // Plotting vars
   bool m_isLinearMode = false; // Linear = true, dB = false
-  float m_scale = 0.9f;
-  size_t m_max_height;
-  static constexpr float m_offset = 0.0f;
-  static constexpr float EPSILON = 1e-8f;
+  size_t m_max_height;         // Max plot height (pixels)
+
+  float m_smoothing_factor =
+      0.8f; // Smoothing factor for exponential smoothing (EMA)
+  std::vector<float> m_smoothed_data; // Smooothed FFT data
+
+  float m_scale = 0.9f;                   // Scale factor applied to FFT output
+  static constexpr float m_offset = 0.0f; // Vertical offset
 
 public:
   // Lifecycle
@@ -37,11 +44,15 @@ public:
   bool isEnabled() const override { return m_enabled; }
   float getScale() const override { return m_scale; }
   bool getIsModeLinear() const override { return m_isLinearMode; }
+  float getSmoothingFactor() const override { return m_smoothing_factor; }
 
   // Setters
   void setEnabled(bool enabled) override { m_enabled = enabled; }
   void setScale(float scale) override { m_scale = scale; }
   void setIsModeLinear(bool mode) override { m_isLinearMode = mode; }
+  void setSmoothingFactor(float factor) override {
+    m_smoothing_factor = factor;
+  }
 
   // Pipeline
   void process(const std::vector<HardwareT> &raw_frame,
@@ -50,6 +61,7 @@ public:
     size_t frame_size = raw_frame.size();
     m_fft_output.resize(frame_size);
 
+    // Remove DC offset and apply windowing function (Gaussian distribution)
     std::vector<float> centered_frame;
     centered_frame.resize(frame_size);
     prepareWindow(frame_size);
@@ -59,7 +71,30 @@ public:
           (static_cast<float>(raw_frame[i]) - mean) * m_window_lut[i];
     }
 
-    calculateFFTRecursive(centered_frame, m_fft_output);
+    // Old FFT function
+    // calculateFFTRecursive(centered_frame, m_fft_output);
+
+    // Real to complex Fourier Transform
+    /*
+    template<typename T> void r2c(const shape_t &shape_in,
+      const stride_t &stride_in, const stride_t &stride_out, size_t axis,
+      bool forward, const T *data_in, complex<T> *data_out, T fct,
+      size_t nthreads=1)
+    */
+    pocketfft::shape_t shape{frame_size};
+
+    pocketfft::stride_t stride_in(1);
+    stride_in[0] = sizeof(float);
+
+    pocketfft::stride_t stride_out(1);
+    stride_out[0] = sizeof(std::complex<float>);
+
+    pocketfft::shape_t axes;
+    axes.push_back(0);
+
+    pocketfft::r2c(shape, stride_in, stride_out, axes, pocketfft::FORWARD,
+                   centered_frame.data(), m_fft_output.data(),
+                   2.0f / static_cast<float>(frame_size));
 
     Trace fft_trace;
     fft_trace.name = this->m_name; // TODO: Add channel to name
@@ -67,16 +102,25 @@ public:
 
     fft_trace.data.resize(frame_size / 2);
 
+    m_smoothed_data.resize(frame_size / 2);
+
     // Find magnitude and normalize
     float max = std::numeric_limits<float>::lowest();
     float min = std::numeric_limits<float>::max();
     for (size_t i = 0; i < frame_size / 2; i++) {
-      float mag = std::abs(m_fft_output[i]) / frame_size * 2.0f;
+      float mag = std::abs(m_fft_output[i]);
       if (m_isLinearMode) {
         fft_trace.data[i] = mag;
       } else {
         fft_trace.data[i] = 20.0f * std::log10(mag + EPSILON);
       }
+
+      // Smooth data
+      m_smoothed_data[i] = ((1.0f - m_smoothing_factor) * fft_trace.data[i]) +
+                           (m_smoothed_data[i] * m_smoothing_factor);
+
+      fft_trace.data[i] = m_smoothed_data[i];
+
       max = fft_trace.data[i] > max ? fft_trace.data[i] : max;
       min = fft_trace.data[i] < min ? fft_trace.data[i] : min;
     }
@@ -91,7 +135,7 @@ public:
   }
 
   // Logic
-  [[deprecated("Recursive implementation is slow, use iterative FFT.")]]
+  [[deprecated("Recursive implementation is slow, use PocketFFT.")]]
   void calculateFFTRecursive(const std::vector<float> &frame,
                              std::vector<std::complex<float>> &fft_frame) {
     size_t n = frame.size();

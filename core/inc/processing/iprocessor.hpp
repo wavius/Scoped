@@ -1,8 +1,8 @@
 #pragma once
 
+#include <common/trace.hpp>
 #include <string>
 #include <vector>
-#include <common/trace.hpp>
 
 namespace Scoped {
 
@@ -18,11 +18,13 @@ public:
   virtual bool isEnabled() const = 0;
   virtual float getScale() const = 0;
   virtual bool getIsModeLinear() const = 0;
+  virtual float getSmoothingFactor() const = 0;
 
   // Setters
   virtual void setEnabled(bool enabled) = 0;
   virtual void setScale(float scale) = 0;
   virtual void setIsModeLinear(bool mode) = 0;
+  virtual void setSmoothingFactor(float factor) = 0;
 };
 
 // Base for processors operating across multiple channels.

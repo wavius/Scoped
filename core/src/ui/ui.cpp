@@ -6,17 +6,7 @@
 
 namespace Scoped {
 
-namespace Colors {
-const ImVec4 Black = ImVec4(0, 0, 0, 1);
-const ImVec4 Grid = ImVec4(0.3f, 0.3f, 0.3f, 0.4f);
-const ImVec4 Trigger = ImVec4(1, 0, 0, 0.5f);
-const ImVec4 FFTLine = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
-const ImVec4 TopBarBg = ImVec4(0.11f, 0.14f, 0.18f, 1.0f);
-const ImVec4 ChannelBlockBg = ImVec4(1.0f, 0.8f, 0.0f, 1.0f);
-const ImVec4 StatusOk = ImVec4(0, 1, 0, 1);
-const ImVec4 StatusError = ImVec4(1, 0, 0, 1);
-const ImVec4 BottomBarBg = ImVec4(0.08f, 0.1f, 0.12f, 1.0f);
-} // namespace Colors
+// Colors are defined in ui.hpp
 
 // Draws a single two-point line segment on the current ImPlot canvas.
 static void plotLineSegment(const char *label, double x0, double y0, double x1,
@@ -188,18 +178,17 @@ void OscilloscopeUI::drawModeCombo(Oscilloscope &osc) {
   }
 }
 
-void OscilloscopeUI::drawTimebaseControl(Oscilloscope &osc) {
-  if (osc.getChannels().empty())
-    return;
-  auto &channel = *osc.getChannels()[0];
-
+void OscilloscopeUI::drawHorizontalControls(IChannel &channel) {
   int samples = static_cast<int>(channel.getVisibleSamples());
   ImGui::SetNextItemWidth(150);
   if (ImGui::SliderInt("##Time", &samples, 256, 16384, "%d smp")) {
-    for (auto &ch : osc.getChannels()) {
-      ch->setVisibleSamples(static_cast<size_t>(samples));
-    }
+    channel.setVisibleSamples(static_cast<size_t>(samples));
   }
+}
+
+void OscilloscopeUI::drawVerticalControls(IChannel &channel) {
+    // V1 layout handles vertical controls in drawChannelBlock and drawBottomBar.
+    // This is a placeholder for the V2 interface.
 }
 
 void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
@@ -275,10 +264,12 @@ void OscilloscopeUI::drawTopBar(Oscilloscope &osc) {
   ImGui::SameLine();
   drawFFTControl(osc);
 
-  ImGui::SameLine(ImGui::GetWindowWidth() - 250);
+  ImGui::SameLine(ImGui::GetWindowWidth() - 350);
   ImGui::TextDisabled("HORIZ:");
-  ImGui::SameLine();
-  drawTimebaseControl(osc);
+  for (auto &ch : osc.getChannels()) {
+      ImGui::SameLine();
+      drawHorizontalControls(*ch);
+  }
 
   ImGui::EndChild();
   ImGui::PopStyleColor();

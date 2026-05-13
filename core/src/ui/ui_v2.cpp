@@ -48,12 +48,15 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
 
   while (m_displays.size() < channels.size()) {
     size_t index = m_displays.size();
-    auto display = std::make_unique<IntensityMap>(m_display_width, m_display_height);
-    
+    auto display =
+        std::make_unique<IntensityMap>(m_display_width, m_display_height);
+
     // Assign color based on channel index
-    ImVec4 color = (index == 0) ? Colors::CH1 : (index == 1) ? Colors::CH2 : ImVec4(1, 1, 1, 1);
+    ImVec4 color = (index == 0)   ? Colors::CH1
+                   : (index == 1) ? Colors::CH2
+                                  : ImVec4(1, 1, 1, 1);
     display->setColor(color.x, color.y, color.z);
-    
+
     m_displays.push_back(std::move(display));
   }
 
@@ -227,19 +230,19 @@ void OscilloscopeUI::drawHorizontalControls(IChannel &channel) {
 
   ImGui::SetNextItemWidth(-1);
   ImGui::Text("Horizontal Scale");
-  if (ImGui::SliderInt("##HorizontalScale", &samples, 256, 16384, "%d smp")) {
+  if (ImGui::SliderInt("##Horizontal Scale", &samples, 256, 16384, "%d smp")) {
     channel.setHorizontalScale(static_cast<size_t>(samples));
   }
 }
 
 // TODO: Change this to voltage division instead of Scale
 void OscilloscopeUI::drawVerticalControls(IChannel &channel) {
-  ImGui::Text("Scale");
+  ImGui::Text("Vertical Scale");
 
   float gain = channel.getVerticalScale();
   ImGui::SetNextItemWidth(-1);
 
-  if (ImGui::SliderFloat("##Scale", &gain, 0.1f, 10.0f, "%.1fx")) {
+  if (ImGui::SliderFloat("##Vertical Scale", &gain, 0.1f, 10.0f, "%.1fx")) {
     channel.setVerticalScale(gain);
   }
 

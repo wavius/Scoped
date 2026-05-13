@@ -6,13 +6,13 @@
 #include <cstdio>
 
 #include <common/channel.hpp>
+#include <common/oscilloscope.hpp>
+#include <hardware/usb.hpp>
 #include <implot.h>
 #include <memory>
-#include <common/oscilloscope.hpp>
-#include <processing/trigger.hpp>
 #include <processing/fft_processor.hpp>
+#include <processing/trigger.hpp>
 #include <ui/ui.hpp>
-#include <hardware/usb.hpp>
 
 static const char *GLSL_VERSION = "#version 130";
 
@@ -83,7 +83,7 @@ int main(int, char **) {
 
   // UI created after OpenGL is ready, destroyed before shutdown
   Scoped::OscilloscopeUI ui(1280, 720);
-  Scoped::setupChannelColormap(ImVec4(0, 1, 1, 1));
+  Scoped::setupChannelColormap(Scoped::Colors::CH1);
 
   Scoped::Oscilloscope osc;
 
@@ -116,7 +116,7 @@ int main(int, char **) {
 
     if (!osc.getUSB().isConnected()) {
       for (int i = 0; i < 16; ++i)
-        ch1->getBuffer().fillTestSquareWave();
+        ch1->getBuffer().fillTestSineWave();
     }
 
     osc.update();

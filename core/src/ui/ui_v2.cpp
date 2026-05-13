@@ -13,27 +13,18 @@
 
 namespace Scoped {
 
-// colors 
-namespace Colors {
-const ImVec4 Black = ImVec4(0, 0, 0, 1);
-const ImVec4 Grid = ImVec4(0.3f, 0.3f, 0.3f, 0.4f);
-const ImVec4 Trigger = ImVec4(1, 0, 0, 0.5f);
-const ImVec4 FFTLine = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
-const ImVec4 StatusOk = ImVec4(0, 1, 0, 1);
-const ImVec4 StatusError = ImVec4(1, 0, 0, 1);
-} // namespace Colors
-
+// colors
+// Colors are defined in ui.hpp
 
 static void plotLineSegment(const char *label, double x0, double y0, double x1,
                             double y1, ImVec4 color, float weight) {
   double xs[] = {x0, x1};
   double ys[] = {y0, y1};
 
-  ImPlot::PlotLine(label, xs, ys, 2,
-                   {ImPlotProp_LineColor, color, ImPlotProp_LineWeight,
-                    weight});
+  ImPlot::PlotLine(
+      label, xs, ys, 2,
+      {ImPlotProp_LineColor, color, ImPlotProp_LineWeight, weight});
 }
-
 
 // Colour gradient for the oscilloscope trace image
 void setupChannelColormap(ImVec4 color) {
@@ -49,17 +40,21 @@ void setupChannelColormap(ImVec4 color) {
   initialized = true;
 }
 
-
 OscilloscopeUI::OscilloscopeUI(size_t display_width, size_t display_height)
     : m_display_width(display_width), m_display_height(display_height) {}
-
 
 void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
   const auto &channels = osc.getChannels();
 
   while (m_displays.size() < channels.size()) {
-    m_displays.push_back(
-        std::make_unique<IntensityMap>(m_display_width, m_display_height));
+    size_t index = m_displays.size();
+    auto display = std::make_unique<IntensityMap>(m_display_width, m_display_height);
+    
+    // Assign color based on channel index
+    ImVec4 color = (index == 0) ? Colors::CH1 : (index == 1) ? Colors::CH2 : ImVec4(1, 1, 1, 1);
+    display->setColor(color.x, color.y, color.z);
+    
+    m_displays.push_back(std::move(display));
   }
 
   for (size_t i = 0; i < channels.size(); ++i) {
@@ -74,7 +69,7 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
     for (const auto &trace : traces) {
       if (trace.domain == Domain::Time) {
         size_t visible =
-            std::min(channel.getVisibleSamples(), trace.data.size());
+            std::min(channel.getHorizontalScale(), trace.data.size());
 
         m_normalized_time.resize(visible);
 
@@ -147,7 +142,7 @@ void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
     for (const auto &trace : channel->getTraces()) {
       if (trace.domain == Domain::Frequency) {
         size_t visible =
-            std::min(channel->getVisibleSamples(), trace.data.size());
+            std::min(channel->getHorizontalScale(), trace.data.size());
 
         m_normalized_freq.resize(visible);
 
@@ -163,7 +158,6 @@ void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
     }
   }
 }
-
 
 void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
   const double w = static_cast<double>(m_display_width);
@@ -218,32 +212,42 @@ void OscilloscopeUI::drawModeCombo(Oscilloscope &osc) {
 
   ImGui::SetNextItemWidth(-1);
 
-  if (ImGui::Combo("Mode", &selected, items, 2)) {
+  ImGui::Text("Mode");
+  if (ImGui::Combo("##Mode", &selected, items, 2)) {
     TriggerMode mode = selected == 0 ? TriggerMode::AUTO : TriggerMode::NORMAL;
     osc.getTrigger()->setMode(mode);
   }
 }
 
+// Control Helpers
 // Controls how many samples are visible horizontally.
-void OscilloscopeUI::drawTimebaseControl(Oscilloscope &osc) {
-  if (osc.getChannels().empty()) {
-    return;
-  }
-
-  auto &channel = *osc.getChannels()[0];
-
-  int samples = static_cast<int>(channel.getVisibleSamples());
+// TODO: Change this to time division instead of samples
+void OscilloscopeUI::drawHorizontalControls(IChannel &channel) {
+  int samples = static_cast<int>(channel.getHorizontalScale());
 
   ImGui::SetNextItemWidth(-1);
-
-  if (ImGui::SliderInt("Visible samples", &samples, 256, 16384, "%d smp")) {
-    for (auto &ch : osc.getChannels()) {
-      ch->setVisibleSamples(static_cast<size_t>(samples));
-    }
+  ImGui::Text("Horizontal Scale");
+  if (ImGui::SliderInt("##HorizontalScale", &samples, 256, 16384, "%d smp")) {
+    channel.setHorizontalScale(static_cast<size_t>(samples));
   }
 }
 
-// FFT controls.
+// TODO: Change this to voltage division instead of Scale
+void OscilloscopeUI::drawVerticalControls(IChannel &channel) {
+  ImGui::Text("Scale");
+
+  float gain = channel.getVerticalScale();
+  ImGui::SetNextItemWidth(-1);
+
+  if (ImGui::SliderFloat("##Scale", &gain, 0.1f, 10.0f, "%.1fx")) {
+    channel.setVerticalScale(gain);
+  }
+
+  ImGui::TextDisabled("Horizontal scale: %zu", channel.getHorizontalScale());
+}
+
+// Control pannels
+
 void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
   bool found_fft = false;
 
@@ -269,7 +273,8 @@ void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
 
       ImGui::SetNextItemWidth(-1);
 
-      if (ImGui::SliderFloat("Scale", &scale, 0.01f, 1.00f, "%.2f")) {
+      ImGui::Text("Scale");
+      if (ImGui::SliderFloat("##Scale", &scale, 0.01f, 1.00f, "%.2f")) {
         processor->setScale(scale);
       }
 
@@ -280,6 +285,14 @@ void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
       }
 
       ImGui::Separator();
+
+      float smoothing_factor = processor->getSmoothingFactor();
+
+      ImGui::Text("Smoothing");
+      if (ImGui::SliderFloat("##Smoothing", &smoothing_factor, 0.0f, 1.00f,
+                             "%.2f")) {
+        processor->setSmoothingFactor(smoothing_factor);
+      }
     }
 
     ImGui::PopID();
@@ -299,17 +312,14 @@ void OscilloscopeUI::buildDefaultDockLayout(ImGuiID dockspace_id,
 
   ImGuiID main_id = dockspace_id;
 
-  ImGuiID left_id =
-      ImGui::DockBuilderSplitNode(main_id, ImGuiDir_Left, 0.22f, nullptr,
-                                  &main_id);
+  ImGuiID left_id = ImGui::DockBuilderSplitNode(main_id, ImGuiDir_Left, 0.22f,
+                                                nullptr, &main_id);
 
-  ImGuiID right_id =
-      ImGui::DockBuilderSplitNode(main_id, ImGuiDir_Right, 0.22f, nullptr,
-                                  &main_id);
+  ImGuiID right_id = ImGui::DockBuilderSplitNode(main_id, ImGuiDir_Right, 0.22f,
+                                                 nullptr, &main_id);
 
-  ImGuiID bottom_id =
-      ImGui::DockBuilderSplitNode(main_id, ImGuiDir_Down, 0.24f, nullptr,
-                                  &main_id);
+  ImGuiID bottom_id = ImGui::DockBuilderSplitNode(main_id, ImGuiDir_Down, 0.24f,
+                                                  nullptr, &main_id);
 
   ImGui::DockBuilderDockWindow("Scope View", main_id);
 
@@ -334,14 +344,10 @@ void OscilloscopeUI::drawDockSpace() {
   ImGui::SetNextWindowViewport(viewport->ID);
 
   constexpr ImGuiWindowFlags window_flags =
-      ImGuiWindowFlags_NoDocking |
-      ImGuiWindowFlags_NoTitleBar |
-      ImGuiWindowFlags_NoCollapse |
-      ImGuiWindowFlags_NoResize |
-      ImGuiWindowFlags_NoMove |
-      ImGuiWindowFlags_NoBringToFrontOnFocus |
-      ImGuiWindowFlags_NoNavFocus |
-      ImGuiWindowFlags_NoBackground;
+      ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
+      ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+      ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
+      ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
 
   ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
   ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
@@ -411,6 +417,7 @@ void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
 
   ImGui::Separator();
 
+  // Parameters are set in trigger.hpp
   auto params = trigger->getUIParameters();
 
   for (const auto &param : params) {
@@ -423,7 +430,7 @@ void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
     if (param.combo_items.empty()) {
       ImGui::SetNextItemWidth(-1);
 
-      if (ImGui::SliderInt("Value", &value, param.min_val, param.max_val)) {
+      if (ImGui::SliderInt("##Value", &value, param.min_val, param.max_val)) {
         trigger->setUIParameter(param.name, value);
       }
     } else {
@@ -435,7 +442,7 @@ void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
 
       ImGui::SetNextItemWidth(-1);
 
-      if (ImGui::Combo("Value", &value, combo_items.data(),
+      if (ImGui::Combo("##Value", &value, combo_items.data(),
                        static_cast<int>(combo_items.size()))) {
         trigger->setUIParameter(param.name, value);
       }
@@ -462,34 +469,28 @@ void OscilloscopeUI::drawFFTWindow(Oscilloscope &osc) {
 void OscilloscopeUI::drawChannelWindow(Oscilloscope &osc) {
   ImGui::Begin("Channels");
 
-  const auto &channels = osc.getChannels();
-
-  if (channels.empty()) {
+  if (osc.getChannels().empty()) {
     ImGui::TextDisabled("No channels available.");
     ImGui::End();
     return;
   }
 
-  drawTimebaseControl(osc);
-
-  ImGui::Separator();
-
-  for (auto &channel : channels) {
+  // Per-Channel Controls
+  for (auto &channel : osc.getChannels()) {
     ImGui::PushID(channel->getLabel().c_str());
 
-    ImGui::Text("%s", channel->getLabel().c_str());
+    // Use Cyan for CH1, Yellow for others (or default)
+    ImVec4 label_color =
+        (channel->getLabel() == "CH1") ? Colors::CH1 : ImVec4(1, 1, 0, 1);
+    ImGui::TextColored(label_color, "%s", channel->getLabel().c_str());
+    ImGui::Spacing();
 
-    float gain = channel->getVerticalScale();
+    drawHorizontalControls(*channel);
+    drawVerticalControls(*channel);
 
-    ImGui::SetNextItemWidth(-1);
-
-    if (ImGui::SliderFloat("Vertical scale", &gain, 0.1f, 10.0f, "%.1fx")) {
-      channel->setVerticalScale(gain);
-    }
-
-    ImGui::TextDisabled("Visible samples: %zu", channel->getVisibleSamples());
-
+    ImGui::Spacing();
     ImGui::Separator();
+    ImGui::Spacing();
 
     ImGui::PopID();
   }
@@ -553,9 +554,8 @@ void OscilloscopeUI::drawDebugWindow(Oscilloscope &osc) {
     ImGui::Separator();
 
     ImGui::Text("First channel: %s", channel->getLabel().c_str());
-    ImGui::Text("Visible samples: %zu", channel->getVisibleSamples());
-    ImGui::Text("New frame waiting: %s",
-                channel->hasNewFrame() ? "yes" : "no");
+    ImGui::Text("Horizontal scale: %zu", channel->getHorizontalScale());
+    ImGui::Text("New frame waiting: %s", channel->hasNewFrame() ? "yes" : "no");
   }
 
   ImGui::End();

@@ -20,6 +20,9 @@ private:
   std::vector<uint32_t> m_grid;
   std::vector<RGBA> m_texture_data;
   GLuint m_texture_id = 0;
+  float m_r = 0.0f;
+  float m_g = 1.0f;
+  float m_b = 1.0f;
 
   void initTexture();
 
@@ -47,6 +50,11 @@ public:
   void processFrame(const float *normalized, size_t count);
 
   void updateTexture();
+  void setColor(float r, float g, float b) {
+    m_r = r;
+    m_g = g;
+    m_b = b;
+  }
 };
 
 } // namespace Scoped

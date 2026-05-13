@@ -1,10 +1,7 @@
 #pragma once
 
-#include <algorithm>
 #include <chrono>
 #include <common/circularbuffer.hpp>
-#include <cstdint>
-#include <type_traits>
 #include <vector>
 
 #include <common/channel.hpp>

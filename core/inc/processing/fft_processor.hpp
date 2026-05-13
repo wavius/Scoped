@@ -37,7 +37,10 @@ private:
 
 public:
   // Lifecycle
-  FFTProcessor(size_t display_height) { m_max_height = display_height; }
+  FFTProcessor(size_t display_height) {
+    m_max_height = display_height;
+    m_enabled = false;
+  }
 
   // Accessors
   std::string getName() const override { return m_name; }
@@ -128,8 +131,8 @@ public:
     // Scale + offset
     float range =
         (max - min) > 0.001f ? max - min : 1.0f; // Prevent division by 0
-    fft_trace.scale = (static_cast<float>(m_max_height) / range) * m_scale;
-    fft_trace.offset = -min * fft_trace.scale;
+    fft_trace.vertical_scale = (1.0f / range) * m_scale;
+    fft_trace.vertical_offset = min * fft_trace.vertical_scale;
 
     traces.push_back(std::move(fft_trace));
   }

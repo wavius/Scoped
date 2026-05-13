@@ -150,7 +150,8 @@ void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
         m_normalized_freq.resize(visible);
 
         for (size_t i = 0; i < visible; i++) {
-          m_normalized_freq[i] = trace.normalizeToIntensity(trace.data[i]);
+          m_normalized_freq[i] = trace.normalizeToIntensity(trace.data[i]) *
+                                 static_cast<float>(m_display_height);
         }
 
         ImPlot::PlotLine(trace.name.c_str(), m_normalized_freq.data(),
@@ -238,12 +239,22 @@ void OscilloscopeUI::drawHorizontalControls(IChannel &channel) {
 // TODO: Change this to voltage division instead of Scale
 void OscilloscopeUI::drawVerticalControls(IChannel &channel) {
   ImGui::Text("Vertical Scale");
-
-  float gain = channel.getVerticalScale();
+  float scale = channel.getVerticalScale();
   ImGui::SetNextItemWidth(-1);
 
-  if (ImGui::SliderFloat("##Vertical Scale", &gain, 0.1f, 10.0f, "%.1fx")) {
-    channel.setVerticalScale(gain);
+  if (ImGui::SliderFloat("##Vertical Scale", &scale, 0.1f, 10.0f, "%.1fx")) {
+    channel.setVerticalScale(scale);
+  }
+
+  ImGui::Spacing();
+
+  ImGui::Text("Vertical Offset");
+  float offset = channel.getVerticalOffset();
+  ImGui::SetNextItemWidth(-1);
+
+  if (ImGui::SliderFloat("##Vertical Offset", &offset, -255.0f, 255.0f,
+                         "%.1f")) {
+    channel.setVerticalOffset(offset);
   }
 
   ImGui::TextDisabled("Horizontal scale: %zu", channel.getHorizontalScale());

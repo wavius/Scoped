@@ -16,3 +16,7 @@
 
 - Add support for multiple concurrent hardware channels.
 - Change FPGA USB to stream multiple channels and edit `OscilloscopeUI::drawHardwareStatus`.
+
+## Trigger
+
+- Edge trigger level hardcoded for 8 bit ADC

@@ -24,14 +24,18 @@ public:
   virtual const std::vector<Trace> &getTraces() const = 0;
   virtual bool hasNewFrame() const = 0;
   virtual float getVerticalScale() const = 0;
+  virtual float getVerticalOffset() const = 0;
   virtual size_t getHorizontalScale() const = 0;
+  virtual size_t getHorizontalOffset() const = 0;
   virtual size_t getUnreadSampleCount() const = 0;
   virtual bool isHardwareChannel() const = 0;
   virtual std::vector<IProcessorControl *> getProcessors() const = 0;
 
   // Setters
   virtual void setVerticalScale(float scale) = 0;
+  virtual void setVerticalOffset(float offset) = 0;
   virtual void setHorizontalScale(size_t n) = 0;
+  virtual void setHorizontalOffset(size_t offset) = 0;
   virtual void clearNewFrame() = 0;
 
   // Pipeline
@@ -70,7 +74,9 @@ public:
   const std::vector<Trace> &getTraces() const override { return m_traces; }
   bool hasNewFrame() const override { return m_has_new_frame; }
   float getVerticalScale() const override { return m_vertical_scale; }
+  float getVerticalOffset() const override { return m_vertical_offset; }
   size_t getHorizontalScale() const override { return m_horizontal_scale; }
+  size_t getHorizontalOffset() const override { return m_horizontal_offset; }
   size_t getUnreadSampleCount() const override { return 0; }
   bool isHardwareChannel() const override { return false; }
 
@@ -84,7 +90,11 @@ public:
 
   // Setters
   void setVerticalScale(float scale) override { m_vertical_scale = scale; }
+  void setVerticalOffset(float offset) override { m_vertical_offset = offset; }
   void setHorizontalScale(size_t n) override { m_horizontal_scale = n; }
+  void setHorizontalOffset(size_t offset) override {
+    m_horizontal_offset = offset;
+  }
   void clearNewFrame() override { m_has_new_frame = false; }
 
   // Configuration
@@ -120,9 +130,13 @@ private:
   CircularBuffer<HardwareT> m_buffer;
   std::vector<std::unique_ptr<IProcessor<HardwareT>>> m_processors;
 
+  // Vertical (voltage)
   float m_vertical_scale = 1.0f;
   float m_vertical_offset = 0.0f;
+
+  // Horizontal (time)
   size_t m_horizontal_scale;
+  size_t m_horizontal_offset;
 
   std::vector<HardwareT> m_raw_frame;
   std::vector<Trace> m_traces;
@@ -131,14 +145,17 @@ private:
 public:
   // Lifecycle
   Channel(const std::string &label, size_t buffer_size, size_t horizontal_scale)
-      : m_label(label), m_buffer(buffer_size), m_horizontal_scale(horizontal_scale) {}
+      : m_label(label), m_buffer(buffer_size),
+        m_horizontal_scale(horizontal_scale) {}
 
   // Accessors
   const std::string &getLabel() const override { return m_label; }
   const std::vector<Trace> &getTraces() const override { return m_traces; }
   bool hasNewFrame() const override { return m_has_new_frame; }
   float getVerticalScale() const override { return m_vertical_scale; }
+  float getVerticalOffset() const override { return m_vertical_offset; }
   size_t getHorizontalScale() const override { return m_horizontal_scale; }
+  size_t getHorizontalOffset() const override { return m_horizontal_offset; }
   size_t getUnreadSampleCount() const override {
     return m_buffer.getUnreadCount();
   }
@@ -155,7 +172,11 @@ public:
 
   // Setters
   void setVerticalScale(float scale) override { m_vertical_scale = scale; }
+  void setVerticalOffset(float offset) override { m_vertical_offset = offset; }
   void setHorizontalScale(size_t n) override { m_horizontal_scale = n; }
+  void setHorizontalOffset(size_t offset) override {
+    m_horizontal_offset = offset;
+  }
   void clearNewFrame() override { m_has_new_frame = false; }
 
   // Configuration
@@ -194,8 +215,8 @@ public:
     Trace base_trace;
     base_trace.name = m_label + " Time";
     base_trace.domain = Domain::Time;
-    base_trace.scale = m_vertical_scale;
-    base_trace.offset = m_vertical_offset;
+    base_trace.vertical_scale = m_vertical_scale;
+    base_trace.vertical_offset = m_vertical_offset;
     base_trace.data.resize(frame_width);
 
     for (size_t i = 0; i < frame_width; ++i) {

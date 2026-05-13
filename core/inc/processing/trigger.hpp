@@ -142,7 +142,10 @@ public:
   std::vector<float> getTriggerLevels() const override { return {m_threshold}; }
   std::vector<TriggerParameter> getUIParameters() override {
     std::vector<TriggerParameter> params;
-    params.push_back({"Level", 0, 255, static_cast<int>(m_threshold), {}});
+
+    // TODO: fix min_val and max_val hardcoded for 8 bit ADC
+    params.push_back(
+        {"Level", -128, 128, static_cast<int>(m_threshold) - 128, {}});
 
     std::vector<std::string> dirs = {"Rising", "Falling"};
     int dir_idx = (m_direction == EdgeDirection::RISING) ? 0 : 1;
@@ -155,7 +158,9 @@ public:
   void setDirection(EdgeDirection dir) { m_direction = dir; }
   void setUIParameter(const std::string &name, int val) override {
     if (name == "Level") {
-      m_threshold = static_cast<float>(val);
+      m_threshold =
+          static_cast<float>(val + 128); // Internally, trigger ranges from 0 to
+                                         // 255 but -128 to 128 in UI
     } else if (name == "Edge") {
       m_direction = (val == 0) ? EdgeDirection::RISING : EdgeDirection::FALLING;
     }

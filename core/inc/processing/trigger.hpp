@@ -25,6 +25,7 @@ protected:
   using Clock = std::chrono::steady_clock;
 
   TriggerMode m_mode;
+  bool m_enabled;
   size_t m_frame_width;
   Clock::time_point m_last_trigger_time;
   static constexpr std::chrono::milliseconds AUTO_TIMEOUT{100};
@@ -35,13 +36,14 @@ protected:
 public:
   // Lifecycle
   explicit ITrigger(size_t width)
-      : m_mode(TriggerMode::AUTO), m_frame_width(width),
+      : m_mode(TriggerMode::AUTO), m_enabled(true), m_frame_width(width),
         m_last_trigger_time(Clock::now()) {}
 
   virtual ~ITrigger() = default;
 
   // Accessors
   TriggerMode getMode() const { return m_mode; }
+  bool isEnabled() const { return m_enabled; }
   size_t getFrameWidth() const { return m_frame_width; }
 
   virtual std::vector<float> getTriggerLevels() const = 0;
@@ -49,6 +51,7 @@ public:
 
   // Setters
   void setMode(TriggerMode mode) { m_mode = mode; }
+  void setEnabled(bool enabled) { m_enabled = enabled; }
   void setFrameWidth(size_t width) { m_frame_width = width; }
   virtual void setUIParameter(const std::string &name, int val) = 0;
   virtual void clear() = 0;

@@ -22,6 +22,7 @@ public:
   // Accessors
   virtual const std::string &getLabel() const = 0;
   virtual const std::vector<Trace> &getTraces() const = 0;
+  virtual bool isEnabled() const = 0;
   virtual bool hasNewFrame() const = 0;
   virtual float getVerticalScale() const = 0;
   virtual float getVerticalOffset() const = 0;
@@ -36,6 +37,7 @@ public:
   virtual void setVerticalOffset(float offset) = 0;
   virtual void setHorizontalScale(size_t n) = 0;
   virtual void setHorizontalOffset(size_t offset) = 0;
+  virtual void setEnabled(bool enabled) = 0;
   virtual void clearNewFrame() = 0;
 
   // Pipeline
@@ -54,6 +56,7 @@ private:
   std::vector<IChannel *> m_sources;
   std::vector<std::unique_ptr<IVirtualProcessor>> m_processors;
   std::vector<Trace> m_traces;
+  bool m_enabled = true;
   bool m_has_new_frame = false;
 
   // Vertical plot settings
@@ -72,6 +75,7 @@ public:
   // Accessors
   const std::string &getLabel() const override { return m_label; }
   const std::vector<Trace> &getTraces() const override { return m_traces; }
+  bool isEnabled() const override { return m_enabled; }
   bool hasNewFrame() const override { return m_has_new_frame; }
   float getVerticalScale() const override { return m_vertical_scale; }
   float getVerticalOffset() const override { return m_vertical_offset; }
@@ -95,6 +99,7 @@ public:
   void setHorizontalOffset(size_t offset) override {
     m_horizontal_offset = offset;
   }
+  void setEnabled(bool enabled) override { m_enabled = enabled; }
   void clearNewFrame() override { m_has_new_frame = false; }
 
   // Configuration
@@ -140,6 +145,7 @@ private:
 
   std::vector<HardwareT> m_raw_frame;
   std::vector<Trace> m_traces;
+  bool m_enabled = true;
   bool m_has_new_frame = false;
 
 public:
@@ -151,6 +157,7 @@ public:
   // Accessors
   const std::string &getLabel() const override { return m_label; }
   const std::vector<Trace> &getTraces() const override { return m_traces; }
+  bool isEnabled() const override { return m_enabled; }
   bool hasNewFrame() const override { return m_has_new_frame; }
   float getVerticalScale() const override { return m_vertical_scale; }
   float getVerticalOffset() const override { return m_vertical_offset; }
@@ -177,6 +184,7 @@ public:
   void setHorizontalOffset(size_t offset) override {
     m_horizontal_offset = offset;
   }
+  void setEnabled(bool enabled) override { m_enabled = enabled; }
   void clearNewFrame() override { m_has_new_frame = false; }
 
   // Configuration

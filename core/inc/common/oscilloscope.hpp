@@ -39,7 +39,7 @@ public:
 
   // Core
   void update() {
-    if (m_channels.empty())
+    if (m_channels.empty() || (m_trigger && !m_trigger->isEnabled()))
       return;
 
     size_t src_idx =
@@ -55,7 +55,9 @@ public:
       for (auto &ch : m_channels) {
         if (ch->isHardwareChannel()) {
           if (ch->getUnreadSampleCount() >= frame_width) {
-            ch->extractAndProcessFrame(trigger_offset, frame_width);
+            if (ch->isEnabled()) {
+              ch->extractAndProcessFrame(trigger_offset, frame_width);
+            }
             ch->consumeBuffer(trigger_offset + frame_width);
           }
         }
@@ -63,7 +65,7 @@ public:
 
       // Pass 2: Extract virtual frames
       for (auto &ch : m_channels) {
-        if (!ch->isHardwareChannel()) {
+        if (!ch->isHardwareChannel() && ch->isEnabled()) {
           ch->extractAndProcessFrame(trigger_offset, frame_width);
         }
       }

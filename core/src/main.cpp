@@ -93,9 +93,9 @@ int main(int, char **) {
 
   // FFT processors
   auto fft_p1 = std::make_unique<Scoped::FFTProcessor<unsigned char>>(
-      "FFT 1", ui.getDisplayHeight());
+      "FFT CH1", ui.getDisplayHeight());
   auto fft_p2 = std::make_unique<Scoped::FFTProcessor<unsigned char>>(
-      "FFT 2", ui.getDisplayHeight());
+      "FFT CH2", ui.getDisplayHeight());
 
   ch1->addProcessor(std::move(fft_p1));
   ch2->addProcessor(std::move(fft_p2));
@@ -125,7 +125,7 @@ int main(int, char **) {
     if (!osc.getUSB().isConnected()) {
       for (int i = 0; i < 16; ++i) {
         ch1->getBuffer().fillTestSineWave();
-        ch2->getBuffer().fillTestSineWave();
+        ch2->getBuffer().fillTestSquareWave();
       }
     }
 

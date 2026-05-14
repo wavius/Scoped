@@ -137,7 +137,8 @@ void IntensityMap::processFrame(const float *normalized, size_t count, float r, 
   const int max_y = static_cast<int>(m_height - 1);
 
   auto toPixelY = [max_y](float n) -> int {
-    return static_cast<int>(std::clamp(n, 0.0f, 1.0f) * max_y);
+    return static_cast<int>(std::clamp(n * static_cast<float>(max_y) + 0.5f, 0.0f,
+                                      static_cast<float>(max_y)));
   };
 
   int prev_x = 0;

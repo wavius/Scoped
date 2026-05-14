@@ -65,6 +65,11 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
     for (size_t i = 0; i < channels.size(); ++i) {
       auto &channel = *channels[i];
 
+      if (!channel.isEnabled()) {
+        channel.clearNewFrame();
+        continue;
+      }
+
       // Assign color based on channel index
       ImVec4 color = (i == 0)   ? Colors::CH1
                      : (i == 1) ? Colors::CH2
@@ -159,9 +164,9 @@ void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
         }
 
         ImVec4 trace_color = Colors::FFTLine;
-        if (trace.name == "FFT 1") {
+        if (trace.name == "FFT CH1") {
           trace_color = Colors::FFT1;
-        } else if (trace.name == "FFT 2") {
+        } else if (trace.name == "FFT CH2") {
           trace_color = Colors::FFT2;
         }
 
@@ -191,9 +196,9 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
   ImPlotFlags flags = ImPlotFlags_CanvasOnly | ImPlotFlags_NoLegend;
 
   if (ImPlot::BeginPlot("##OscilloscopeImage", ImVec2(-1, -1), flags)) {
-    ImPlot::SetupAxesLimits(0, w, 0, h, ImGuiCond_Always);
+    ImPlot::SetupAxesLimits(0, w, -12, h + 12, ImGuiCond_Always);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0, w);
-    ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, h);
+    ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, -12, h + 12);
     ImPlot::SetupAxis(ImAxis_X1, nullptr, ImPlotAxisFlags_NoDecorations);
     ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_NoDecorations);
 
@@ -289,20 +294,22 @@ void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
 
       // Color coded label matching Trace
       ImVec4 label_color = Colors::FFTLine;
-      if (name == "FFT 1") {
+      if (name == "FFT CH1") {
         label_color = Colors::FFT1;
-      } else if (name == "FFT 2") {
+      } else if (name == "FFT CH2") {
         label_color = Colors::FFT2;
       }
 
-      ImGui::TextColored(label_color, "%s (%s)", name.c_str(),
-                         channel->getLabel().c_str());
-      ImGui::Spacing();
-
       bool enabled = processor->isEnabled();
-      if (ImGui::Checkbox("Enabled", &enabled)) {
+      ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
+      if (ImGui::Checkbox("##Enabled", &enabled)) {
         processor->setEnabled(enabled);
       }
+      ImGui::PopStyleVar();
+      ImGui::SameLine();
+
+      ImGui::TextColored(label_color, "%s", name.c_str());
+      ImGui::Spacing();
 
       float scale = processor->getScale();
       ImGui::Text("Scale");
@@ -492,6 +499,17 @@ void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
     return;
   }
 
+  bool enabled = trigger->isEnabled();
+  ImGui::PushStyleColor(ImGuiCol_Text, enabled ? Colors::StatusError : Colors::StatusOk);
+  if (ImGui::Button(enabled ? "Stop" : "Start", ImVec2(-1, 0))) {
+    trigger->setEnabled(!enabled);
+  }
+  ImGui::PopStyleColor();
+
+  ImGui::Spacing();
+  ImGui::Separator();
+  ImGui::Spacing();
+
   drawModeCombo(osc);
 
   ImGui::Spacing();
@@ -542,6 +560,7 @@ void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
 // FFT controls window.
 void OscilloscopeUI::drawFFTWindow(Oscilloscope &osc) {
   ImGui::Begin("FFT");
+  ImGui::SetWindowFontScale(1.15f);
 
   drawFFTControl(osc);
 
@@ -551,6 +570,7 @@ void OscilloscopeUI::drawFFTWindow(Oscilloscope &osc) {
 // Channel controls window.
 void OscilloscopeUI::drawChannelWindow(Oscilloscope &osc) {
   ImGui::Begin("Channels");
+  ImGui::SetWindowFontScale(1.15f);
 
   if (osc.getChannels().empty()) {
     ImGui::TextDisabled("No channels available.");
@@ -570,6 +590,15 @@ void OscilloscopeUI::drawChannelWindow(Oscilloscope &osc) {
     } else if (channel->getLabel() == "CH2") {
       label_color = Colors::CH2;
     }
+
+    bool enabled = channel->isEnabled();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
+    if (ImGui::Checkbox("##Enabled", &enabled)) {
+      channel->setEnabled(enabled);
+    }
+    ImGui::PopStyleVar();
+    ImGui::SameLine();
+
     ImGui::TextColored(label_color, "%s", channel->getLabel().c_str());
     ImGui::Spacing();
 

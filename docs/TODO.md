@@ -4,13 +4,12 @@
 
 - Fix hardcoded trigger source in `OscilloscopeUI::drawTriggerLine` (currently defaults to channel 0).
 - Add a "Source" selector in the Trigger UI to switch between channels.
-- Add a proper scale to signal and fft plot
+- Add a proper scale to signal and fft plots
 - Add channel enable
 
-## Signal Processing
+## FFT
 
-- Refactor `calculateFFT` to use an **Iterative Cooley-Tukey** algorithm (avoid recursive allocations).
-- Add support for multiple FFT traces (one per channel).
+- Add vertical scale and offset
 
 ## Hardware
 

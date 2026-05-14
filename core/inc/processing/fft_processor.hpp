@@ -148,10 +148,12 @@ public:
 
       val = m_smoothed_data[i];
       
+      // Calculate min/max over the entire FFT so scrolling doesn't change the scale
+      max = val > max ? val : max;
+      min = val < min ? val : min;
+
       if (i >= offset && i < offset + scale) {
         fft_trace.data[i - offset] = val;
-        max = val > max ? val : max;
-        min = val < min ? val : min;
       }
     }
 

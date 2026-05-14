@@ -18,6 +18,8 @@ const ImVec4 StatusOk = ImVec4(0, 1, 0, 1);            // Green
 const ImVec4 StatusError = ImVec4(1, 0, 0, 1);         // Red
 const ImVec4 CH1 = ImVec4(1, 1, 0, 1);                 // Yellow
 const ImVec4 CH2 = ImVec4(0, 1, 0, 1);                 // Green
+const ImVec4 FFT1 = ImVec4(1.0f, 0.5f, 0.0f, 1.0f);    // Orange
+const ImVec4 FFT2 = ImVec4(0.0f, 1.0f, 1.0f, 1.0f);    // Cyan
 const ImVec4 TopBarBg = ImVec4(0.11f, 0.14f, 0.18f, 1.0f);   // Dark Blue-Gray
 const ImVec4 ChannelBlockBg = ImVec4(1.0f, .8f, 0.0f, 1.0f); // Amber/Gold
 const ImVec4 BottomBarBg = ImVec4(0.08f, 0.1f, 0.12f, 1.0f); // Dark Navy
@@ -29,7 +31,7 @@ void setupChannelColormap(ImVec4 color);
 // Owns the display state and renders the complete oscilloscope UI.
 class OscilloscopeUI {
 private:
-  std::vector<std::unique_ptr<IntensityMap>> m_displays;
+  std::unique_ptr<IntensityMap> m_display;
   size_t m_display_width;
   size_t m_display_height;
   std::vector<float> m_normalized_time;

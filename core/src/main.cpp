@@ -87,13 +87,21 @@ int main(int, char **) {
 
   Scoped::Oscilloscope osc;
 
-  // CH1
+  // Channels
   auto ch1 = std::make_shared<Scoped::Channel<uint8_t>>("CH1", 16384 * 4, 2048);
-  // FFT processor
-  auto fft_proc = std::make_unique<Scoped::FFTProcessor<unsigned char>>(
-      ui.getDisplayHeight());
-  ch1->addProcessor(std::move(fft_proc));
+  auto ch2 = std::make_shared<Scoped::Channel<uint8_t>>("CH2", 16384 * 4, 2048);
+
+  // FFT processors
+  auto fft_p1 = std::make_unique<Scoped::FFTProcessor<unsigned char>>(
+      "FFT 1", ui.getDisplayHeight());
+  auto fft_p2 = std::make_unique<Scoped::FFTProcessor<unsigned char>>(
+      "FFT 2", ui.getDisplayHeight());
+
+  ch1->addProcessor(std::move(fft_p1));
+  ch2->addProcessor(std::move(fft_p2));
+
   osc.addChannel(ch1);
+  osc.addChannel(ch2);
 
   auto trigger = std::make_unique<Scoped::EdgeTrigger>(16384, 128.0f);
   osc.setTrigger(std::move(trigger));
@@ -115,8 +123,10 @@ int main(int, char **) {
     ImGui::NewFrame();
 
     if (!osc.getUSB().isConnected()) {
-      for (int i = 0; i < 16; ++i)
+      for (int i = 0; i < 16; ++i) {
         ch1->getBuffer().fillTestSineWave();
+        ch2->getBuffer().fillTestSineWave();
+      }
     }
 
     osc.update();

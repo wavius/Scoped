@@ -91,7 +91,7 @@ public:
   // Setters
   void setVerticalScale(float scale) override { m_vertical_scale = scale; }
   void setVerticalOffset(float offset) override { m_vertical_offset = offset; }
-  void setHorizontalScale(size_t n) override { m_horizontal_scale = n; }
+  void setHorizontalScale(size_t scale) override { m_horizontal_scale = scale; }
   void setHorizontalOffset(size_t offset) override {
     m_horizontal_offset = offset;
   }

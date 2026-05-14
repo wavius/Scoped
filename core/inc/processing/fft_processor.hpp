@@ -34,13 +34,17 @@ private:
   float m_smoothing_factor =
       0.8f; // Smoothing factor for exponential smoothing (EMA)
   std::vector<float> m_smoothed_data; // Smooothed FFT data
+  size_t m_fft_size = 16384; // Window size for FFT
 
   float m_scale = 0.9f;                   // Scale factor applied to FFT output
   static constexpr float m_offset = 0.0f; // Vertical offset
+  size_t m_horizontal_scale = 0; // 0 means auto/full
+  size_t m_horizontal_offset = 0;
 
 public:
   // Lifecycle
-  FFTProcessor(size_t display_height) : m_window(0, WindowType::Hann) {
+  FFTProcessor(const std::string &name, size_t display_height)
+      : m_name(name), m_window(0, WindowType::Hann) {
     m_max_height = display_height;
     m_enabled = false;
   }
@@ -55,6 +59,9 @@ public:
   std::string getWindowTypeName() const override {
     return m_window.getTypeName();
   }
+  size_t getWindowSize() const override { return m_fft_size; }
+  size_t getHorizontalScale() const override { return m_horizontal_scale; }
+  size_t getHorizontalOffset() const override { return m_horizontal_offset; }
 
   // Setters
   void setEnabled(bool enabled) override { m_enabled = enabled; }
@@ -66,12 +73,21 @@ public:
   void setWindowType(int type) override {
     m_window.setType(static_cast<WindowType>(type));
   }
+  void setWindowSize(size_t size) override {
+    m_fft_size = size;
+  }
+  void setHorizontalScale(size_t scale) override {
+    m_horizontal_scale = scale;
+  }
+  void setHorizontalOffset(size_t offset) override {
+    m_horizontal_offset = offset;
+  }
 
   // Pipeline
   void process(const std::vector<HardwareT> &raw_frame,
                std::vector<Trace> &traces) override {
 
-    size_t frame_size = raw_frame.size();
+    size_t frame_size = std::min(m_fft_size, raw_frame.size());
     m_fft_output.resize(frame_size);
 
     // Update window size (Window class only regenerates if size actually changes)
@@ -107,29 +123,36 @@ public:
     fft_trace.name = this->m_name; // TODO: Add channel to name
     fft_trace.domain = Domain::Frequency;
 
-    fft_trace.data.resize(frame_size / 2);
+    size_t num_bins = frame_size / 2;
+    size_t scale = (m_horizontal_scale == 0 || m_horizontal_scale > num_bins) ? num_bins : m_horizontal_scale;
+    size_t offset = std::min(m_horizontal_offset, num_bins - scale);
 
-    m_smoothed_data.resize(frame_size / 2);
+    fft_trace.data.resize(scale);
+    m_smoothed_data.resize(num_bins);
 
     // Find magnitude and normalize
     float max = std::numeric_limits<float>::lowest();
     float min = std::numeric_limits<float>::max();
-    for (size_t i = 0; i < frame_size / 2; i++) {
+    for (size_t i = 0; i < num_bins; i++) {
       float mag = std::abs(m_fft_output[i]);
+      float val;
       if (m_isLinearMode) {
-        fft_trace.data[i] = mag;
+        val = mag;
       } else {
-        fft_trace.data[i] = 20.0f * std::log10(mag + EPSILON);
+        val = 20.0f * std::log10(mag + EPSILON);
       }
 
       // Smooth data
-      m_smoothed_data[i] = ((1.0f - m_smoothing_factor) * fft_trace.data[i]) +
+      m_smoothed_data[i] = ((1.0f - m_smoothing_factor) * val) +
                            (m_smoothed_data[i] * m_smoothing_factor);
 
-      fft_trace.data[i] = m_smoothed_data[i];
-
-      max = fft_trace.data[i] > max ? fft_trace.data[i] : max;
-      min = fft_trace.data[i] < min ? fft_trace.data[i] : min;
+      val = m_smoothed_data[i];
+      
+      if (i >= offset && i < offset + scale) {
+        fft_trace.data[i - offset] = val;
+        max = val > max ? val : max;
+        min = val < min ? val : min;
+      }
     }
 
     // Scale + offset

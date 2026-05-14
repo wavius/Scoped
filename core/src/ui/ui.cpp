@@ -46,46 +46,50 @@ OscilloscopeUI::OscilloscopeUI(size_t display_width, size_t display_height)
 void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
   const auto &channels = osc.getChannels();
 
-  while (m_displays.size() < channels.size()) {
-    size_t index = m_displays.size();
-    auto display =
+  if (!m_display) {
+    m_display =
         std::make_unique<IntensityMap>(m_display_width, m_display_height);
-
-    // Assign color based on channel index
-    ImVec4 color = (index == 0)   ? Colors::CH1
-                   : (index == 1) ? Colors::CH2
-                                  : ImVec4(1, 1, 1, 1);
-    display->setColor(color.x, color.y, color.z);
-
-    m_displays.push_back(std::move(display));
   }
 
-  for (size_t i = 0; i < channels.size(); ++i) {
-    auto &channel = *channels[i];
-
-    if (!channel.hasNewFrame()) {
-      continue;
+  bool any_new_frame = false;
+  for (const auto &channel : channels) {
+    if (channel->hasNewFrame()) {
+      any_new_frame = true;
+      break;
     }
+  }
 
-    const auto &traces = channel.getTraces();
+  if (any_new_frame) {
+    m_display->clear();
 
-    for (const auto &trace : traces) {
-      if (trace.domain == Domain::Time) {
-        size_t visible =
-            std::min(channel.getHorizontalScale(), trace.data.size());
+    for (size_t i = 0; i < channels.size(); ++i) {
+      auto &channel = *channels[i];
 
-        m_normalized_time.resize(visible);
+      // Assign color based on channel index
+      ImVec4 color = (i == 0)   ? Colors::CH1
+                     : (i == 1) ? Colors::CH2
+                                : ImVec4(1, 1, 1, 1);
 
-        for (size_t j = 0; j < visible; ++j) {
-          m_normalized_time[j] = trace.normalizeToIntensity(trace.data[j]);
+      const auto &traces = channel.getTraces();
+
+      for (const auto &trace : traces) {
+        if (trace.domain == Domain::Time) {
+          size_t visible =
+              std::min(channel.getHorizontalScale(), trace.data.size());
+
+          m_normalized_time.resize(visible);
+
+          for (size_t j = 0; j < visible; ++j) {
+            m_normalized_time[j] = trace.normalizeToIntensity(trace.data[j]);
+          }
+
+          m_display->processFrame(m_normalized_time.data(), visible, color.x,
+                                  color.y, color.z);
         }
-
-        m_displays[i]->clear();
-        m_displays[i]->processFrame(m_normalized_time.data(), visible);
       }
-    }
 
-    channel.clearNewFrame();
+      channel.clearNewFrame();
+    }
   }
 }
 
@@ -144,8 +148,8 @@ void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
   for (const auto &channel : osc.getChannels()) {
     for (const auto &trace : channel->getTraces()) {
       if (trace.domain == Domain::Frequency) {
-        size_t visible =
-            std::min(channel->getHorizontalScale(), trace.data.size());
+        size_t visible = trace.data.size();
+        if (visible < 2) continue;
 
         m_normalized_freq.resize(visible);
 
@@ -154,10 +158,19 @@ void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
                                  static_cast<float>(m_display_height);
         }
 
-        ImPlot::PlotLine(trace.name.c_str(), m_normalized_freq.data(),
-                         m_normalized_freq.size(), 1.0, 0.0,
-                         {ImPlotProp_LineColor, Colors::FFTLine,
-                          ImPlotProp_LineWeight, 2.0f});
+        ImVec4 trace_color = Colors::FFTLine;
+        if (trace.name == "FFT 1") {
+          trace_color = Colors::FFT1;
+        } else if (trace.name == "FFT 2") {
+          trace_color = Colors::FFT2;
+        }
+
+        double xscale = static_cast<double>(m_display_width) / static_cast<double>(visible - 1);
+
+        ImPlot::PlotLine(
+            trace.name.c_str(), m_normalized_freq.data(),
+            m_normalized_freq.size(), xscale, 0.0,
+            {ImPlotProp_LineColor, trace_color, ImPlotProp_LineWeight, 2.0f});
       }
     }
   }
@@ -184,11 +197,11 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
     ImPlot::SetupAxis(ImAxis_X1, nullptr, ImPlotAxisFlags_NoDecorations);
     ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_NoDecorations);
 
-    for (size_t i = 0; i < m_displays.size(); ++i) {
-      m_displays[i]->updateTexture();
+    if (m_display) {
+      m_display->updateTexture();
 
-      ImPlot::PlotImage(("OscilloscopeTrace" + std::to_string(i)).c_str(),
-                        (ImTextureID)(intptr_t)m_displays[i]->getTextureID(),
+      ImPlot::PlotImage("OscilloscopeTrace",
+                        (ImTextureID)(intptr_t)m_display->getTextureID(),
                         ImPlotPoint(0, 0), ImPlotPoint(w, h));
     }
 
@@ -231,13 +244,8 @@ void OscilloscopeUI::drawHorizontalControls(IChannel &channel,
 
   ImGui::Text("Horizontal Scale");
   ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-  if (ImGui::SliderInt("##Horizontal Scale", &samples, 256, 16384, "%d smp")) {
+  if (ImGui::SliderInt("##Horizontal Scale", &samples, 256, 16384, "%d samples")) {
     channel.setHorizontalScale(static_cast<size_t>(samples));
-
-    // Ensure the trigger acquisition length matches the visible scale
-    if (osc.getTrigger()) {
-      osc.getTrigger()->setFrameWidth(static_cast<size_t>(samples));
-    }
   }
 }
 
@@ -261,8 +269,6 @@ void OscilloscopeUI::drawVerticalControls(IChannel &channel) {
                          "%.1f")) {
     channel.setVerticalOffset(offset);
   }
-
-  ImGui::TextDisabled("Horizontal scale: %zu", channel.getHorizontalScale());
 }
 
 // Control pannels
@@ -274,18 +280,23 @@ void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
     ImGui::PushID(channel->getLabel().c_str());
 
     for (auto &processor : channel->getProcessors()) {
-      if (processor->getName() != "FFT") {
+      std::string name = processor->getName();
+      if (name.find("FFT") == std::string::npos) {
         continue;
       }
 
       found_fft = true;
 
-      // Color coded label matching Channel Window
-      ImVec4 label_color = (channel->getLabel() == "CH1") ? Colors::CH1
-                           : (channel->getLabel() == "CH2")
-                               ? Colors::CH2
-                               : ImVec4(1, 1, 0, 1);
-      ImGui::TextColored(label_color, "%s", channel->getLabel().c_str());
+      // Color coded label matching Trace
+      ImVec4 label_color = Colors::FFTLine;
+      if (name == "FFT 1") {
+        label_color = Colors::FFT1;
+      } else if (name == "FFT 2") {
+        label_color = Colors::FFT2;
+      }
+
+      ImGui::TextColored(label_color, "%s (%s)", name.c_str(),
+                         channel->getLabel().c_str());
       ImGui::Spacing();
 
       bool enabled = processor->isEnabled();
@@ -300,10 +311,12 @@ void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
         processor->setScale(scale);
       }
 
-      bool linear = processor->getIsModeLinear();
-      if (ImGui::Button(linear ? "Linear" : "Decibel",
-                        ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-        processor->setIsModeLinear(!linear);
+      ImGui::Text("Representation");
+      int selected_mode = processor->getIsModeLinear() ? 0 : 1;
+      const char *modes[] = {"Linear", "Decibel"};
+      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+      if (ImGui::Combo("##Representation", &selected_mode, modes, 2)) {
+        processor->setIsModeLinear(selected_mode == 0);
       }
 
       // Window Type Selection
@@ -330,6 +343,34 @@ void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
       if (ImGui::SliderFloat("##Smoothing", &smoothing_factor, 0.0f, 1.00f,
                              "%.2f")) {
         processor->setSmoothingFactor(smoothing_factor);
+      }
+
+      int fft_size = static_cast<int>(processor->getWindowSize());
+      ImGui::Text("Resolution");
+      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+      if (ImGui::SliderInt("##SampleCount", &fft_size, 256, 16384, "%d samples")) {
+        processor->setWindowSize(static_cast<size_t>(fft_size));
+      }
+
+      int num_bins = fft_size / 2;
+      int h_scale = static_cast<int>(processor->getHorizontalScale());
+      if (h_scale == 0 || h_scale > num_bins) h_scale = num_bins;
+      ImGui::Text("Horizontal Scale");
+      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+      if (ImGui::SliderInt("##FFTHorizontalScale", &h_scale, 2, num_bins, "%d bins")) {
+        processor->setHorizontalScale(static_cast<size_t>(h_scale));
+      }
+
+      int h_offset = static_cast<int>(processor->getHorizontalOffset());
+      int max_offset = std::max(1, num_bins - h_scale);
+      if (h_offset > max_offset) {
+          h_offset = max_offset;
+          processor->setHorizontalOffset(static_cast<size_t>(h_offset));
+      }
+      ImGui::Text("Horizontal Offset");
+      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+      if (ImGui::SliderInt("##FFTHorizontalOffset", &h_offset, 0, max_offset, "%d bins")) {
+        processor->setHorizontalOffset(static_cast<size_t>(h_offset));
       }
 
       ImGui::Spacing();
@@ -521,9 +562,14 @@ void OscilloscopeUI::drawChannelWindow(Oscilloscope &osc) {
   for (auto &channel : osc.getChannels()) {
     ImGui::PushID(channel->getLabel().c_str());
 
-    // Use Cyan for CH1, Yellow for others (or default)
-    ImVec4 label_color =
-        (channel->getLabel() == "CH1") ? Colors::CH1 : ImVec4(1, 1, 0, 1);
+    // Default to Black
+    // Add more channel colors as needed
+    ImVec4 label_color = Colors::Black;
+    if (channel->getLabel() == "CH1") {
+      label_color = Colors::CH1;
+    } else if (channel->getLabel() == "CH2") {
+      label_color = Colors::CH2;
+    }
     ImGui::TextColored(label_color, "%s", channel->getLabel().c_str());
     ImGui::Spacing();
 
@@ -588,7 +634,6 @@ void OscilloscopeUI::drawDebugWindow(Oscilloscope &osc) {
   ImGui::Text("Display width: %zu", m_display_width);
   ImGui::Text("Display height: %zu", m_display_height);
   ImGui::Text("Channels: %zu", osc.getChannels().size());
-  ImGui::Text("Display textures: %zu", m_displays.size());
 
   if (!osc.getChannels().empty()) {
     auto &channel = osc.getChannels()[0];

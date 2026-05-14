@@ -48,7 +48,7 @@ private:
 
   // Control helpers
   void drawModeCombo(Oscilloscope &osc);
-  void drawHorizontalControls(IChannel &channel);
+  void drawHorizontalControls(IChannel &channel, Oscilloscope &osc);
   void drawVerticalControls(IChannel &channel);
   void drawFFTControl(Oscilloscope &osc);
 

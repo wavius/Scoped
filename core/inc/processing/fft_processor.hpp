@@ -5,6 +5,7 @@
 #include <complex>
 #include <limits>
 #include <processing/iprocessor.hpp>
+#include <processing/window.hpp>
 #include <vector>
 
 namespace Scoped {
@@ -17,7 +18,9 @@ private:
   std::string m_name = "FFT";
 
   std::vector<std::complex<float>> m_fft_output; // FFT output
-  std::vector<float> m_window_lut;               // LUT for windowing function
+
+  // Windowing
+  Scoped::Window m_window;
 
   // Constants
   static constexpr std::complex<float> I_COMPLEX{0.0f, 1.0f};
@@ -37,7 +40,7 @@ private:
 
 public:
   // Lifecycle
-  FFTProcessor(size_t display_height) {
+  FFTProcessor(size_t display_height) : m_window(0, WindowType::Hann) {
     m_max_height = display_height;
     m_enabled = false;
   }
@@ -48,6 +51,10 @@ public:
   float getScale() const override { return m_scale; }
   bool getIsModeLinear() const override { return m_isLinearMode; }
   float getSmoothingFactor() const override { return m_smoothing_factor; }
+  WindowType getWindowType() const { return m_window.getType(); }
+  std::string getWindowTypeName() const override {
+    return m_window.getTypeName();
+  }
 
   // Setters
   void setEnabled(bool enabled) override { m_enabled = enabled; }
@@ -55,6 +62,9 @@ public:
   void setIsModeLinear(bool mode) override { m_isLinearMode = mode; }
   void setSmoothingFactor(float factor) override {
     m_smoothing_factor = factor;
+  }
+  void setWindowType(int type) override {
+    m_window.setType(static_cast<WindowType>(type));
   }
 
   // Pipeline
@@ -64,26 +74,20 @@ public:
     size_t frame_size = raw_frame.size();
     m_fft_output.resize(frame_size);
 
-    // Remove DC offset and apply windowing function (Gaussian distribution)
+    // Update window size (Window class only regenerates if size actually changes)
+    m_window.setSize(frame_size);
+    const auto& window_func = m_window.getFunction();
+
+    // Remove DC offset and apply windowing function
     std::vector<float> centered_frame;
     centered_frame.resize(frame_size);
-    prepareWindow(frame_size);
     float mean = calculateMean(raw_frame);
     for (size_t i = 0; i < frame_size; i++) {
       centered_frame[i] =
-          (static_cast<float>(raw_frame[i]) - mean) * m_window_lut[i];
+          (static_cast<float>(raw_frame[i]) - mean) * window_func[i];
     }
 
-    // Old FFT function
-    // calculateFFTRecursive(centered_frame, m_fft_output);
-
     // Real to complex Fourier Transform
-    /*
-    template<typename T> void r2c(const shape_t &shape_in,
-      const stride_t &stride_in, const stride_t &stride_out, size_t axis,
-      bool forward, const T *data_in, complex<T> *data_out, T fct,
-      size_t nthreads=1)
-    */
     pocketfft::shape_t shape{frame_size};
 
     pocketfft::stride_t stride_in(1);
@@ -188,18 +192,6 @@ public:
       sum += i;
     }
     return static_cast<float>(sum / frame.size());
-  }
-
-  void prepareWindow(size_t size) {
-    if (m_window_lut.size() == size)
-      return;
-
-    m_window_lut.resize(size);
-    for (size_t i = 0; i < size; i++) {
-      m_window_lut[i] =
-          0.5f *
-          (1.0f - std::cos(2.0f * PI * i / (static_cast<float>(size) - 1.0f)));
-    }
   }
 };
 

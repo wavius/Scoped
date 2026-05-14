@@ -19,12 +19,14 @@ public:
   virtual float getScale() const = 0;
   virtual bool getIsModeLinear() const = 0;
   virtual float getSmoothingFactor() const = 0;
+  virtual std::string getWindowTypeName() const { return "None"; }
 
   // Setters
   virtual void setEnabled(bool enabled) = 0;
   virtual void setScale(float scale) = 0;
   virtual void setIsModeLinear(bool mode) = 0;
   virtual void setSmoothingFactor(float factor) = 0;
+  virtual void setWindowType(int /*type*/) {}
 };
 
 // Base for processors operating across multiple channels.

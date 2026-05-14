@@ -4,8 +4,8 @@
 
 - Fix hardcoded trigger source in `OscilloscopeUI::drawTriggerLine` (currently defaults to channel 0).
 - Add a "Source" selector in the Trigger UI to switch between channels.
-- Implement a selector for the timebase reference channel.
 - Add a proper scale to signal and fft plot
+- Add channel enable
 
 ## Signal Processing
 

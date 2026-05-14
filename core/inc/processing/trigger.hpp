@@ -49,6 +49,7 @@ public:
 
   // Setters
   void setMode(TriggerMode mode) { m_mode = mode; }
+  void setFrameWidth(size_t width) { m_frame_width = width; }
   virtual void setUIParameter(const std::string &name, int val) = 0;
   virtual void clear() = 0;
 

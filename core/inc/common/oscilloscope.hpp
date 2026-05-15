@@ -38,6 +38,7 @@ public:
   const std::vector<std::shared_ptr<IChannel>> &getChannels() const {
     return m_channels;
   }
+  size_t getTriggerSourceIndex() const { return m_trigger_source_idx; }
 
   // Core
   void update() {
@@ -47,9 +48,7 @@ public:
     if (m_trigger && !m_trigger->isEnabled()) {
       // Re-process last frame using current UI settings
       for (auto &ch : m_channels) {
-        if (ch->isEnabled()) {
-          ch->reprocessLastFrame();
-        }
+        ch->reprocessLastFrame();
       }
       return;
     }

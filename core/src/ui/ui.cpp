@@ -129,7 +129,11 @@ void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
     return;
   }
 
-  auto &channel = osc.getChannels()[0];
+  size_t src_idx = osc.getTriggerSourceIndex();
+  if (src_idx >= osc.getChannels().size()) {
+    src_idx = 0;
+  }
+  auto &channel = osc.getChannels()[src_idx];
   auto traces = channel->getTraces();
 
   if (traces.empty()) {
@@ -151,6 +155,9 @@ void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
 // Draws FFT data over the scope display when FFT is enabled.
 void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
   for (const auto &channel : osc.getChannels()) {
+    if (!channel->isEnabled()) {
+      continue;
+    }
     for (const auto &trace : channel->getTraces()) {
       if (trace.domain == Domain::Frequency) {
         size_t visible = trace.data.size();

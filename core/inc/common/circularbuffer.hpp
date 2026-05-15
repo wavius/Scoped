@@ -64,26 +64,28 @@ public:
   }
 
   // Test Signal Generators
-  void fillTestSquareWave() {
+  void fillTestSquareWave(float frequency = 4.0f) {
     size_t count = 1024;
-    constexpr size_t frequency = 6;
-    size_t x = std::pow(2, frequency);
+    // frequency here is number of cycles per 1024 samples
+    float period = 1024.0f / frequency;
+    float half_period = period / 2.0f;
+
     for (size_t i = 0; i < count; i++) {
       T val;
+      bool high = std::fmod(static_cast<float>(i), period) < half_period;
+
       if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
-        val = (i % (x * 2)) < x ? static_cast<T>(1.0) : static_cast<T>(-1.0);
+        val = high ? static_cast<T>(1.0) : static_cast<T>(-1.0);
       } else {
-        val = (i % (x * 2)) < x ? static_cast<T>(255) : static_cast<T>(0);
+        val = high ? static_cast<T>(255) : static_cast<T>(0);
       }
-      pushSample(val);
       pushSample(val);
     }
   }
 
-  void fillTestSineWave() {
-    constexpr float frequency = 5.00f;
+  void fillTestSineWave(float frequency = 5.00f) {
     constexpr size_t chunk_size = 1024;
-    constexpr float phase_step = (2.0f * M_PI * frequency) / chunk_size;
+    const float phase_step = (2.0f * M_PI * frequency) / chunk_size;
 
     for (size_t i = 0; i < chunk_size; ++i) {
       float val = std::sin(m_test_phase);
@@ -95,7 +97,7 @@ public:
       m_test_phase += phase_step;
     }
 
-    if (m_test_phase > 2.0f * M_PI * 100.0f) {
+    if (m_test_phase > 2.0f * M_PI * 1000.0f) {
       m_test_phase = std::fmod(m_test_phase, 2.0f * M_PI);
     }
   }

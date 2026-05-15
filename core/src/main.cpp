@@ -123,9 +123,10 @@ int main(int, char **) {
     ImGui::NewFrame();
 
     if (!osc.getUSB().isConnected()) {
+      constexpr float base_freq = 4.0f;
       for (int i = 0; i < 16; ++i) {
-        ch1->getBuffer().fillTestSineWave();
-        ch2->getBuffer().fillTestSquareWave();
+        ch1->getBuffer().fillTestSineWave(base_freq);
+        ch2->getBuffer().fillTestSineWave(base_freq * 2.0f);
       }
     }
 

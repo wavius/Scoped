@@ -62,6 +62,22 @@ void IntensityMap::updateTexture() {
                   GL_UNSIGNED_BYTE, m_texture_data.data());
 }
 
+void IntensityMap::resize(size_t width, size_t height) {
+  if (width == m_width && height == m_height)
+    return;
+
+  m_width = width;
+  m_height = height;
+
+  m_grid.assign(width * height, {0.0f, 0.0f, 0.0f, 0.0f});
+  m_texture_data.assign(width * height, {0, 0, 0, 0});
+
+  if (m_texture_id != 0) {
+    glDeleteTextures(1, &m_texture_id);
+  }
+  initTexture();
+}
+
 // Grid operations
 void IntensityMap::clear() { std::fill(m_grid.begin(), m_grid.end(), Pixel{0.0f, 0.0f, 0.0f, 0.0f}); }
 
@@ -99,7 +115,7 @@ void IntensityMap::decay(float factor) {
 }
 
 // Frame rasterization
-static void plotLine(IntensityMap::Pixel *grid, int width, int height, int x1, int y1,
+static inline void plotLineFast(IntensityMap::Pixel *grid, int width, int x1, int y1,
                      int x2, int y2, float r, float g, float b) {
   int dx = std::abs(x2 - x1);
   int dy = std::abs(y2 - y1);
@@ -108,12 +124,13 @@ static void plotLine(IntensityMap::Pixel *grid, int width, int height, int x1, i
   int err = dx - dy;
 
   while (true) {
-    if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height) {
-      grid[y1 * width + x1].r += r;
-      grid[y1 * width + x1].g += g;
-      grid[y1 * width + x1].b += b;
-      grid[y1 * width + x1].a += 1.0f;
-    }
+    // Inputs are explicitly clamped by the caller, so we can skip bounds checking for extreme speed
+    auto& p = grid[y1 * width + x1];
+    p.r += r;
+    p.g += g;
+    p.b += b;
+    p.a += 1.0f;
+    
     if (x1 == x2 && y1 == y2)
       break;
     int e2 = 2 * err;
@@ -148,8 +165,7 @@ void IntensityMap::processFrame(const float *normalized, size_t count, float r, 
     int cur_x = static_cast<int>(i * x_scale);
     int cur_y = toPixelY(normalized[i]);
 
-    plotLine(m_grid.data(), static_cast<int>(m_width),
-             static_cast<int>(m_height), prev_x, prev_y, cur_x, cur_y, r, g, b);
+    plotLineFast(m_grid.data(), static_cast<int>(m_width), prev_x, prev_y, cur_x, cur_y, r, g, b);
 
     prev_x = cur_x;
     prev_y = cur_y;

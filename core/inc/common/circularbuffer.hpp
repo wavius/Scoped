@@ -9,7 +9,7 @@
 
 namespace Scoped {
 
-// Lock-free single-producer single-consumer circular buffer.
+// Lock-free single-producer single-consumer circular buffer
 template <typename T> class CircularBuffer {
 private:
   std::vector<T> m_buffer;
@@ -17,8 +17,18 @@ private:
   std::atomic<size_t> m_read_idx{0};
   std::atomic<size_t> m_write_idx{0};
 
-  // Phase accumulator for test signals shared across all instances of this buffer type
+  // Used for test signals; shared across all instances of this buffer type
   inline static double s_fundamental_phase{0.0};
+  inline static std::vector<float> s_sine_lut;
+
+  static void ensureSineLUT() {
+    if (!s_sine_lut.empty())
+      return;
+    s_sine_lut.resize(4096);
+    for (int i = 0; i < 4096; ++i) {
+      s_sine_lut[i] = std::sin(2.0 * M_PI * i / 4096.0);
+    }
+  }
 
 public:
   // Lifecycle
@@ -102,14 +112,21 @@ public:
 
   void fillTestSineWave(float frequency = 5.00f) {
     constexpr size_t chunk_size = 1024;
+    ensureSineLUT();
     
-    // Scale fundamental phase to local frequency phase
-    double phase = s_fundamental_phase * static_cast<double>(frequency) * 2.0 * M_PI;
-    double step = (2.0 * M_PI / 1024.0) * static_cast<double>(frequency);
+    // Direct Digital Synthesis (DDS) setup
+    // We map 0.0-1.0 to the full range of a 32-bit unsigned integer.
+    // This gives us automatic, free phase wrapping (integer overflow) and extreme speed.
+    double local_phase_double = std::fmod(s_fundamental_phase * static_cast<double>(frequency), 1.0);
+    uint32_t phase = static_cast<uint32_t>(local_phase_double * 4294967296.0);
+    uint32_t step = static_cast<uint32_t>(((1.0 / 1024.0) * static_cast<double>(frequency)) * 4294967296.0);
+    
     size_t write_idx = m_write_idx.load(std::memory_order_relaxed);
 
     for (size_t i = 0; i < chunk_size; ++i) {
-      float val = std::sinf(static_cast<float>(phase));
+      // Top 12 bits give us an index from 0 to 4095
+      size_t lut_idx = phase >> 20;
+      float val = s_sine_lut[lut_idx];
       
       T sample;
       if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
@@ -120,12 +137,14 @@ public:
 
       m_buffer[write_idx] = sample;
       write_idx = (write_idx + 1) % m_capacity;
+      
+      // Integer addition (automatic wrap-around)
       phase += step;
     }
 
     m_write_idx.store(write_idx, std::memory_order_release);
 
-    // Update master clock (normalized 0.0 to 1.0)
+    // Update master clock
     s_fundamental_phase += (1.0 / 1024.0);
     if (s_fundamental_phase >= 1024.0) {
       s_fundamental_phase = std::fmod(s_fundamental_phase, 1024.0);

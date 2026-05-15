@@ -125,8 +125,8 @@ int main(int, char **) {
     if (!osc.getUSB().isConnected()) {
       constexpr float base_freq = 4.0f;
       for (int i = 0; i < 16; ++i) {
-        ch1->getBuffer().fillTestSquareWave(base_freq);
-        ch2->getBuffer().fillTestSquareWave(base_freq * 2.0f);
+        ch1->getBuffer().fillTestSineWave(base_freq);
+        ch2->getBuffer().fillTestSineWave(base_freq * 2.0f);
       }
     }
 

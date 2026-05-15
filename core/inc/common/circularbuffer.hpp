@@ -66,13 +66,17 @@ public:
   // Test Signal Generators
   void fillTestSquareWave(float frequency = 4.0f) {
     size_t count = 1024;
-    // frequency here is number of cycles per 1024 samples
-    float period = 1024.0f / frequency;
-    float half_period = period / 2.0f;
+    static uint64_t s_shared_samples = 0;
+    
+    // Period in samples
+    double period = 1024.0 / static_cast<double>(frequency);
+    double half_period = period / 2.0;
 
     for (size_t i = 0; i < count; i++) {
       T val;
-      bool high = std::fmod(static_cast<float>(i), period) < half_period;
+      // Use the shared global sample count to determine phase
+      double current_phase = std::fmod(static_cast<double>(s_shared_samples++), period);
+      bool high = current_phase < half_period;
 
       if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
         val = high ? static_cast<T>(1.0) : static_cast<T>(-1.0);
@@ -95,10 +99,9 @@ public:
         pushSample(static_cast<T>((val * 127.5f) + 127.5f));
       }
       m_test_phase += phase_step;
-    }
-
-    if (m_test_phase > 2.0f * M_PI * 1000.0f) {
-      m_test_phase = std::fmod(m_test_phase, 2.0f * M_PI);
+      if (m_test_phase >= 2.0f * M_PI) {
+        m_test_phase = std::fmod(m_test_phase, 2.0f * M_PI);
+      }
     }
   }
 };

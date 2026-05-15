@@ -14,6 +14,8 @@ private:
   USBDevice m_usb;
   std::unique_ptr<ITrigger> m_trigger;
   size_t m_trigger_source_idx = 0;
+  size_t m_last_trigger_offset = 0;
+  size_t m_last_frame_width = 1024;
 
 public:
   // Lifecycle
@@ -39,8 +41,18 @@ public:
 
   // Core
   void update() {
-    if (m_channels.empty() || (m_trigger && !m_trigger->isEnabled()))
+    if (m_channels.empty())
       return;
+
+    if (m_trigger && !m_trigger->isEnabled()) {
+      // Re-process last frame using current UI settings
+      for (auto &ch : m_channels) {
+        if (ch->isEnabled()) {
+          ch->reprocessLastFrame();
+        }
+      }
+      return;
+    }
 
     size_t src_idx =
         m_trigger_source_idx < m_channels.size() ? m_trigger_source_idx : 0;
@@ -50,6 +62,8 @@ public:
     if (m_trigger &&
         m_trigger->processStream(source_channel.get(), trigger_offset)) {
       size_t frame_width = m_trigger->getFrameWidth();
+      m_last_trigger_offset = trigger_offset;
+      m_last_frame_width = frame_width;
 
       // Pass 1: Extract hardware frames
       for (auto &ch : m_channels) {

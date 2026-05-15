@@ -44,6 +44,7 @@ public:
   virtual float getNormalizedSample(size_t index_offset) const = 0;
   virtual void extractAndProcessFrame(size_t trigger_offset,
                                       size_t frame_width) = 0;
+  virtual void reprocessLastFrame() = 0;
   virtual void consumeBuffer(size_t amount) = 0;
   virtual void pushRawBytes(const uint8_t *data, size_t size) = 0;
   virtual void clearBuffer() = 0;
@@ -121,6 +122,11 @@ public:
       }
     }
     m_has_new_frame = true;
+  }
+  void reprocessLastFrame() override {
+    // Virtual channels pull from their sources' traces, which should have
+    // already been reprocessed.
+    extractAndProcessFrame(0, 0); 
   }
   void consumeBuffer(size_t /*amount*/) override {}
   void pushRawBytes(const uint8_t * /*data*/, size_t /*size*/) override {}
@@ -235,6 +241,33 @@ public:
 
     for (auto &proc : m_processors) {
       // Only process if Processor is enabled
+      if (proc->isEnabled()) {
+        proc->process(m_raw_frame, m_traces);
+      }
+    }
+
+    m_has_new_frame = true;
+  }
+
+  void reprocessLastFrame() override {
+    if (m_raw_frame.empty()) return;
+
+    size_t frame_width = m_raw_frame.size();
+    m_traces.clear();
+    Trace base_trace;
+    base_trace.name = m_label + " Time";
+    base_trace.domain = Domain::Time;
+    base_trace.vertical_scale = m_vertical_scale;
+    base_trace.vertical_offset = m_vertical_offset;
+    base_trace.data.resize(frame_width);
+
+    for (size_t i = 0; i < frame_width; ++i) {
+      base_trace.data[i] = static_cast<float>(m_raw_frame[i]);
+    }
+
+    m_traces.push_back(std::move(base_trace));
+
+    for (auto &proc : m_processors) {
       if (proc->isEnabled()) {
         proc->process(m_raw_frame, m_traces);
       }

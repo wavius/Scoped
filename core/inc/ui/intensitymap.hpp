@@ -39,6 +39,7 @@ public:
   GLuint getTextureID() const;
 
   // Rendering
+  void resize(size_t width, size_t height);
   void clear();
 
   // Bilinearly distributes intensity at a sub-pixel coordinate.

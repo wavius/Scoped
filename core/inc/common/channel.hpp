@@ -42,8 +42,8 @@ public:
 
   // Pipeline
   virtual float getNormalizedSample(size_t index_offset) const = 0;
-  virtual void extractAndProcessFrame(size_t trigger_offset,
-                                      size_t frame_width) = 0;
+  virtual void extractAndProcessFrame(size_t trigger_idx,
+                                      size_t max_width) = 0;
   virtual void reprocessLastFrame() = 0;
   virtual void consumeBuffer(size_t amount) = 0;
   virtual void pushRawBytes(const uint8_t *data, size_t size) = 0;
@@ -113,8 +113,8 @@ public:
   float getNormalizedSample(size_t /*index_offset*/) const override {
     return 0.0f;
   }
-  void extractAndProcessFrame(size_t /*trigger_offset*/,
-                              size_t /*frame_width*/) override {
+  void extractAndProcessFrame(size_t /*trigger_idx*/,
+                              size_t /*max_width*/) override {
     m_traces.clear();
     for (auto &proc : m_processors) {
       if (proc->isEnabled()) {
@@ -124,8 +124,6 @@ public:
     m_has_new_frame = true;
   }
   void reprocessLastFrame() override {
-    // Virtual channels pull from their sources' traces, which should have
-    // already been reprocessed.
     extractAndProcessFrame(0, 0); 
   }
   void consumeBuffer(size_t /*amount*/) override {}
@@ -151,6 +149,7 @@ private:
 
   std::vector<HardwareT> m_raw_frame;
   std::vector<Trace> m_traces;
+  size_t m_last_trigger_in_frame = 0;
   bool m_enabled = true;
   bool m_has_new_frame = false;
 
@@ -206,41 +205,63 @@ public:
     return static_cast<float>(m_buffer.peekAhead(index_offset));
   }
 
-  void extractAndProcessFrame(size_t trigger_offset,
-                              size_t frame_width) override {
-    m_raw_frame.resize(frame_width);
-    size_t capacity = m_buffer.getCapacity();
-    size_t start = (m_buffer.getReadIdx() + trigger_offset) % capacity;
+  void extractAndProcessFrame(size_t trigger_idx,
+                              size_t max_width) override {
+    // 1. Calculate the buffer window to extract (centered on trigger_idx)
+    size_t unread = m_buffer.getUnreadCount();
+    size_t half_max = max_width / 2;
+    size_t start = (trigger_idx >= half_max) ? trigger_idx - half_max : 0;
+    
+    // Clamp extraction window to available data
+    if (start + max_width > unread) {
+        start = (unread > max_width) ? unread - max_width : 0;
+    }
+    size_t actual_width = std::min(max_width, unread - start);
 
-    if (start + frame_width <= capacity) {
-      std::copy(m_buffer.getRawData() + start,
-                m_buffer.getRawData() + start + frame_width,
+    // 2. Extract raw frame for processors
+    m_raw_frame.resize(actual_width);
+    size_t capacity = m_buffer.getCapacity();
+    size_t buffer_start = (m_buffer.getReadIdx() + start) % capacity;
+
+    if (buffer_start + actual_width <= capacity) {
+      std::copy(m_buffer.getRawData() + buffer_start,
+                m_buffer.getRawData() + buffer_start + actual_width,
                 m_raw_frame.begin());
     } else {
-      size_t first_len = capacity - start;
-      size_t second_len = frame_width - first_len;
-      std::copy(m_buffer.getRawData() + start,
-                m_buffer.getRawData() + start + first_len, m_raw_frame.begin());
+      size_t first_len = capacity - buffer_start;
+      size_t second_len = actual_width - first_len;
+      std::copy(m_buffer.getRawData() + buffer_start,
+                m_buffer.getRawData() + buffer_start + first_len, m_raw_frame.begin());
       std::copy(m_buffer.getRawData(), m_buffer.getRawData() + second_len,
                 m_raw_frame.begin() + first_len);
     }
 
     m_traces.clear();
+
+    // 3. Populate Time trace (centered subset of raw frame)
     Trace base_trace;
     base_trace.name = m_label + " Time";
     base_trace.domain = Domain::Time;
     base_trace.vertical_scale = m_vertical_scale;
     base_trace.vertical_offset = m_vertical_offset;
-    base_trace.data.resize(frame_width);
 
-    for (size_t i = 0; i < frame_width; ++i) {
-      base_trace.data[i] = static_cast<float>(m_raw_frame[i]);
+    // Trigger point relative to the extracted frame
+    size_t trigger_in_frame = trigger_idx - start;
+    m_last_trigger_in_frame = trigger_in_frame; // Store for reprocessing
+
+    size_t half_vis = m_horizontal_scale / 2;
+    size_t time_start = (trigger_in_frame >= half_vis) ? trigger_in_frame - half_vis : 0;
+    size_t time_width = std::min(m_horizontal_scale, actual_width - time_start);
+
+    base_trace.data.resize(time_width);
+    for (size_t i = 0; i < time_width; ++i) {
+      base_trace.data[i] = static_cast<float>(m_raw_frame[time_start + i]);
     }
 
     m_traces.push_back(std::move(base_trace));
 
+    // 4. Run processors on the full raw frame
     for (auto &proc : m_processors) {
-      // Only process if Processor is enabled
       if (proc->isEnabled()) {
         proc->process(m_raw_frame, m_traces);
       }
@@ -252,17 +273,23 @@ public:
   void reprocessLastFrame() override {
     if (m_raw_frame.empty()) return;
 
-    size_t frame_width = m_raw_frame.size();
+    size_t actual_width = m_raw_frame.size();
     m_traces.clear();
+    
     Trace base_trace;
     base_trace.name = m_label + " Time";
     base_trace.domain = Domain::Time;
     base_trace.vertical_scale = m_vertical_scale;
     base_trace.vertical_offset = m_vertical_offset;
-    base_trace.data.resize(frame_width);
 
-    for (size_t i = 0; i < frame_width; ++i) {
-      base_trace.data[i] = static_cast<float>(m_raw_frame[i]);
+    size_t trigger_in_frame = m_last_trigger_in_frame;
+    size_t half_vis = m_horizontal_scale / 2;
+    size_t time_start = (trigger_in_frame >= half_vis) ? trigger_in_frame - half_vis : 0;
+    size_t time_width = std::min(m_horizontal_scale, actual_width - time_start);
+
+    base_trace.data.resize(time_width);
+    for (size_t i = 0; i < time_width; ++i) {
+      base_trace.data[i] = static_cast<float>(m_raw_frame[time_start + i]);
     }
 
     m_traces.push_back(std::move(base_trace));

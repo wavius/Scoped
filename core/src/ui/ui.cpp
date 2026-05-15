@@ -59,8 +59,25 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
     }
   }
 
-  if (any_new_frame) {
+  bool any_active = false;
+  for (const auto &ch : channels) {
+    if (ch->isEnabled()) {
+      any_active = true;
+      break;
+    }
+    for (const auto *proc : ch->getProcessors()) {
+      if (proc->isEnabled()) {
+        any_active = true;
+        break;
+      }
+    }
+    if (any_active) break;
+  }
+
+  if (any_new_frame || !any_active) {
     m_display->clear();
+    
+    if (!any_active) return; // Nothing to draw
 
     for (size_t i = 0; i < channels.size(); ++i) {
       auto &channel = *channels[i];
@@ -78,17 +95,18 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
       const auto &traces = channel.getTraces();
 
       for (const auto &trace : traces) {
-        if (trace.domain == Domain::Time) {
-          size_t visible =
-              std::min(channel.getHorizontalScale(), trace.data.size());
+        if (trace.domain == Domain::Time && channel.isEnabled()) {
+          // trace.data is already centered on the trigger point
+          // with exactly horizontalScale samples. Just render it all.
+          size_t count = trace.data.size();
 
-          m_normalized_time.resize(visible);
+          m_normalized_time.resize(count);
 
-          for (size_t j = 0; j < visible; ++j) {
+          for (size_t j = 0; j < count; ++j) {
             m_normalized_time[j] = trace.normalizeToIntensity(trace.data[j]);
           }
 
-          m_display->processFrame(m_normalized_time.data(), visible, color.x,
+          m_display->processFrame(m_normalized_time.data(), count, color.x,
                                   color.y, color.z);
         }
       }
@@ -144,6 +162,7 @@ void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
 
   for (float level : levels) {
     float y_normalized = trace.normalizeToIntensity(level);
+    // After flipping PlotImage, y_normalized=1.0 is top (h) and 0.0 is bottom (0)
     double y_level = y_normalized * m_display_height;
 
     plotLineSegment("##TriggerLine", 0.0, y_level,
@@ -155,9 +174,6 @@ void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
 // Draws FFT data over the scope display when FFT is enabled.
 void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
   for (const auto &channel : osc.getChannels()) {
-    if (!channel->isEnabled()) {
-      continue;
-    }
     for (const auto &trace : channel->getTraces()) {
       if (trace.domain == Domain::Frequency) {
         size_t visible = trace.data.size();
@@ -214,7 +230,7 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
 
       ImPlot::PlotImage("OscilloscopeTrace",
                         (ImTextureID)(intptr_t)m_display->getTextureID(),
-                        ImPlotPoint(0, 0), ImPlotPoint(w, h));
+                        ImPlotPoint(0, h), ImPlotPoint(w, 0));
     }
 
     drawFrequencyTraces(osc);

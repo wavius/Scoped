@@ -74,7 +74,8 @@ public:
     if (m_mode == TriggerMode::AUTO) {
       auto elapsed = Clock::now() - m_last_trigger_time;
       if (elapsed > AUTO_TIMEOUT) {
-        out_trigger_offset = 0;
+        // Place the "crossing" in the middle of available data
+        out_trigger_offset = unread / 2;
         m_last_trigger_time = Clock::now();
         onTriggerFired();
         return true;
@@ -89,8 +90,10 @@ public:
     if (!channel)
       return false;
     size_t unread = channel->getUnreadSampleCount();
-    if (unread > m_frame_width) {
-      discard_amount = unread - m_frame_width;
+    // Keep enough data for pre-trigger centering (2x frame width)
+    size_t keep = m_frame_width * 2;
+    if (unread > keep) {
+      discard_amount = unread - keep;
       return true;
     }
     return false;
@@ -120,10 +123,29 @@ private:
 protected:
   bool scanForTrigger(IChannel *channel, size_t &trigger_offset) override {
     size_t unread = channel->getUnreadSampleCount();
-    for (size_t i = 0; i < unread - this->m_frame_width; ++i) {
+    size_t half = m_frame_width / 2;
+
+    // We need at least m_frame_width samples to guarantee we can extract
+    // a centered frame of that size.
+    if (unread < m_frame_width)
+      return false;
+
+    // Initialize edge detector from the first sample of the safe search range
+    m_prev_sample = channel->getNormalizedSample(0);
+
+    // To ensure the crossing is centered and we have enough data to fill the frame
+    // without distortion, we only search in a range that allows for 'half' samples
+    // of padding on both sides.
+    size_t search_start = 1;
+    size_t search_end = (unread > half) ? unread - half : 0;
+
+    if (search_start >= search_end)
+      return false;
+
+    for (size_t i = search_start; i < search_end; ++i) {
       float current = channel->getNormalizedSample(i);
       if (checkEdge(current)) {
-        trigger_offset = i;
+        trigger_offset = i; // Raw crossing index
         m_prev_sample = current;
         return true;
       }

@@ -106,6 +106,7 @@ int main(int, char **) {
   auto trigger = std::make_unique<Scoped::EdgeTrigger>(16384, 128.0f);
   osc.setTrigger(std::move(trigger));
   osc.setTriggerSource(0);
+  osc.setMaxCaptureWidth(16384);
 
   ImGuiIO &io = ImGui::GetIO();
 

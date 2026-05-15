@@ -16,6 +16,7 @@ private:
   size_t m_trigger_source_idx = 0;
   size_t m_last_trigger_offset = 0;
   size_t m_last_frame_width = 1024;
+  size_t m_max_capture_width = 16384;
 
 public:
   // Lifecycle
@@ -30,6 +31,9 @@ public:
   }
   void setTriggerSource(size_t channel_index) {
     m_trigger_source_idx = channel_index;
+  }
+  void setMaxCaptureWidth(size_t width) {
+    m_max_capture_width = width;
   }
 
   // Accessors
@@ -53,33 +57,56 @@ public:
       return;
     }
 
+    // Always capture the absolute maximum window to allow full resizing while stopped.
+    const size_t max_req = m_max_capture_width; 
+
+    if (m_trigger) {
+      m_trigger->setFrameWidth(max_req);
+    }
+
     size_t src_idx =
         m_trigger_source_idx < m_channels.size() ? m_trigger_source_idx : 0;
     auto &source_channel = m_channels[src_idx];
 
-    size_t trigger_offset = 0;
+    // trigger_offset is the raw crossing index in the buffer
+    size_t trigger_idx = 0;
     if (m_trigger &&
-        m_trigger->processStream(source_channel.get(), trigger_offset)) {
-      size_t frame_width = m_trigger->getFrameWidth();
-      m_last_trigger_offset = trigger_offset;
-      m_last_frame_width = frame_width;
+        m_trigger->processStream(source_channel.get(), trigger_idx)) {
+      m_last_trigger_offset = trigger_idx;
+
+      // Calculate a common consume amount for all hardware channels to stay phase-locked.
+      size_t step = 1024; 
+      size_t common_consume = trigger_idx + step;
 
       // Pass 1: Extract hardware frames
       for (auto &ch : m_channels) {
         if (ch->isHardwareChannel()) {
-          if (ch->getUnreadSampleCount() >= frame_width) {
-            if (ch->isEnabled()) {
-              ch->extractAndProcessFrame(trigger_offset, frame_width);
-            }
-            ch->consumeBuffer(trigger_offset + frame_width);
+          size_t unread = ch->getUnreadSampleCount();
+          
+          bool any_proc_enabled = false;
+          for (auto* proc : ch->getProcessors()) {
+            if (proc->isEnabled()) any_proc_enabled = true;
           }
+
+          if (ch->isEnabled() || any_proc_enabled) {
+            ch->extractAndProcessFrame(trigger_idx, max_req);
+          }
+
+          // Apply uniform consumption
+          ch->consumeBuffer(std::min(unread, common_consume));
         }
       }
 
       // Pass 2: Extract virtual frames
       for (auto &ch : m_channels) {
-        if (!ch->isHardwareChannel() && ch->isEnabled()) {
-          ch->extractAndProcessFrame(trigger_offset, frame_width);
+        if (!ch->isHardwareChannel()) {
+          bool any_proc_enabled = false;
+          for (auto* proc : ch->getProcessors()) {
+            if (proc->isEnabled()) any_proc_enabled = true;
+          }
+          if (ch->isEnabled() || any_proc_enabled) {
+            ch->extractAndProcessFrame(trigger_idx, max_req);
+          }
         }
       }
     } else if (m_trigger) {

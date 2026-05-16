@@ -289,6 +289,27 @@ void OscilloscopeUI::drawHorizontalControls(IChannel &channel,
         static_cast<size_t>(std::clamp(samples, 256, 16384)));
     osc.forceReprocess();
   }
+
+  ImGui::Spacing();
+  ImGui::Text("Horizontal Offset");
+  int h_offset = channel.getHorizontalOffset();
+  
+  // Dynamic limits: how far can we pan before the window edge hits the buffer edge?
+  int capture_width = static_cast<int>(osc.getMaxCaptureWidth());
+  int visible_width = static_cast<int>(channel.getHorizontalScale());
+  int max_offset = std::max(0, (capture_width - visible_width) / 2);
+  
+  ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
+  if (ImGui::SliderInt("##Horizontal Offset", &h_offset, -max_offset, max_offset, "%d samples")) {
+    channel.setHorizontalOffset(h_offset);
+    osc.forceReprocess();
+  }
+  ImGui::SameLine();
+  ImGui::SetNextItemWidth(-FLT_MIN);
+  if (ImGui::InputInt("##HOffsetInput", &h_offset, 0, 0)) {
+    channel.setHorizontalOffset(std::clamp(h_offset, -max_offset, max_offset));
+    osc.forceReprocess();
+  }
 }
 
 // TODO: Change this to voltage division instead of Scale

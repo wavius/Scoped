@@ -35,6 +35,7 @@ public:
   void setMaxCaptureWidth(size_t width) {
     m_max_capture_width = width;
   }
+  size_t getMaxCaptureWidth() const { return m_max_capture_width; }
   void forceReprocess() {
     if (m_trigger && m_trigger_source_idx < m_channels.size()) {
       auto &source = m_channels[m_trigger_source_idx];

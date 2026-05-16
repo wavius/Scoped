@@ -27,7 +27,7 @@ public:
   virtual float getVerticalScale() const = 0;
   virtual float getVerticalOffset() const = 0;
   virtual size_t getHorizontalScale() const = 0;
-  virtual size_t getHorizontalOffset() const = 0;
+  virtual int getHorizontalOffset() const = 0;
   virtual size_t getUnreadSampleCount() const = 0;
   virtual bool isHardwareChannel() const = 0;
   virtual std::vector<IProcessorControl *> getProcessors() const = 0;
@@ -36,7 +36,7 @@ public:
   virtual void setVerticalScale(float scale) = 0;
   virtual void setVerticalOffset(float offset) = 0;
   virtual void setHorizontalScale(size_t n) = 0;
-  virtual void setHorizontalOffset(size_t offset) = 0;
+  virtual void setHorizontalOffset(int offset) = 0;
   virtual void setEnabled(bool enabled) = 0;
   virtual void clearNewFrame() = 0;
 
@@ -69,7 +69,7 @@ private:
 
   // Horizontal plot settings
   size_t m_horizontal_scale;
-  size_t m_horizontal_offset = 0;
+  int m_horizontal_offset = 0;
 
 public:
   // Lifecycle
@@ -84,7 +84,7 @@ public:
   float getVerticalScale() const override { return m_vertical_scale; }
   float getVerticalOffset() const override { return m_vertical_offset; }
   size_t getHorizontalScale() const override { return m_horizontal_scale; }
-  size_t getHorizontalOffset() const override { return m_horizontal_offset; }
+  int getHorizontalOffset() const override { return m_horizontal_offset; }
   size_t getUnreadSampleCount() const override { return 0; }
   bool isHardwareChannel() const override { return false; }
 
@@ -97,16 +97,16 @@ public:
   }
 
   // Setters
+  // Configuration
   void setVerticalScale(float scale) override { m_vertical_scale = scale; }
   void setVerticalOffset(float offset) override { m_vertical_offset = offset; }
-  void setHorizontalScale(size_t scale) override { m_horizontal_scale = scale; }
-  void setHorizontalOffset(size_t offset) override {
+  void setHorizontalScale(size_t n) override { m_horizontal_scale = n; }
+  void setHorizontalOffset(int offset) override {
     m_horizontal_offset = offset;
   }
   void setEnabled(bool enabled) override { m_enabled = enabled; }
   void clearNewFrame() override { m_has_new_frame = false; }
 
-  // Configuration
   void addSource(IChannel *source) { m_sources.push_back(source); }
   void addProcessor(std::unique_ptr<IVirtualProcessor> proc) {
     m_processors.push_back(std::move(proc));
@@ -157,7 +157,7 @@ private:
 
   // Horizontal (time)
   size_t m_horizontal_scale;
-  size_t m_horizontal_offset;
+  int m_horizontal_offset = 0;
 
   std::vector<HardwareT> m_raw_frame;
   std::vector<float> m_float_frame;
@@ -180,7 +180,7 @@ public:
   float getVerticalScale() const override { return m_vertical_scale; }
   float getVerticalOffset() const override { return m_vertical_offset; }
   size_t getHorizontalScale() const override { return m_horizontal_scale; }
-  size_t getHorizontalOffset() const override { return m_horizontal_offset; }
+  int getHorizontalOffset() const override { return m_horizontal_offset; }
   size_t getUnreadSampleCount() const override {
     return m_buffer.getUnreadCount();
   }
@@ -198,7 +198,7 @@ public:
   void setVerticalScale(float scale) override { m_vertical_scale = scale; }
   void setVerticalOffset(float offset) override { m_vertical_offset = offset; }
   void setHorizontalScale(size_t n) override { m_horizontal_scale = n; }
-  void setHorizontalOffset(size_t offset) override {
+  void setHorizontalOffset(int offset) override {
     m_horizontal_offset = offset;
   }
   void setEnabled(bool enabled) override { m_enabled = enabled; }
@@ -267,7 +267,14 @@ public:
     m_last_trigger_in_frame = trigger_in_frame; // Store for reprocessing
 
     size_t half_vis = m_horizontal_scale / 2;
-    size_t time_start = (trigger_in_frame >= half_vis) ? trigger_in_frame - half_vis : 0;
+    int offset_val = m_horizontal_offset; 
+    
+    long long center_idx = static_cast<long long>(trigger_in_frame) + offset_val;
+    long long start_idx = center_idx - half_vis;
+    
+    size_t time_start = (start_idx < 0) ? 0 : static_cast<size_t>(start_idx);
+    if (time_start >= actual_width) time_start = actual_width - 1;
+    
     size_t time_width = std::min(m_horizontal_scale, actual_width - time_start);
 
     base_trace.data.resize(time_width);
@@ -301,7 +308,14 @@ public:
 
     size_t trigger_in_frame = m_last_trigger_in_frame;
     size_t half_vis = m_horizontal_scale / 2;
-    size_t time_start = (trigger_in_frame >= half_vis) ? trigger_in_frame - half_vis : 0;
+    int offset_val = m_horizontal_offset;
+
+    long long center_idx = static_cast<long long>(trigger_in_frame) + offset_val;
+    long long start_idx = center_idx - half_vis;
+
+    size_t time_start = (start_idx < 0) ? 0 : static_cast<size_t>(start_idx);
+    if (time_start >= actual_width) time_start = actual_width - 1;
+
     size_t time_width = std::min(m_horizontal_scale, actual_width - time_start);
 
     base_trace.data.resize(time_width);

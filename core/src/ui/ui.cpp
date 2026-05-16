@@ -71,13 +71,15 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
         break;
       }
     }
-    if (any_active) break;
+    if (any_active)
+      break;
   }
 
   if (any_new_frame || !any_active) {
     m_display->clear();
-    
-    if (!any_active) return; // Nothing to draw
+
+    if (!any_active)
+      return; // Nothing to draw
 
     for (size_t i = 0; i < channels.size(); ++i) {
       auto &channel = *channels[i];
@@ -162,7 +164,8 @@ void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
 
   for (float level : levels) {
     float y_normalized = trace.normalizeToIntensity(level);
-    // After flipping PlotImage, y_normalized=1.0 is top (h) and 0.0 is bottom (0)
+    // After flipping PlotImage, y_normalized=1.0 is top (h) and 0.0 is bottom
+    // (0)
     double y_level = y_normalized * m_display_height;
 
     plotLineSegment("##TriggerLine", 0.0, y_level,
@@ -177,7 +180,8 @@ void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
     for (const auto &trace : channel->getTraces()) {
       if (trace.domain == Domain::Frequency) {
         size_t visible = trace.data.size();
-        if (visible < 2) continue;
+        if (visible < 2)
+          continue;
 
         m_normalized_freq.resize(visible);
 
@@ -193,7 +197,8 @@ void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
           trace_color = Colors::FFT2;
         }
 
-        double xscale = static_cast<double>(m_display_width) / static_cast<double>(visible - 1);
+        double xscale = static_cast<double>(m_display_width) /
+                        static_cast<double>(visible - 1);
 
         ImPlot::PlotLine(
             trace.name.c_str(), m_normalized_freq.data(),
@@ -272,20 +277,23 @@ void OscilloscopeUI::drawHorizontalControls(IChannel &channel,
 
   ImGui::Text("Horizontal Scale");
   ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-  if (ImGui::SliderInt("##Horizontal Scale", &samples, 256, 16384, "%d samples")) {
+  if (ImGui::SliderInt("##Horizontal Scale", &samples, 256, 16384,
+                       "%d samples")) {
     channel.setHorizontalScale(static_cast<size_t>(samples));
     osc.forceReprocess();
   }
   ImGui::SameLine();
   ImGui::SetNextItemWidth(-FLT_MIN);
   if (ImGui::InputInt("##HScaleInput", &samples, 0, 0)) {
-    channel.setHorizontalScale(static_cast<size_t>(std::clamp(samples, 256, 16384)));
+    channel.setHorizontalScale(
+        static_cast<size_t>(std::clamp(samples, 256, 16384)));
     osc.forceReprocess();
   }
 }
 
 // TODO: Change this to voltage division instead of Scale
-void OscilloscopeUI::drawVerticalControls(IChannel &channel, Oscilloscope &osc) {
+void OscilloscopeUI::drawVerticalControls(IChannel &channel,
+                                          Oscilloscope &osc) {
   ImGui::Text("Vertical Scale");
   float scale = channel.getVerticalScale();
   ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
@@ -304,7 +312,8 @@ void OscilloscopeUI::drawVerticalControls(IChannel &channel, Oscilloscope &osc) 
   ImGui::Text("Vertical Offset");
   float offset = channel.getVerticalOffset();
   ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-  if (ImGui::SliderFloat("##Vertical Offset", &offset, -255.0f, 255.0f, "%.1f")) {
+  if (ImGui::SliderFloat("##Vertical Offset", &offset, -255.0f, 255.0f,
+                         "%.1f")) {
     channel.setVerticalOffset(offset);
     osc.forceReprocess();
   }
@@ -396,13 +405,15 @@ void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
       float smoothing_factor = processor->getSmoothingFactor();
       ImGui::Text("Smoothing");
       ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderFloat("##Smoothing", &smoothing_factor, 0.0f, 1.00f, "%.2f")) {
+      if (ImGui::SliderFloat("##Smoothing", &smoothing_factor, 0.0f, 1.00f,
+                             "%.2f")) {
         processor->setSmoothingFactor(smoothing_factor);
         osc.forceReprocess();
       }
       ImGui::SameLine();
       ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputFloat("##SmoothingInput", &smoothing_factor, 0, 0, "%.2f")) {
+      if (ImGui::InputFloat("##SmoothingInput", &smoothing_factor, 0, 0,
+                            "%.2f")) {
         processor->setSmoothingFactor(std::clamp(smoothing_factor, 0.0f, 1.0f));
         osc.forceReprocess();
       }
@@ -410,49 +421,56 @@ void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
       int fft_size = static_cast<int>(processor->getWindowSize());
       ImGui::Text("Resolution");
       ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderInt("##SampleCount", &fft_size, 256, 16384, "%d samples")) {
+      if (ImGui::SliderInt("##SampleCount", &fft_size, 256, 16384,
+                           "%d samples")) {
         processor->setWindowSize(static_cast<size_t>(fft_size));
         osc.forceReprocess();
       }
       ImGui::SameLine();
       ImGui::SetNextItemWidth(-FLT_MIN);
       if (ImGui::InputInt("##ResolutionInput", &fft_size, 0, 0)) {
-        processor->setWindowSize(static_cast<size_t>(std::clamp(fft_size, 256, 16384)));
+        processor->setWindowSize(
+            static_cast<size_t>(std::clamp(fft_size, 256, 16384)));
         osc.forceReprocess();
       }
 
       int num_bins = fft_size / 2;
       int h_scale = static_cast<int>(processor->getHorizontalScale());
-      if (h_scale == 0 || h_scale > num_bins) h_scale = num_bins;
+      if (h_scale == 0 || h_scale > num_bins)
+        h_scale = num_bins;
       ImGui::Text("Horizontal Scale");
       ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderInt("##FFTHorizontalScale", &h_scale, 2, num_bins, "%d bins")) {
+      if (ImGui::SliderInt("##FFTHorizontalScale", &h_scale, 2, num_bins,
+                           "%d bins")) {
         processor->setHorizontalScale(static_cast<size_t>(h_scale));
         osc.forceReprocess();
       }
       ImGui::SameLine();
       ImGui::SetNextItemWidth(-FLT_MIN);
       if (ImGui::InputInt("##FFTHScaleInput", &h_scale, 0, 0)) {
-        processor->setHorizontalScale(static_cast<size_t>(std::clamp(h_scale, 2, num_bins)));
+        processor->setHorizontalScale(
+            static_cast<size_t>(std::clamp(h_scale, 2, num_bins)));
         osc.forceReprocess();
       }
 
       int h_offset = static_cast<int>(processor->getHorizontalOffset());
       int max_offset = std::max(1, num_bins - h_scale);
       if (h_offset > max_offset) {
-          h_offset = max_offset;
-          processor->setHorizontalOffset(static_cast<size_t>(h_offset));
+        h_offset = max_offset;
+        processor->setHorizontalOffset(static_cast<size_t>(h_offset));
       }
       ImGui::Text("Horizontal Offset");
       ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderInt("##FFTHorizontalOffset", &h_offset, 0, max_offset, "%d bins")) {
+      if (ImGui::SliderInt("##FFTHorizontalOffset", &h_offset, 0, max_offset,
+                           "%d bins")) {
         processor->setHorizontalOffset(static_cast<size_t>(h_offset));
         osc.forceReprocess();
       }
       ImGui::SameLine();
       ImGui::SetNextItemWidth(-FLT_MIN);
       if (ImGui::InputInt("##FFTHOffsetInput", &h_offset, 0, 0)) {
-        processor->setHorizontalOffset(static_cast<size_t>(std::clamp(h_offset, 0, max_offset)));
+        processor->setHorizontalOffset(
+            static_cast<size_t>(std::clamp(h_offset, 0, max_offset)));
         osc.forceReprocess();
       }
 
@@ -481,8 +499,8 @@ void OscilloscopeUI::buildDefaultDockLayout(ImGuiID dockspace_id,
   ImGuiID left_id = ImGui::DockBuilderSplitNode(main_id, ImGuiDir_Left, 0.22f,
                                                 nullptr, &main_id);
 
-  ImGuiID right_id = ImGui::DockBuilderSplitNode(main_id, ImGuiDir_Right, 0.282f,
-                                                 nullptr, &main_id);
+  ImGuiID right_id = ImGui::DockBuilderSplitNode(main_id, ImGuiDir_Right,
+                                                 0.282f, nullptr, &main_id);
 
   ImGuiID bottom_id = ImGui::DockBuilderSplitNode(main_id, ImGuiDir_Down, 0.24f,
                                                   nullptr, &main_id);
@@ -577,7 +595,8 @@ void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
   }
 
   bool enabled = trigger->isEnabled();
-  ImGui::PushStyleColor(ImGuiCol_Text, enabled ? Colors::StatusError : Colors::StatusOk);
+  ImGui::PushStyleColor(ImGuiCol_Text,
+                        enabled ? Colors::StatusError : Colors::StatusOk);
   if (ImGui::Button(enabled ? "Stop" : "Start", ImVec2(-1, 0))) {
     trigger->setEnabled(!enabled);
   }
@@ -614,7 +633,8 @@ void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
       ImGui::SameLine();
       ImGui::SetNextItemWidth(-FLT_MIN);
       if (ImGui::InputInt("##ValueInput", &value, 0, 0)) {
-        trigger->setUIParameter(param.name, std::clamp(value, param.min_val, param.max_val));
+        trigger->setUIParameter(
+            param.name, std::clamp(value, param.min_val, param.max_val));
         osc.forceReprocess();
       }
     } else {
@@ -770,9 +790,9 @@ void OscilloscopeUI::render(Oscilloscope &osc) {
   drawDockSpace();
 
   drawScopeWindow(osc);
+  drawChannelWindow(osc);
   drawTriggerWindow(osc);
   drawFFTWindow(osc);
-  drawChannelWindow(osc);
   drawHardwareWindow(osc);
   drawDebugWindow(osc);
 }

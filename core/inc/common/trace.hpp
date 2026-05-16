@@ -19,7 +19,6 @@ struct Trace {
   float normalizeToIntensity(float sample) const {
     if (domain == Domain::Time) {
       float centered = sample - 128.0f;
-      // Use + vertical_offset so that increasing the slider moves the wave UP on screen
       float scaled = (centered * vertical_scale) + vertical_offset + 128.0f;
       return std::clamp(scaled / 256.0f, 0.0f, 1.0f);
     } else if (domain == Domain::Frequency) {

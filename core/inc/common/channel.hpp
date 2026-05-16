@@ -12,7 +12,7 @@
 #include <common/trace.hpp>
 
 namespace Scoped {
-
+class ITrigger;
 // Interface for oscilloscope channels.
 class IChannel {
 public:
@@ -48,6 +48,9 @@ public:
   virtual void consumeBuffer(size_t amount) = 0;
   virtual void pushRawBytes(const uint8_t *data, size_t size) = 0;
   virtual void clearBuffer() = 0;
+  virtual void clearTraces() = 0;
+  virtual const std::vector<float> &getRawFrame() const = 0;
+  virtual void updateTriggerPoint(size_t idx) = 0;
 };
 
 // Encapsulates a channel that pulls data from other channels' traces.
@@ -129,6 +132,15 @@ public:
   void consumeBuffer(size_t /*amount*/) override {}
   void pushRawBytes(const uint8_t * /*data*/, size_t /*size*/) override {}
   void clearBuffer() override {}
+  void clearTraces() override {
+    m_traces.clear();
+    m_has_new_frame = true;
+  }
+  const std::vector<float> &getRawFrame() const override { 
+      static std::vector<float> empty; 
+      return empty; 
+  }
+  void updateTriggerPoint(size_t /*idx*/) override {}
 };
 
 // Encapsulates the acquisition and processing pipeline for a single hardware
@@ -148,6 +160,7 @@ private:
   size_t m_horizontal_offset;
 
   std::vector<HardwareT> m_raw_frame;
+  std::vector<float> m_float_frame;
   std::vector<Trace> m_traces;
   size_t m_last_trigger_in_frame = 0;
   bool m_enabled = true;
@@ -172,7 +185,6 @@ public:
     return m_buffer.getUnreadCount();
   }
   bool isHardwareChannel() const override { return true; }
-  const std::vector<HardwareT> &getRawFrame() const { return m_raw_frame; }
 
   std::vector<IProcessorControl *> getProcessors() const override {
     std::vector<IProcessorControl *> list;
@@ -234,6 +246,11 @@ public:
                 m_buffer.getRawData() + buffer_start + first_len, m_raw_frame.begin());
       std::copy(m_buffer.getRawData(), m_buffer.getRawData() + second_len,
                 m_raw_frame.begin() + first_len);
+    }
+
+    m_float_frame.resize(actual_width);
+    for (size_t i = 0; i < actual_width; ++i) {
+      m_float_frame[i] = static_cast<float>(m_raw_frame[i]);
     }
 
     m_traces.clear();
@@ -317,7 +334,22 @@ public:
     }
   }
 
-  void clearBuffer() override { m_buffer.clear(); }
+  void clearBuffer() override {
+    m_buffer.clear();
+    m_raw_frame.clear();
+    m_traces.clear();
+  }
+
+  void clearTraces() override {
+    m_traces.clear();
+    m_has_new_frame = true;
+  }
+  const std::vector<float> &getRawFrame() const override {
+    return m_float_frame;
+  }
+  void updateTriggerPoint(size_t idx) override {
+    m_last_trigger_in_frame = idx;
+  }
 
   // Hardware
   CircularBuffer<HardwareT> &getBuffer() { return m_buffer; }

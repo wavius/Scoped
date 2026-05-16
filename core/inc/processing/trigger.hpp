@@ -34,8 +34,7 @@ protected:
   virtual void onTriggerFired() {}
 
 public:
-  // Lifecycle
-  explicit ITrigger(size_t width)
+  ITrigger(size_t width = 1024)
       : m_mode(TriggerMode::AUTO), m_enabled(true), m_frame_width(width),
         m_last_trigger_time(Clock::now()) {}
 
@@ -85,6 +84,10 @@ public:
     return false;
   }
 
+  // Scans a raw float buffer for a trigger crossing.
+  virtual bool scanRawBuffer(const std::vector<float> &buffer,
+                             size_t &out_offset) = 0;
+
   // Checks if stale data should be discarded.
   bool shouldDiscardStale(IChannel *channel, size_t &discard_amount) {
     if (!channel)
@@ -100,7 +103,7 @@ public:
   }
 };
 
-// Edge trigger: fires when a sample crosses the threshold with hysteresis.
+// Simple edge trigger.
 class EdgeTrigger : public ITrigger {
 public:
   enum class EdgeDirection { RISING, FALLING };
@@ -154,6 +157,30 @@ protected:
     return false;
   }
 
+  bool scanRawBuffer(const std::vector<float> &buffer,
+                     size_t &out_offset) override {
+    if (buffer.size() < 2)
+      return false;
+
+    float prev = buffer[0];
+    for (size_t i = 1; i < buffer.size(); ++i) {
+      float current = buffer[i];
+      bool fired = false;
+      if (m_direction == EdgeDirection::RISING) {
+        fired = prev < (m_threshold - m_hysteresis_margin) && current >= m_threshold;
+      } else {
+        fired = prev > (m_threshold + m_hysteresis_margin) && current <= m_threshold;
+      }
+
+      if (fired) {
+        out_offset = i;
+        return true;
+      }
+      prev = current;
+    }
+    return false;
+  }
+
 public:
   // Lifecycle
   explicit EdgeTrigger(size_t width = 1024, float level = 128.0f)
@@ -169,13 +196,15 @@ public:
   std::vector<TriggerParameter> getUIParameters() override {
     std::vector<TriggerParameter> params;
 
-    // TODO: fix min_val and max_val hardcoded for 8 bit ADC
     params.push_back(
         {"Level", -128, 128, static_cast<int>(m_threshold) - 128, {}});
 
     std::vector<std::string> dirs = {"Rising", "Falling"};
     int dir_idx = (m_direction == EdgeDirection::RISING) ? 0 : 1;
     params.push_back({"Edge", 0, 1, dir_idx, dirs});
+
+    params.push_back(
+        {"Hysteresis", 0, 50, static_cast<int>(m_hysteresis_margin), {}});
     return params;
   }
 
@@ -184,11 +213,11 @@ public:
   void setDirection(EdgeDirection dir) { m_direction = dir; }
   void setUIParameter(const std::string &name, int val) override {
     if (name == "Level") {
-      m_threshold =
-          static_cast<float>(val + 128); // Internally, trigger ranges from 0 to
-                                         // 255 but -128 to 128 in UI
+      m_threshold = static_cast<float>(val + 128);
     } else if (name == "Edge") {
       m_direction = (val == 0) ? EdgeDirection::RISING : EdgeDirection::FALLING;
+    } else if (name == "Hysteresis") {
+      m_hysteresis_margin = static_cast<float>(val);
     }
   }
   void clear() override { m_prev_sample = 0; }

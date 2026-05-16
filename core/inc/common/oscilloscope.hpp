@@ -35,6 +35,20 @@ public:
   void setMaxCaptureWidth(size_t width) {
     m_max_capture_width = width;
   }
+  void forceReprocess() {
+    if (m_trigger && m_trigger_source_idx < m_channels.size()) {
+      auto &source = m_channels[m_trigger_source_idx];
+      size_t new_in_frame_idx = 0;
+      if (m_trigger->scanRawBuffer(source->getRawFrame(), new_in_frame_idx)) {
+        for (auto &ch : m_channels) {
+          ch->updateTriggerPoint(new_in_frame_idx);
+        }
+      }
+    }
+    for (auto &ch : m_channels) {
+      ch->reprocessLastFrame();
+    }
+  }
 
   // Accessors
   USBDevice &getUSB() { return m_usb; }
@@ -90,6 +104,8 @@ public:
 
           if (ch->isEnabled() || any_proc_enabled) {
             ch->extractAndProcessFrame(trigger_idx, max_req);
+          } else {
+            ch->clearTraces();
           }
 
           // Apply uniform consumption
@@ -106,6 +122,8 @@ public:
           }
           if (ch->isEnabled() || any_proc_enabled) {
             ch->extractAndProcessFrame(trigger_idx, max_req);
+          } else {
+            ch->clearTraces();
           }
         }
       }

@@ -51,7 +51,7 @@ private:
   // Control helpers
   void drawModeCombo(Oscilloscope &osc);
   void drawHorizontalControls(IChannel &channel, Oscilloscope &osc);
-  void drawVerticalControls(IChannel &channel);
+  void drawVerticalControls(IChannel &channel, Oscilloscope &osc);
   void drawFFTControl(Oscilloscope &osc);
 
   // Legacy layout (V1)

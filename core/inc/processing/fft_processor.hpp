@@ -32,13 +32,13 @@ private:
   size_t m_max_height;         // Max plot height (pixels)
 
   float m_smoothing_factor =
-      0.8f; // Smoothing factor for exponential smoothing (EMA)
+      0.0f; // Smoothing factor for exponential smoothing (EMA)
   std::vector<float> m_smoothed_data; // Smooothed FFT data
-  size_t m_fft_size = 16384; // Window size for FFT
+  size_t m_fft_size = 16384;          // Window size for FFT
 
   float m_scale = 0.9f;                   // Scale factor applied to FFT output
   static constexpr float m_offset = 0.0f; // Vertical offset
-  size_t m_horizontal_scale = 0; // 0 means auto/full
+  size_t m_horizontal_scale = 0;          // 0 means auto/full
   size_t m_horizontal_offset = 0;
 
 public:
@@ -73,12 +73,8 @@ public:
   void setWindowType(int type) override {
     m_window.setType(static_cast<WindowType>(type));
   }
-  void setWindowSize(size_t size) override {
-    m_fft_size = size;
-  }
-  void setHorizontalScale(size_t scale) override {
-    m_horizontal_scale = scale;
-  }
+  void setWindowSize(size_t size) override { m_fft_size = size; }
+  void setHorizontalScale(size_t scale) override { m_horizontal_scale = scale; }
   void setHorizontalOffset(size_t offset) override {
     m_horizontal_offset = offset;
   }
@@ -90,9 +86,10 @@ public:
     size_t frame_size = std::min(m_fft_size, raw_frame.size());
     m_fft_output.resize(frame_size);
 
-    // Update window size (Window class only regenerates if size actually changes)
+    // Update window size (Window class only regenerates if size actually
+    // changes)
     m_window.setSize(frame_size);
-    const auto& window_func = m_window.getFunction();
+    const auto &window_func = m_window.getFunction();
 
     // Remove DC offset and apply windowing function
     std::vector<float> centered_frame;
@@ -124,7 +121,9 @@ public:
     fft_trace.domain = Domain::Frequency;
 
     size_t num_bins = frame_size / 2;
-    size_t scale = (m_horizontal_scale == 0 || m_horizontal_scale > num_bins) ? num_bins : m_horizontal_scale;
+    size_t scale = (m_horizontal_scale == 0 || m_horizontal_scale > num_bins)
+                       ? num_bins
+                       : m_horizontal_scale;
     size_t offset = std::min(m_horizontal_offset, num_bins - scale);
 
     fft_trace.data.resize(scale);
@@ -147,8 +146,9 @@ public:
                            (m_smoothed_data[i] * m_smoothing_factor);
 
       val = m_smoothed_data[i];
-      
-      // Calculate min/max over the entire FFT so scrolling doesn't change the scale
+
+      // Calculate min/max over the entire FFT so scrolling doesn't change the
+      // scale
       max = val > max ? val : max;
       min = val < min ? val : min;
 

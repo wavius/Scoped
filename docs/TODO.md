@@ -1,11 +1,8 @@
 # Project TODOs
 
-## UI / UX
+## UI
 
-- Fix hardcoded trigger source in `OscilloscopeUI::drawTriggerLine` (currently defaults to channel 0).
-- Add a "Source" selector in the Trigger UI to switch between channels.
-- Add a proper scale to signal and fft plots
-- Add channel enable
+- Add a proper scale to signal and fft plots; this requires choosing an ADC so its on hold
 
 ## FFT
 
@@ -19,3 +16,11 @@
 ## Trigger
 
 - Edge trigger level hardcoded for 8 bit ADC
+
+## Math
+
+- Add math (add, sub, mul, div, ch1_ch2, sqrt)
+
+## Measurements
+
+- Add measurements (V_pp, V_rms, V_avg, V_min, V_max, freq, period)

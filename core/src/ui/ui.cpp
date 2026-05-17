@@ -629,7 +629,7 @@ void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
   ImGui::Text("Source");
   int trigger_source_idx = static_cast<int>(osc.getTriggerSourceIndex());
   std::vector<std::string> channel_labels;
-  std::vector<const char*> channel_labels_cstr;
+  std::vector<const char *> channel_labels_cstr;
   size_t num_channels = osc.getChannels().size();
   channel_labels.resize(num_channels);
   channel_labels_cstr.resize(num_channels);
@@ -637,7 +637,7 @@ void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
     channel_labels[i] = osc.getChannels()[i]->getLabel();
     channel_labels_cstr[i] = channel_labels[i].c_str();
   }
-  
+
   ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
   if (ImGui::Combo("##Source", &trigger_source_idx, channel_labels_cstr.data(),
                    static_cast<int>(num_channels))) {
@@ -812,10 +812,7 @@ void OscilloscopeUI::drawDebugWindow(Oscilloscope &osc) {
     auto &channel = osc.getChannels()[0];
 
     ImGui::Separator();
-
-    ImGui::Text("First channel: %s", channel->getLabel().c_str());
-    ImGui::Text("Horizontal scale: %zu", channel->getHorizontalScale());
-    ImGui::Text("New frame waiting: %s", channel->hasNewFrame() ? "yes" : "no");
+    // TODO: add channel specific debug info
   }
 
   ImGui::End();

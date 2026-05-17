@@ -293,14 +293,16 @@ void OscilloscopeUI::drawHorizontalControls(IChannel &channel,
   ImGui::Spacing();
   ImGui::Text("Horizontal Offset");
   int h_offset = channel.getHorizontalOffset();
-  
-  // Dynamic limits: how far can we pan before the window edge hits the buffer edge?
+
+  // Dynamic limits: how far can we pan before the window edge hits the buffer
+  // edge?
   int capture_width = static_cast<int>(osc.getMaxCaptureWidth());
   int visible_width = static_cast<int>(channel.getHorizontalScale());
   int max_offset = std::max(0, (capture_width - visible_width) / 2);
-  
+
   ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-  if (ImGui::SliderInt("##Horizontal Offset", &h_offset, -max_offset, max_offset, "%d samples")) {
+  if (ImGui::SliderInt("##Horizontal Offset", &h_offset, -max_offset,
+                       max_offset, "%d samples")) {
     channel.setHorizontalOffset(h_offset);
     osc.forceReprocess();
   }
@@ -624,8 +626,24 @@ void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
   ImGui::PopStyleColor();
 
   ImGui::Spacing();
-  ImGui::Separator();
-  ImGui::Spacing();
+  ImGui::Text("Source");
+  int trigger_source_idx = static_cast<int>(osc.getTriggerSourceIndex());
+  std::vector<std::string> channel_labels;
+  std::vector<const char*> channel_labels_cstr;
+  size_t num_channels = osc.getChannels().size();
+  channel_labels.resize(num_channels);
+  channel_labels_cstr.resize(num_channels);
+  for (size_t i = 0; i < num_channels; i++) {
+    channel_labels[i] = osc.getChannels()[i]->getLabel();
+    channel_labels_cstr[i] = channel_labels[i].c_str();
+  }
+  
+  ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+  if (ImGui::Combo("##Source", &trigger_source_idx, channel_labels_cstr.data(),
+                   static_cast<int>(num_channels))) {
+    osc.setTriggerSource(static_cast<size_t>(trigger_source_idx));
+    osc.forceReprocess();
+  }
 
   drawModeCombo(osc);
 

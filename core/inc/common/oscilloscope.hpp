@@ -22,10 +22,19 @@ public:
   // Lifecycle
   Oscilloscope() = default;
 
-  // Configuration
-  void addChannel(std::shared_ptr<IChannel> channel) {
-    m_channels.push_back(std::move(channel));
+  // Accessors
+  USBDevice &getUSB() { return m_usb; }
+  ITrigger *getTrigger() { return m_trigger.get(); }
+  const std::vector<std::shared_ptr<IChannel>> &getChannels() const {
+    return m_channels;
   }
+  std::vector<std::shared_ptr<IChannel>> &getChannels() {
+    return m_channels;
+  }
+  size_t getTriggerSourceIndex() const { return m_trigger_source_idx; }
+  size_t getMaxCaptureWidth() const { return m_max_capture_width; }
+
+  // Setters
   void setTrigger(std::unique_ptr<ITrigger> trigger) {
     m_trigger = std::move(trigger);
   }
@@ -35,7 +44,13 @@ public:
   void setMaxCaptureWidth(size_t width) {
     m_max_capture_width = width;
   }
-  size_t getMaxCaptureWidth() const { return m_max_capture_width; }
+
+  // Configuration
+  void addChannel(std::shared_ptr<IChannel> channel) {
+    m_channels.push_back(std::move(channel));
+  }
+
+  // Core
   void forceReprocess() {
     if (m_trigger && m_trigger_source_idx < m_channels.size()) {
       auto &source = m_channels[m_trigger_source_idx];
@@ -51,15 +66,6 @@ public:
     }
   }
 
-  // Accessors
-  USBDevice &getUSB() { return m_usb; }
-  ITrigger *getTrigger() { return m_trigger.get(); }
-  const std::vector<std::shared_ptr<IChannel>> &getChannels() const {
-    return m_channels;
-  }
-  size_t getTriggerSourceIndex() const { return m_trigger_source_idx; }
-
-  // Core
   void update() {
     if (m_channels.empty())
       return;

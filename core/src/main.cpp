@@ -93,9 +93,9 @@ int main(int, char **) {
 
   // FFT processors
   auto fft_p1 = std::make_unique<Scoped::FFTProcessor<unsigned char>>(
-      "FFT CH1", ui.getDisplayHeight());
+      "FFT CH1", ui.getDisplayHeight(), 16384);
   auto fft_p2 = std::make_unique<Scoped::FFTProcessor<unsigned char>>(
-      "FFT CH2", ui.getDisplayHeight());
+      "FFT CH2", ui.getDisplayHeight(), 16384);
 
   ch1->addProcessor(std::move(fft_p1));
   ch2->addProcessor(std::move(fft_p2));

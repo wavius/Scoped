@@ -16,21 +16,15 @@ public:
   // Accessors
   virtual std::string getName() const = 0;
   virtual bool isEnabled() const = 0;
-  virtual float getScale() const = 0;
-  virtual bool getIsModeLinear() const = 0;
-  virtual float getSmoothingFactor() const = 0;
-  virtual std::string getWindowTypeName() const { return "None"; }
-  virtual size_t getWindowSize() const { return 16384; }
+  virtual float getVerticalScale() const = 0;
+  virtual float getVerticalOffset() const = 0;
   virtual size_t getHorizontalScale() const { return 0; }
   virtual size_t getHorizontalOffset() const { return 0; }
 
   // Setters
   virtual void setEnabled(bool enabled) = 0;
-  virtual void setScale(float scale) = 0;
-  virtual void setIsModeLinear(bool mode) = 0;
-  virtual void setSmoothingFactor(float factor) = 0;
-  virtual void setWindowType(int /*type*/) {}
-  virtual void setWindowSize(size_t /*size*/) {}
+  virtual void setVerticalScale(float scale) = 0;
+  virtual void setVerticalOffset(float offset) = 0;
   virtual void setHorizontalScale(size_t /*scale*/) {}
   virtual void setHorizontalOffset(size_t /*offset*/) {}
 };

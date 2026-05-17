@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <ui/ui.hpp>
+#include <processing/fft_processor.hpp>
 
 namespace Scoped {
 
@@ -383,118 +384,135 @@ void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
       ImGui::TextColored(label_color, "%s", name.c_str());
       ImGui::Spacing();
 
-      float scale = processor->getScale();
-      ImGui::Text("Scale");
+      float scale = processor->getVerticalScale();
+      ImGui::Text("Vertical Scale");
       ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderFloat("##Scale", &scale, 0.01f, 1.00f, "%.2f")) {
-        processor->setScale(scale);
+      if (ImGui::SliderFloat("##Scale", &scale, 0.01f, 10.00f, "%.2f")) {
+        processor->setVerticalScale(scale);
         osc.forceReprocess();
       }
       ImGui::SameLine();
       ImGui::SetNextItemWidth(-FLT_MIN);
       if (ImGui::InputFloat("##ScaleInput", &scale, 0, 0, "%.2f")) {
-        processor->setScale(std::clamp(scale, 0.01f, 1.0f));
+        processor->setVerticalScale(std::clamp(scale, 0.01f, 10.0f));
         osc.forceReprocess();
       }
 
-      ImGui::Text("Representation");
-      int selected_mode = processor->getIsModeLinear() ? 0 : 1;
-      const char *modes[] = {"Linear", "Decibel"};
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-      if (ImGui::Combo("##Representation", &selected_mode, modes, 2)) {
-        processor->setIsModeLinear(selected_mode == 0);
+      float offset = processor->getVerticalOffset();
+      ImGui::Text("Vertical Offset");
+      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
+      if (ImGui::SliderFloat("##Offset", &offset, -500.0f, 500.0f, "%.1f")) {
+        processor->setVerticalOffset(offset);
+        osc.forceReprocess();
+      }
+      ImGui::SameLine();
+      ImGui::SetNextItemWidth(-FLT_MIN);
+      if (ImGui::InputFloat("##OffsetInput", &offset, 0, 0, "%.1f")) {
+        processor->setVerticalOffset(std::clamp(offset, -500.0f, 500.0f));
         osc.forceReprocess();
       }
 
-      // Window Type Selection
-      ImGui::Text("Window Function");
-      const char *window_types[] = {"Rectangular", "Hann", "Hamming",
-                                    "Blackman-Harris", "Flat Top"};
-      int current_type = 0;
-      std::string current_name = processor->getWindowTypeName();
-      for (int i = 0; i < 5; i++) {
-        if (current_name == window_types[i]) {
-          current_type = i;
-          break;
+      auto *fft_proc = dynamic_cast<FFTProcessor<unsigned char> *>(processor);
+      if (fft_proc) {
+        ImGui::Text("Representation");
+        int selected_mode = fft_proc->getIsModeLinear() ? 0 : 1;
+        const char *modes[] = {"Linear", "Decibel"};
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::Combo("##Representation", &selected_mode, modes, 2)) {
+          fft_proc->setIsModeLinear(selected_mode == 0);
+          osc.forceReprocess();
         }
-      }
 
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-      if (ImGui::Combo("##WindowType", &current_type, window_types, 5)) {
-        processor->setWindowType(current_type);
-        osc.forceReprocess();
-      }
+        // Window Type Selection
+        ImGui::Text("Window Function");
+        const char *window_types[] = {"Rectangular", "Hann", "Hamming",
+                                      "Blackman-Harris", "Flat Top"};
+        int current_type = 0;
+        std::string current_name = fft_proc->getWindowTypeName();
+        for (int i = 0; i < 5; i++) {
+          if (current_name == window_types[i]) {
+            current_type = i;
+            break;
+          }
+        }
 
-      float smoothing_factor = processor->getSmoothingFactor();
-      ImGui::Text("Smoothing");
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderFloat("##Smoothing", &smoothing_factor, 0.0f, 1.00f,
-                             "%.2f")) {
-        processor->setSmoothingFactor(smoothing_factor);
-        osc.forceReprocess();
-      }
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputFloat("##SmoothingInput", &smoothing_factor, 0, 0,
-                            "%.2f")) {
-        processor->setSmoothingFactor(std::clamp(smoothing_factor, 0.0f, 1.0f));
-        osc.forceReprocess();
-      }
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::Combo("##WindowType", &current_type, window_types, 5)) {
+          fft_proc->setWindowType(current_type);
+          osc.forceReprocess();
+        }
 
-      int fft_size = static_cast<int>(processor->getWindowSize());
-      ImGui::Text("Resolution");
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderInt("##SampleCount", &fft_size, 256, 16384,
-                           "%d samples")) {
-        processor->setWindowSize(static_cast<size_t>(fft_size));
-        osc.forceReprocess();
-      }
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputInt("##ResolutionInput", &fft_size, 0, 0)) {
-        processor->setWindowSize(
-            static_cast<size_t>(std::clamp(fft_size, 256, 16384)));
-        osc.forceReprocess();
-      }
+        float smoothing_factor = fft_proc->getSmoothingFactor();
+        ImGui::Text("Smoothing");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
+        if (ImGui::SliderFloat("##Smoothing", &smoothing_factor, 0.0f, 1.00f,
+                               "%.2f")) {
+          fft_proc->setSmoothingFactor(smoothing_factor);
+          osc.forceReprocess();
+        }
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        if (ImGui::InputFloat("##SmoothingInput", &smoothing_factor, 0, 0,
+                              "%.2f")) {
+          fft_proc->setSmoothingFactor(std::clamp(smoothing_factor, 0.0f, 1.0f));
+          osc.forceReprocess();
+        }
 
-      int num_bins = fft_size / 2;
-      int h_scale = static_cast<int>(processor->getHorizontalScale());
-      if (h_scale == 0 || h_scale > num_bins)
-        h_scale = num_bins;
-      ImGui::Text("Horizontal Scale");
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderInt("##FFTHorizontalScale", &h_scale, 2, num_bins,
-                           "%d bins")) {
-        processor->setHorizontalScale(static_cast<size_t>(h_scale));
-        osc.forceReprocess();
-      }
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputInt("##FFTHScaleInput", &h_scale, 0, 0)) {
-        processor->setHorizontalScale(
-            static_cast<size_t>(std::clamp(h_scale, 2, num_bins)));
-        osc.forceReprocess();
-      }
+        int fft_size = static_cast<int>(fft_proc->getWindowSize());
+        ImGui::Text("Resolution");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
+        if (ImGui::SliderInt("##SampleCount", &fft_size, 256, 16384,
+                             "%d samples")) {
+          fft_proc->setWindowSize(static_cast<size_t>(fft_size));
+          osc.forceReprocess();
+        }
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        if (ImGui::InputInt("##ResolutionInput", &fft_size, 0, 0)) {
+          fft_proc->setWindowSize(
+              static_cast<size_t>(std::clamp(fft_size, 256, 16384)));
+          osc.forceReprocess();
+        }
 
-      int h_offset = static_cast<int>(processor->getHorizontalOffset());
-      int max_offset = std::max(1, num_bins - h_scale);
-      if (h_offset > max_offset) {
-        h_offset = max_offset;
-        processor->setHorizontalOffset(static_cast<size_t>(h_offset));
-      }
-      ImGui::Text("Horizontal Offset");
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderInt("##FFTHorizontalOffset", &h_offset, 0, max_offset,
-                           "%d bins")) {
-        processor->setHorizontalOffset(static_cast<size_t>(h_offset));
-        osc.forceReprocess();
-      }
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputInt("##FFTHOffsetInput", &h_offset, 0, 0)) {
-        processor->setHorizontalOffset(
-            static_cast<size_t>(std::clamp(h_offset, 0, max_offset)));
-        osc.forceReprocess();
+        int num_bins = fft_size / 2;
+        int h_scale = static_cast<int>(processor->getHorizontalScale());
+        if (h_scale == 0 || h_scale > num_bins)
+          h_scale = num_bins;
+        ImGui::Text("Horizontal Scale");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
+        if (ImGui::SliderInt("##FFTHorizontalScale", &h_scale, 2, num_bins,
+                             "%d bins")) {
+          processor->setHorizontalScale(static_cast<size_t>(h_scale));
+          osc.forceReprocess();
+        }
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        if (ImGui::InputInt("##FFTHScaleInput", &h_scale, 0, 0)) {
+          processor->setHorizontalScale(
+              static_cast<size_t>(std::clamp(h_scale, 2, num_bins)));
+          osc.forceReprocess();
+        }
+
+        int h_offset = static_cast<int>(processor->getHorizontalOffset());
+        int max_offset = std::max(1, num_bins - h_scale);
+        if (h_offset > max_offset) {
+          h_offset = max_offset;
+          processor->setHorizontalOffset(static_cast<size_t>(h_offset));
+        }
+        ImGui::Text("Horizontal Offset");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
+        if (ImGui::SliderInt("##FFTHorizontalOffset", &h_offset, 0, max_offset,
+                             "%d bins")) {
+          processor->setHorizontalOffset(static_cast<size_t>(h_offset));
+          osc.forceReprocess();
+        }
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        if (ImGui::InputInt("##FFTHOffsetInput", &h_offset, 0, 0)) {
+          processor->setHorizontalOffset(
+              static_cast<size_t>(std::clamp(h_offset, 0, max_offset)));
+          osc.forceReprocess();
+        }
       }
 
       ImGui::Spacing();

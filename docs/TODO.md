@@ -10,8 +10,9 @@
 
 ## Hardware
 
-- Add support for multiple concurrent hardware channels.
-- Change FPGA USB to stream multiple channels and edit `OscilloscopeUI::drawHardwareStatus`.
+- Add support for multiple concurrent hardware channels
+- Change FPGA USB to stream multiple channels and edit `OscilloscopeUI::drawHardwareStatus`
+- Trigger stops centering at origin after certain horizontal scale: this is because the horizontal scale doesn't dynamically calculate
 
 ## Trigger
 

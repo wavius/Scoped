@@ -246,6 +246,65 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
       drawTriggerLine(osc);
     }
 
+    // Draw horizontal trigger position indicator badge at the top of the grid
+    if (!osc.getChannels().empty()) {
+      size_t src_idx = osc.getTriggerSourceIndex();
+      if (src_idx >= osc.getChannels().size()) {
+        src_idx = 0;
+      }
+      auto &channel = osc.getChannels()[src_idx];
+      double h_scale = static_cast<double>(channel->getHorizontalScale());
+      double h_offset = static_cast<double>(channel->getHorizontalOffset());
+      
+      double trigger_frac = 0.5 - (h_offset / h_scale);
+      double trigger_x = w * trigger_frac;
+      
+      std::string badge_text = "T";
+      bool is_offscreen_left = trigger_x < 0.0;
+      bool is_offscreen_right = trigger_x > w;
+      
+      if (is_offscreen_left) {
+        badge_text = "< T";
+      } else if (is_offscreen_right) {
+        badge_text = "T >";
+      }
+      
+      ImVec2 text_size = ImGui::CalcTextSize(badge_text.c_str());
+      float badge_width = std::max(14.0f, text_size.x + 6.0f);
+      float half_badge_w = badge_width * 0.5f;
+      
+      double trigger_x_clamped = trigger_x;
+      if (is_offscreen_left) {
+        trigger_x_clamped = half_badge_w + 2.0f;
+      } else if (is_offscreen_right) {
+        trigger_x_clamped = w - half_badge_w - 2.0f;
+      }
+      
+      ImVec2 center_pix = ImPlot::PlotToPixels(ImPlotPoint(trigger_x_clamped, h));
+      ImDrawList* draw_list = ImPlot::GetPlotDrawList();
+      
+      ImVec4 badge_color = ImVec4(1.0f, 0.55f, 0.0f, 1.0f); // Bright Neon Orange/Amber
+      ImU32 badge_color_u32 = ImGui::GetColorU32(badge_color);
+      ImU32 text_color_u32 = ImGui::GetColorU32(ImVec4(0, 0, 0, 1)); // Black
+      
+      // Draw background rounded rect
+      ImVec2 rect_min(center_pix.x - half_badge_w, center_pix.y - 18.0f);
+      ImVec2 rect_max(center_pix.x + half_badge_w, center_pix.y - 5.0f);
+      draw_list->AddRectFilled(rect_min, rect_max, badge_color_u32, 3.0f);
+      
+      // Draw a small triangle pointing down to the exact horizontal position if it's on-screen
+      if (!is_offscreen_left && !is_offscreen_right) {
+        ImVec2 tri_p1(center_pix.x - 4.0f, center_pix.y - 5.0f);
+        ImVec2 tri_p2(center_pix.x + 4.0f, center_pix.y - 5.0f);
+        ImVec2 tri_p3(center_pix.x, center_pix.y);
+        draw_list->AddTriangleFilled(tri_p1, tri_p2, tri_p3, badge_color_u32);
+      }
+      
+      // Draw text centered in the badge
+      ImVec2 text_pos(center_pix.x - text_size.x * 0.5f, center_pix.y - 11.5f - text_size.y * 0.5f);
+      draw_list->AddText(text_pos, text_color_u32, badge_text.c_str());
+    }
+
     ImPlot::EndPlot();
   }
 

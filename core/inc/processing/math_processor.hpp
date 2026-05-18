@@ -12,14 +12,14 @@ private:
   bool m_enabled;
   std::string m_name = "FFT";
 
-  std::vector<std::complex<float>> m_fft_output; // FFT output
+  std::vector<std::complex<float>> m_math_output;
 
   // Plotting vars
   size_t m_max_height; // Max plot height (pixels)
 
-  float m_vertical_scale = 0.9f; // Scale factor applied to FFT output
-  static constexpr float m_vertical_offset = 0.0f; // Vertical offset
-  size_t m_horizontal_scale = 0;                   // 0 means auto/full
+  float m_vertical_scale = 0.9f;
+  float m_vertical_offset = 0.0f;
+  size_t m_horizontal_scale = 0;
   size_t m_horizontal_offset = 0;
 
 public:
@@ -36,9 +36,11 @@ public:
   // Setters
   void setEnabled(bool enabled) override { m_enabled = enabled; }
   void setVerticalScale(float scale) override { m_vertical_scale = scale; }
-  void setVerticalOffset(float offset) override { /* no-op */ }
+  void setVerticalOffset(float offset) override { m_vertical_offset = offset; }
   void setHorizontalScale(size_t scale) override { m_horizontal_scale = scale; }
-  void setHorizontalOffset(size_t offset) override { m_horizontal_offset = offset; }
+  void setHorizontalOffset(size_t offset) override {
+    m_horizontal_offset = offset;
+  }
 
   // Pipeline
   void process(const std::vector<IChannel *> &sources,

@@ -283,7 +283,7 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
       ImVec2 center_pix = ImPlot::PlotToPixels(ImPlotPoint(trigger_x_clamped, h));
       ImDrawList* draw_list = ImPlot::GetPlotDrawList();
       
-      ImVec4 badge_color = ImVec4(1.0f, 0.55f, 0.0f, 1.0f); // Bright Neon Orange/Amber
+      ImVec4 badge_color = Colors::TriggerMarker;
       ImU32 badge_color_u32 = ImGui::GetColorU32(badge_color);
       ImU32 text_color_u32 = ImGui::GetColorU32(ImVec4(0, 0, 0, 1)); // Black
       

@@ -13,6 +13,7 @@ namespace Colors {
 const ImVec4 Black = ImVec4(0, 0, 0, 1);               // Black
 const ImVec4 Grid = ImVec4(0.3f, 0.3f, 0.3f, 0.4f);    // Dark Gray
 const ImVec4 Trigger = ImVec4(1, 0, 0, 0.5f);          // Red (Semi-transparent)
+const ImVec4 TriggerMarker = ImVec4(1.0f, 0.55f, 0.0f, 1.0f); // Neon Orange/Amber
 const ImVec4 FFTLine = ImVec4(0.7f, 0.5f, 1.0f, 1.0f); // Light purple
 const ImVec4 StatusOk = ImVec4(0, 1, 0, 1);            // Green
 const ImVec4 StatusError = ImVec4(1, 0, 0, 1);         // Red

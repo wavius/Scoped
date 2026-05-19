@@ -7,6 +7,15 @@
 
 namespace Scoped {
 
+enum class MathOperations {
+  ADD,
+  SUBTRACT,
+  MULTIPLY,
+  INVERT,
+  INTEGRATE,
+  DIFFERENTIATE
+};
+
 class MathProcessor : public IVirtualProcessor {
 private:
   bool m_enabled;

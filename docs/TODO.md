@@ -2,7 +2,6 @@
 
 ## UI
 
-- Have Channel colors for channel traces and processors should always plot with their color. For example, processor should have a trigger marker in its color.
 - Add reset settings button for each tab
 - Add a proper scale to signal and fft plots; this requires choosing an ADC so its on hold
 

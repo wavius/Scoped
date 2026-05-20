@@ -22,6 +22,7 @@ const ImVec4 CH1 = ImVec4(1, 1, 0, 1);                     // Yellow
 const ImVec4 CH2 = ImVec4(0, 1, 0, 1);                     // Green
 const ImVec4 FFT1 = ImVec4(0.78f, 0.64f, 0.94f, 1.0f);     // Lilac
 const ImVec4 FFT2 = ImVec4(0.0f, 1.0f, 1.0f, 1.0f);        // Cyan
+const ImVec4 Math = ImVec4(1.0f, 0.4f, 0.7f, 1.0f);        // Pink/Magenta
 const ImVec4 TopBarBg = ImVec4(0.11f, 0.14f, 0.18f, 1.0f); // Dark Blue-Gray
 const ImVec4 ChannelBlockBg = ImVec4(1.0f, .8f, 0.0f, 1.0f); // Amber/Gold
 const ImVec4 BottomBarBg = ImVec4(0.08f, 0.1f, 0.12f, 1.0f); // Dark Navy

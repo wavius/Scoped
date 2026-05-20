@@ -119,7 +119,7 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
                 : (index == 1) ? Colors::CH2
                                : Colors::Black;
       } else {
-        color = ImVec4(1.0f, 0.4f, 0.7f, 1.0f); // Pink/Magenta for virtual/math
+        color = Colors::Math;
       }
 
       const auto &traces = channel.getTraces();
@@ -367,9 +367,9 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
         }
       }
       if (vc->isEnabled() && has_enabled_processor) {
-        ImVec4 v_badge_color = ImVec4(1.0f, 0.4f, 0.7f, 1.0f); // Pink/Magenta for math
+        ImVec4 v_badge_color = Colors::Math;
 
-        drawTriggerMarker("Tm", v_scale, v_offset, w, h, v_badge_color, 22.0f);
+        drawTriggerMarker("TM", v_scale, v_offset, w, h, v_badge_color, 22.0f);
       }
     }
 
@@ -671,8 +671,7 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
       found_math = true;
 
       // Color coded label matching Trace
-      ImVec4 label_color =
-          ImVec4(1.0f, 0.4f, 0.7f, 1.0f); // Default Neon Pink/Magenta for Math
+      ImVec4 label_color = Colors::Math;
 
       bool enabled = processor->isEnabled();
       ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));

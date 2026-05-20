@@ -28,6 +28,11 @@ const ImVec4 ChannelBlockBg = ImVec4(1.0f, .8f, 0.0f, 1.0f); // Amber/Gold
 const ImVec4 BottomBarBg = ImVec4(0.08f, 0.1f, 0.12f, 1.0f); // Dark Navy
 } // namespace Colors
 
+// Converts a Scoped::Color (std::array<float,4>) to ImVec4 for rendering.
+inline ImVec4 toImVec4(const Color &c) {
+  return ImVec4(c[0], c[1], c[2], c[3]);
+}
+
 // Registers a black-to-color gradient colormap for the display.
 void setupChannelColormap(ImVec4 color);
 

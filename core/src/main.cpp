@@ -94,21 +94,29 @@ int main(int, char **) {
 
   // Virtual Channels
   auto vc1 = std::make_shared<Scoped::VirtualChannel>("VC1", 2048);
+  vc1->addSource(ch1.get());
+  vc1->addSource(ch2.get());
 
   // FFT processors
   auto fft_p1 = std::make_unique<Scoped::FFTProcessor<unsigned char>>(
       "FFT CH1", ui.getDisplayHeight(), 16384);
   auto fft_p2 = std::make_unique<Scoped::FFTProcessor<unsigned char>>(
       "FFT CH2", ui.getDisplayHeight(), 16384);
+  fft_p1->setColor(Scoped::Color{Scoped::Colors::FFT1.x, Scoped::Colors::FFT1.y, Scoped::Colors::FFT1.z, Scoped::Colors::FFT1.w});
+  fft_p2->setColor(Scoped::Color{Scoped::Colors::FFT2.x, Scoped::Colors::FFT2.y, Scoped::Colors::FFT2.z, Scoped::Colors::FFT2.w});
 
   ch1->addProcessor(std::move(fft_p1));
   ch2->addProcessor(std::move(fft_p2));
 
   // Math processors
-  auto math_p1 = std::make_unique<Scoped::MathProcessor>(2048);
-  vc1->addSource(ch1.get());
-  vc1->addSource(ch2.get());
+  auto math_p1 = std::make_unique<Scoped::MathProcessor>("M1", 2048);
+  math_p1->setColor(Scoped::Color{Scoped::Colors::Math.x, Scoped::Colors::Math.y, Scoped::Colors::Math.z, Scoped::Colors::Math.w});
   vc1->addProcessor(std::move(math_p1));
+
+  // Channel colors
+  ch1->setColor(Scoped::Color{Scoped::Colors::CH1.x, Scoped::Colors::CH1.y, Scoped::Colors::CH1.z, Scoped::Colors::CH1.w});
+  ch2->setColor(Scoped::Color{Scoped::Colors::CH2.x, Scoped::Colors::CH2.y, Scoped::Colors::CH2.z, Scoped::Colors::CH2.w});
+  vc1->setColor(Scoped::Color{Scoped::Colors::Math.x, Scoped::Colors::Math.y, Scoped::Colors::Math.z, Scoped::Colors::Math.w});
 
   osc.addHardwareChannel(ch1);
   osc.addHardwareChannel(ch2);

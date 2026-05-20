@@ -31,6 +31,7 @@ private:
   float m_vertical_offset = 0.0f;
   size_t m_horizontal_scale = 1024;
   size_t m_horizontal_offset = 0;
+  Color m_color = {1.0f, 1.0f, 1.0f, 1.0f};
 
   // Assume m_math_output is resized already
   // m_math_output = frame1 + frame2 - 128
@@ -78,18 +79,20 @@ private:
 
   // m_math_output = diff(frame1)
   void performDifferentiate(const std::vector<float> &frame1) {
-    if (m_math_output.empty()) return;
+    if (m_math_output.empty())
+      return;
     m_math_output[0] = 128.0f;
     float scale = 5.0f;
     for (size_t i = 1; i < m_math_output.size(); i++) {
-      m_math_output[i] = (frame1[i] - frame1[i-1]) * scale + 128.0f;
+      m_math_output[i] = (frame1[i] - frame1[i - 1]) * scale + 128.0f;
     }
   }
 
 public:
   // Lifecycle
-  explicit MathProcessor(size_t horizontal_scale = 1024)
-      : m_horizontal_scale(horizontal_scale) {}
+  explicit MathProcessor(const std::string &name,
+                         size_t horizontal_scale = 1024)
+      : m_name(name), m_horizontal_scale(horizontal_scale) {}
 
   // Accessors
   std::string getName() const override { return m_name; }
@@ -98,6 +101,7 @@ public:
   float getVerticalOffset() const override { return m_vertical_offset; }
   size_t getHorizontalScale() const override { return m_horizontal_scale; }
   size_t getHorizontalOffset() const override { return m_horizontal_offset; }
+  Color getColor() const override { return m_color; }
 
   MathOperation getOperation() const { return m_operation; }
   const std::string &getSource1Label() const { return m_source1_label; }
@@ -111,6 +115,7 @@ public:
   void setHorizontalOffset(size_t offset) override {
     m_horizontal_offset = offset;
   }
+  void setColor(const Color &color) override { m_color = color; }
 
   void setOperation(MathOperation op) { m_operation = op; }
   void setSource1Label(const std::string &label) { m_source1_label = label; }
@@ -118,8 +123,7 @@ public:
 
   // Pipeline
   void process(const std::vector<IChannel *> &sources,
-               std::vector<Trace> &traces,
-               size_t trigger_in_frame) override {
+               std::vector<Trace> &traces, size_t trigger_in_frame) override {
 
     IChannel *source1 = nullptr;
     IChannel *source2 = nullptr;
@@ -133,29 +137,28 @@ public:
     }
 
     // Check if source channels were resolved
-    if (!source1 || (m_operation != MathOperation::INVERT && 
-                     m_operation != MathOperation::INTEGRATE && 
-                     m_operation != MathOperation::DIFFERENTIATE && 
-                     !source2)) {
+    if (!source1 || (m_operation != MathOperation::INVERT &&
+                     m_operation != MathOperation::INTEGRATE &&
+                     m_operation != MathOperation::DIFFERENTIATE && !source2)) {
       return;
     }
 
     const auto &frame1 = source1->getRawFrame();
-    const auto &frame2 = source2 ? source2->getRawFrame() : std::vector<float>();
+    const auto &frame2 =
+        source2 ? source2->getRawFrame() : std::vector<float>();
 
-    if (frame1.empty() || (m_operation != MathOperation::INVERT && 
-                           m_operation != MathOperation::INTEGRATE && 
-                           m_operation != MathOperation::DIFFERENTIATE && 
-                           frame2.empty())) {
+    if (frame1.empty() ||
+        (m_operation != MathOperation::INVERT &&
+         m_operation != MathOperation::INTEGRATE &&
+         m_operation != MathOperation::DIFFERENTIATE && frame2.empty())) {
       return;
     }
 
     // Compute size based on raw frame lengths
     size_t size = frame1.size();
-    if (m_operation != MathOperation::INVERT && 
-        m_operation != MathOperation::INTEGRATE && 
-        m_operation != MathOperation::DIFFERENTIATE && 
-        frame2.size() < size) {
+    if (m_operation != MathOperation::INVERT &&
+        m_operation != MathOperation::INTEGRATE &&
+        m_operation != MathOperation::DIFFERENTIATE && frame2.size() < size) {
       size = frame2.size();
     }
 
@@ -188,28 +191,35 @@ public:
     }
 
     size_t half_vis = m_horizontal_scale / 2;
-    int offset_val = static_cast<int>(m_horizontal_offset); 
-    
-    long long center_idx = static_cast<long long>(trigger_in_frame) + offset_val;
+    int offset_val = static_cast<int>(m_horizontal_offset);
+
+    long long center_idx =
+        static_cast<long long>(trigger_in_frame) + offset_val;
     long long start_idx = center_idx - half_vis;
-    
+
     size_t time_start = (start_idx < 0) ? 0 : static_cast<size_t>(start_idx);
-    if (time_start >= size) time_start = size - 1;
-    
+    if (time_start >= size)
+      time_start = size - 1;
+
     size_t time_width = std::min(m_horizontal_scale, size - time_start);
 
     Trace math_trace;
-    math_trace.name = m_name + " (" + source1->getLabel() + 
-                     (m_operation == MathOperation::INVERT ? " Inverted" : 
-                      m_operation == MathOperation::INTEGRATE ? " Integrated" :
-                      m_operation == MathOperation::DIFFERENTIATE ? " Diff" :
-                      " " + std::string(m_operation == MathOperation::ADD ? "+" : 
-                                       m_operation == MathOperation::SUBTRACT ? "-" : "*") 
-                      + " " + source2->getLabel()) + ")";
+    math_trace.name =
+        m_name + " (" + source1->getLabel() +
+        (m_operation == MathOperation::INVERT      ? " Inverted"
+         : m_operation == MathOperation::INTEGRATE ? " Integrated"
+         : m_operation == MathOperation::DIFFERENTIATE
+             ? " Diff"
+             : " " +
+                   std::string(m_operation == MathOperation::ADD        ? "+"
+                               : m_operation == MathOperation::SUBTRACT ? "-"
+                                                                        : "*") +
+                   " " + source2->getLabel()) +
+        ")";
     math_trace.domain = Domain::Time;
     math_trace.vertical_scale = m_vertical_scale;
     math_trace.vertical_offset = m_vertical_offset;
-    
+
     math_trace.data.resize(time_width);
     for (size_t i = 0; i < time_width; ++i) {
       math_trace.data[i] = m_math_output[time_start + i];

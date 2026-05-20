@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <common/circularbuffer.hpp>
 #include <cstdint>
 #include <memory>
@@ -31,6 +32,7 @@ public:
   virtual size_t getUnreadSampleCount() const = 0;
   virtual bool isHardwareChannel() const = 0;
   virtual std::vector<IProcessorControl *> getProcessors() const = 0;
+  virtual Color getColor() const = 0;
   virtual size_t getLastTriggerInFrame() const = 0;
 
   // Setters
@@ -40,6 +42,7 @@ public:
   virtual void setHorizontalOffset(int offset) = 0;
   virtual void setEnabled(bool enabled) = 0;
   virtual void clearNewFrame() = 0;
+  virtual void setColor(const Color &color) = 0;
 
   // Pipeline
   virtual float getNormalizedSample(size_t index_offset) const = 0;
@@ -73,6 +76,9 @@ private:
   int m_horizontal_offset = 0;
   size_t m_last_trigger_in_frame = 0;
 
+  // Display color
+  Color m_color = {1.0f, 1.0f, 1.0f, 1.0f};
+
 public:
   // Lifecycle
   VirtualChannel(const std::string &label, size_t horizontal_scale)
@@ -90,6 +96,7 @@ public:
   size_t getUnreadSampleCount() const override { return 0; }
   bool isHardwareChannel() const override { return false; }
   size_t getLastTriggerInFrame() const override { return m_last_trigger_in_frame; }
+  Color getColor() const override { return m_color; }
 
   std::vector<IProcessorControl *> getProcessors() const override {
     std::vector<IProcessorControl *> list;
@@ -109,6 +116,7 @@ public:
   }
   void setEnabled(bool enabled) override { m_enabled = enabled; }
   void clearNewFrame() override { m_has_new_frame = false; }
+  void setColor(const Color &color) override { m_color = color; }
 
   void addSource(IChannel *source) { m_sources.push_back(source); }
   void addProcessor(std::unique_ptr<IVirtualProcessor> proc) {
@@ -183,6 +191,9 @@ private:
   bool m_enabled = true;
   bool m_has_new_frame = false;
 
+  // Display color
+  Color m_color = {1.0f, 1.0f, 1.0f, 1.0f};
+
 public:
   // Lifecycle
   Channel(const std::string &label, size_t buffer_size, size_t horizontal_scale)
@@ -203,6 +214,7 @@ public:
   }
   bool isHardwareChannel() const override { return true; }
   size_t getLastTriggerInFrame() const override { return m_last_trigger_in_frame; }
+  Color getColor() const override { return m_color; }
 
   std::vector<IProcessorControl *> getProcessors() const override {
     std::vector<IProcessorControl *> list;
@@ -221,6 +233,7 @@ public:
   }
   void setEnabled(bool enabled) override { m_enabled = enabled; }
   void clearNewFrame() override { m_has_new_frame = false; }
+  void setColor(const Color &color) override { m_color = color; }
 
   // Configuration
   void addProcessor(std::unique_ptr<IProcessor<HardwareT>> proc) {

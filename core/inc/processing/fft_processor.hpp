@@ -14,7 +14,7 @@ namespace Scoped {
 template <typename HardwareT>
 class FFTProcessor : public IProcessor<HardwareT> {
 private:
-  bool m_enabled;
+  bool m_enabled = false;
   std::string m_name = "FFT";
 
   std::vector<std::complex<float>> m_fft_output; // FFT output
@@ -34,19 +34,21 @@ private:
   float m_smoothing_factor =
       0.0f; // Smoothing factor for exponential smoothing (EMA)
   std::vector<float> m_smoothed_data; // Smooothed FFT data
-  size_t m_fft_size; // Window size for FFT
+  size_t m_fft_size;                  // Window size for FFT
 
-  float m_vertical_scale = 0.9f; // Scale factor applied to FFT output
+  float m_vertical_scale = 0.9f;  // Scale factor applied to FFT output
   float m_vertical_offset = 0.0f; // Vertical offset
-  size_t m_horizontal_scale = 0;                   // 0 means auto/full
+  size_t m_horizontal_scale = 0;  // 0 means auto/full
   size_t m_horizontal_offset = 0;
+  Color m_color = {1.0f, 1.0f, 1.0f, 1.0f};
 
 public:
   // Lifecycle
-  FFTProcessor(const std::string &name, size_t display_height, size_t initial_fft_size)
-      : m_name(name), m_window(initial_fft_size, WindowType::Hann), m_fft_size(initial_fft_size) {
+  FFTProcessor(const std::string &name, size_t display_height,
+               size_t initial_fft_size)
+      : m_name(name), m_window(initial_fft_size, WindowType::Hann),
+        m_fft_size(initial_fft_size) {
     m_max_height = display_height;
-    m_enabled = false;
   }
 
   // Accessors
@@ -57,21 +59,18 @@ public:
   bool getIsModeLinear() const { return m_isLinearMode; }
   float getSmoothingFactor() const { return m_smoothing_factor; }
   WindowType getWindowType() const { return m_window.getType(); }
-  std::string getWindowTypeName() const {
-    return m_window.getTypeName();
-  }
+  std::string getWindowTypeName() const { return m_window.getTypeName(); }
   size_t getWindowSize() const { return m_fft_size; }
   size_t getHorizontalScale() const override { return m_horizontal_scale; }
   size_t getHorizontalOffset() const override { return m_horizontal_offset; }
+  Color getColor() const override { return m_color; }
 
   // Setters
   void setEnabled(bool enabled) override { m_enabled = enabled; }
   void setVerticalScale(float scale) override { m_vertical_scale = scale; }
   void setVerticalOffset(float offset) override { m_vertical_offset = offset; }
   void setIsModeLinear(bool mode) { m_isLinearMode = mode; }
-  void setSmoothingFactor(float factor) {
-    m_smoothing_factor = factor;
-  }
+  void setSmoothingFactor(float factor) { m_smoothing_factor = factor; }
   void setWindowType(int type) {
     m_window.setType(static_cast<WindowType>(type));
   }
@@ -80,6 +79,7 @@ public:
   void setHorizontalOffset(size_t offset) override {
     m_horizontal_offset = offset;
   }
+  void setColor(const Color &color) override { m_color = color; }
 
   // Pipeline
   void process(const std::vector<HardwareT> &raw_frame,

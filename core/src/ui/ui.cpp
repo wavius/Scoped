@@ -112,15 +112,8 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
         return;
       }
 
-      // Assign color based on channel index / type
-      ImVec4 color = ImVec4(1, 1, 1, 1);
-      if (!is_virtual) {
-        color = (index == 0)   ? Colors::CH1
-                : (index == 1) ? Colors::CH2
-                               : Colors::Black;
-      } else {
-        color = Colors::Math;
-      }
+      // Assign color from the channel's own color member
+      ImVec4 color = toImVec4(channel.getColor());
 
       const auto &traces = channel.getTraces();
 
@@ -170,7 +163,8 @@ void OscilloscopeUI::drawGridLines(double w, double h) {
 
 void OscilloscopeUI::drawTriggerMarker(const std::string &label, double h_scale,
                                        double h_offset, double w, double h,
-                                       const ImVec4 &color, float y_offset_rect) {
+                                       const ImVec4 &color,
+                                       float y_offset_rect) {
   double trigger_frac = 0.5 - (h_offset / h_scale);
   double trigger_x = w * trigger_frac;
 
@@ -202,11 +196,13 @@ void OscilloscopeUI::drawTriggerMarker(const std::string &label, double h_scale,
   ImU32 text_color_u32 = ImGui::GetColorU32(ImVec4(0, 0, 0, 1)); // Black
 
   // Draw background rounded rect
-  ImVec2 rect_min(center_pix.x - half_badge_w, center_pix.y - y_offset_rect - 13.0f);
+  ImVec2 rect_min(center_pix.x - half_badge_w,
+                  center_pix.y - y_offset_rect - 13.0f);
   ImVec2 rect_max(center_pix.x + half_badge_w, center_pix.y - y_offset_rect);
   draw_list->AddRectFilled(rect_min, rect_max, badge_color_u32, 3.0f);
 
-  // Draw a small triangle pointing down to the exact horizontal position if it's on-screen
+  // Draw a small triangle pointing down to the exact horizontal position if
+  // it's on-screen
   if (!is_offscreen_left && !is_offscreen_right) {
     ImVec2 tri_p1(center_pix.x - 4.0f, center_pix.y - y_offset_rect);
     ImVec2 tri_p2(center_pix.x + 4.0f, center_pix.y - y_offset_rect);
@@ -247,9 +243,7 @@ void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
 
   auto &trace = traces[0];
 
-  ImVec4 trigger_color = (src_idx == 0) ? Colors::CH1
-                       : (src_idx == 1) ? Colors::CH2
-                                        : Colors::Trigger;
+  ImVec4 trigger_color = toImVec4(osc.getHardwareChannels()[src_idx]->getColor());
   trigger_color.w = 0.5f;
 
   for (float level : levels) {
@@ -280,11 +274,13 @@ void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
                                  static_cast<float>(m_display_height);
         }
 
+        // Find the processor that produced this trace (matched by name) for its color
         ImVec4 trace_color = Colors::FFTLine;
-        if (trace.name == "FFT CH1") {
-          trace_color = Colors::FFT1;
-        } else if (trace.name == "FFT CH2") {
-          trace_color = Colors::FFT2;
+        for (auto *proc : channel->getProcessors()) {
+          if (proc->getName() == trace.name) {
+            trace_color = toImVec4(proc->getColor());
+            break;
+          }
         }
 
         double xscale = static_cast<double>(m_display_width) /
@@ -345,15 +341,19 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
       double h_scale = static_cast<double>(channel->getHorizontalScale());
       double h_offset = static_cast<double>(channel->getHorizontalOffset());
 
-      ImVec4 badge_color = (src_idx == 0) ? Colors::CH1
-                         : (src_idx == 1) ? Colors::CH2
-                                          : Colors::TriggerMarker;
+      ImVec4 badge_color = toImVec4(osc.getHardwareChannels()[src_idx]->getColor());
       badge_color.w = 1.0f;
 
-      drawTriggerMarker("T", h_scale, h_offset, w, h, badge_color, 5.0f);
+      // only draw trigger marker if any hardware channels are enabled
+      if (std::any_of(osc.getHardwareChannels().begin(),
+                      osc.getHardwareChannels().end(),
+                      [](const auto &ch) { return ch->isEnabled(); })) {
+        drawTriggerMarker("T", h_scale, h_offset, w, h, badge_color, 5.0f);
+      }
     }
 
-    // Draw horizontal trigger position indicator badge for the virtual channel (math)
+    // Draw horizontal trigger position indicator badge for the virtual channel
+    // (math)
     for (auto &vc : osc.getVirtualChannels()) {
       bool has_enabled_processor = false;
       double v_scale = 2048.0;
@@ -362,12 +362,13 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
         if (proc->isEnabled()) {
           has_enabled_processor = true;
           v_scale = static_cast<double>(proc->getHorizontalScale());
-          v_offset = static_cast<double>(static_cast<int>(proc->getHorizontalOffset()));
+          v_offset = static_cast<double>(
+              static_cast<int>(proc->getHorizontalOffset()));
           break;
         }
       }
       if (vc->isEnabled() && has_enabled_processor) {
-        ImVec4 v_badge_color = Colors::Math;
+        ImVec4 v_badge_color = toImVec4(vc->getColor());
 
         drawTriggerMarker("TM", v_scale, v_offset, w, h, v_badge_color, 22.0f);
       }
@@ -493,12 +494,7 @@ void OscilloscopeUI::drawFFTControls(Oscilloscope &osc) {
       found_fft = true;
 
       // Color coded label matching Trace
-      ImVec4 label_color = Colors::FFTLine;
-      if (name == "FFT CH1") {
-        label_color = Colors::FFT1;
-      } else if (name == "FFT CH2") {
-        label_color = Colors::FFT2;
-      }
+      ImVec4 label_color = toImVec4(processor->getColor());
 
       bool enabled = processor->isEnabled();
       ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
@@ -671,7 +667,7 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
       found_math = true;
 
       // Color coded label matching Trace
-      ImVec4 label_color = Colors::Math;
+      ImVec4 label_color = toImVec4(processor->getColor());
 
       bool enabled = processor->isEnabled();
       ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
@@ -1042,14 +1038,7 @@ void OscilloscopeUI::drawChannelWindow(Oscilloscope &osc) {
   for (auto &channel : osc.getHardwareChannels()) {
     ImGui::PushID(channel->getLabel().c_str());
 
-    // Default to Black
-    // Add more channel colors as needed
-    ImVec4 label_color = Colors::Black;
-    if (channel->getLabel() == "CH1") {
-      label_color = Colors::CH1;
-    } else if (channel->getLabel() == "CH2") {
-      label_color = Colors::CH2;
-    }
+    ImVec4 label_color = toImVec4(channel->getColor());
 
     bool enabled = channel->isEnabled();
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));

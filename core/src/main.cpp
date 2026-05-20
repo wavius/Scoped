@@ -105,7 +105,7 @@ int main(int, char **) {
   ch2->addProcessor(std::move(fft_p2));
 
   // Math processors
-  auto math_p1 = std::make_unique<Scoped::MathProcessor>();
+  auto math_p1 = std::make_unique<Scoped::MathProcessor>(2048);
   vc1->addSource(ch1.get());
   vc1->addSource(ch2.get());
   vc1->addProcessor(std::move(math_p1));

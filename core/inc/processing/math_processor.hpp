@@ -88,7 +88,8 @@ private:
 
 public:
   // Lifecycle
-  MathProcessor() = default;
+  explicit MathProcessor(size_t horizontal_scale = 1024)
+      : m_horizontal_scale(horizontal_scale) {}
 
   // Accessors
   std::string getName() const override { return m_name; }

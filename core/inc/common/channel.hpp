@@ -31,6 +31,7 @@ public:
   virtual size_t getUnreadSampleCount() const = 0;
   virtual bool isHardwareChannel() const = 0;
   virtual std::vector<IProcessorControl *> getProcessors() const = 0;
+  virtual size_t getLastTriggerInFrame() const = 0;
 
   // Setters
   virtual void setVerticalScale(float scale) = 0;
@@ -87,6 +88,7 @@ public:
   int getHorizontalOffset() const override { return m_horizontal_offset; }
   size_t getUnreadSampleCount() const override { return 0; }
   bool isHardwareChannel() const override { return false; }
+  size_t getLastTriggerInFrame() const override { return 0; }
 
   std::vector<IProcessorControl *> getProcessors() const override {
     std::vector<IProcessorControl *> list;
@@ -185,6 +187,7 @@ public:
     return m_buffer.getUnreadCount();
   }
   bool isHardwareChannel() const override { return true; }
+  size_t getLastTriggerInFrame() const override { return m_last_trigger_in_frame; }
 
   std::vector<IProcessorControl *> getProcessors() const override {
     std::vector<IProcessorControl *> list;

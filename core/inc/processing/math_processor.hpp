@@ -138,40 +138,23 @@ public:
       return;
     }
 
-    // Find the time domain trace of source1
-    const Trace *trace1 = nullptr;
-    for (const auto &t : source1->getTraces()) {
-      if (t.domain == Domain::Time) {
-        trace1 = &t;
-        break;
-      }
-    }
+    const auto &frame1 = source1->getRawFrame();
+    const auto &frame2 = source2 ? source2->getRawFrame() : std::vector<float>();
 
-    // Find the time domain trace of source2 (if required)
-    const Trace *trace2 = nullptr;
-    if (m_operation != MathOperation::INVERT && 
-        m_operation != MathOperation::INTEGRATE && 
-        m_operation != MathOperation::DIFFERENTIATE && 
-        source2) {
-      for (const auto &t : source2->getTraces()) {
-        if (t.domain == Domain::Time) {
-          trace2 = &t;
-          break;
-        }
-      }
-    }
-
-    if (!trace1 || (m_operation != MathOperation::INVERT && 
-                    m_operation != MathOperation::INTEGRATE && 
-                    m_operation != MathOperation::DIFFERENTIATE && 
-                    !trace2)) {
+    if (frame1.empty() || (m_operation != MathOperation::INVERT && 
+                           m_operation != MathOperation::INTEGRATE && 
+                           m_operation != MathOperation::DIFFERENTIATE && 
+                           frame2.empty())) {
       return;
     }
 
-    // Compute size based on source trace lengths
-    size_t size = trace1->data.size();
-    if (trace2 && trace2->data.size() < size) {
-      size = trace2->data.size();
+    // Compute size based on raw frame lengths
+    size_t size = frame1.size();
+    if (m_operation != MathOperation::INVERT && 
+        m_operation != MathOperation::INTEGRATE && 
+        m_operation != MathOperation::DIFFERENTIATE && 
+        frame2.size() < size) {
+      size = frame2.size();
     }
 
     // resize output buffer
@@ -181,26 +164,39 @@ public:
 
     switch (m_operation) {
     case (MathOperation::ADD):
-      performAdd(trace1->data, trace2->data);
+      performAdd(frame1, frame2);
       break;
     case (MathOperation::SUBTRACT):
-      performSubtract(trace1->data, trace2->data);
+      performSubtract(frame1, frame2);
       break;
     case (MathOperation::MULTIPLY):
-      performMultiply(trace1->data, trace2->data);
+      performMultiply(frame1, frame2);
       break;
     case (MathOperation::INVERT):
-      performInvert(trace1->data);
+      performInvert(frame1);
       break;
     case (MathOperation::INTEGRATE):
-      performIntegrate(trace1->data);
+      performIntegrate(frame1);
       break;
     case (MathOperation::DIFFERENTIATE):
-      performDifferentiate(trace1->data);
+      performDifferentiate(frame1);
       break;
     default:
       break;
     }
+
+    // Extract the visible subset of the math trace using source1's trigger positioning
+    size_t trigger_in_frame = source1->getLastTriggerInFrame();
+    size_t half_vis = source1->getHorizontalScale() / 2;
+    int offset_val = source1->getHorizontalOffset(); 
+    
+    long long center_idx = static_cast<long long>(trigger_in_frame) + offset_val;
+    long long start_idx = center_idx - half_vis;
+    
+    size_t time_start = (start_idx < 0) ? 0 : static_cast<size_t>(start_idx);
+    if (time_start >= size) time_start = size - 1;
+    
+    size_t time_width = std::min(source1->getHorizontalScale(), size - time_start);
 
     Trace math_trace;
     math_trace.name = m_name + " (" + source1->getLabel() + 
@@ -213,7 +209,11 @@ public:
     math_trace.domain = Domain::Time;
     math_trace.vertical_scale = m_vertical_scale;
     math_trace.vertical_offset = m_vertical_offset;
-    math_trace.data = m_math_output; // Copy data!
+    
+    math_trace.data.resize(time_width);
+    for (size_t i = 0; i < time_width; ++i) {
+      math_trace.data[i] = m_math_output[time_start + i];
+    }
 
     traces.push_back(std::move(math_trace));
   }

@@ -243,7 +243,8 @@ void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
 
   auto &trace = traces[0];
 
-  ImVec4 trigger_color = toImVec4(osc.getHardwareChannels()[src_idx]->getColor());
+  ImVec4 trigger_color =
+      toImVec4(osc.getHardwareChannels()[src_idx]->getColor());
   trigger_color.w = 0.5f;
 
   for (float level : levels) {
@@ -274,7 +275,8 @@ void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
                                  static_cast<float>(m_display_height);
         }
 
-        // Find the processor that produced this trace (matched by name) for its color
+        // Find the processor that produced this trace (matched by name) for its
+        // color
         ImVec4 trace_color = Colors::FFTLine;
         for (auto *proc : channel->getProcessors()) {
           if (proc->getName() == trace.name) {
@@ -341,7 +343,8 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
       double h_scale = static_cast<double>(channel->getHorizontalScale());
       double h_offset = static_cast<double>(channel->getHorizontalOffset());
 
-      ImVec4 badge_color = toImVec4(osc.getHardwareChannels()[src_idx]->getColor());
+      ImVec4 badge_color =
+          toImVec4(osc.getHardwareChannels()[src_idx]->getColor());
       badge_color.w = 1.0f;
 
       // only draw trigger marker if any hardware channels are enabled
@@ -665,7 +668,7 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
       found_math = true;
 
       // Color coded label matching Trace
-      ImVec4 label_color = toImVec4(processor->getColor());
+      ImVec4 label_color = toImVec4(channel->getColor());
 
       bool enabled = processor->isEnabled();
       ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));

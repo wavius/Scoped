@@ -31,7 +31,6 @@ private:
   float m_vertical_offset = 0.0f;
   size_t m_horizontal_scale = 1024;
   size_t m_horizontal_offset = 0;
-  Color m_color = {1.0f, 1.0f, 1.0f, 1.0f};
 
   // Assume m_math_output is resized already
   // m_math_output = frame1 + frame2 - 128
@@ -102,7 +101,6 @@ public:
   float getVerticalOffset() const override { return m_vertical_offset; }
   size_t getHorizontalScale() const override { return m_horizontal_scale; }
   size_t getHorizontalOffset() const override { return m_horizontal_offset; }
-  Color getColor() const override { return m_color; }
 
   MathOperation getOperation() const { return m_operation; }
   const std::string &getSource1Label() const { return m_source1_label; }
@@ -116,7 +114,6 @@ public:
   void setHorizontalOffset(size_t offset) override {
     m_horizontal_offset = offset;
   }
-  void setColor(const Color &color) override { m_color = color; }
 
   void setOperation(MathOperation op) { m_operation = op; }
   void setSource1Label(const std::string &label) { m_source1_label = label; }

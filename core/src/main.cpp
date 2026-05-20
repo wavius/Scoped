@@ -97,30 +97,47 @@ int main(int, char **) {
   vc1->addSource(ch1.get());
   vc1->addSource(ch2.get());
 
+  auto vc2 = std::make_shared<Scoped::VirtualChannel>("VC2", 2048);
+  vc2->addSource(ch1.get());
+  vc2->addSource(ch2.get());
+
   // FFT processors
   auto fft_p1 = std::make_unique<Scoped::FFTProcessor<unsigned char>>(
-      "FFT CH1", ui.getDisplayHeight(), 16384);
+      "FFT1", ui.getDisplayHeight(), 16384);
   auto fft_p2 = std::make_unique<Scoped::FFTProcessor<unsigned char>>(
-      "FFT CH2", ui.getDisplayHeight(), 16384);
-  fft_p1->setColor(Scoped::Color{Scoped::Colors::FFT1.x, Scoped::Colors::FFT1.y, Scoped::Colors::FFT1.z, Scoped::Colors::FFT1.w});
-  fft_p2->setColor(Scoped::Color{Scoped::Colors::FFT2.x, Scoped::Colors::FFT2.y, Scoped::Colors::FFT2.z, Scoped::Colors::FFT2.w});
+      "FFT2", ui.getDisplayHeight(), 16384);
+  fft_p1->setColor(Scoped::Color{Scoped::Colors::FFT1.x, Scoped::Colors::FFT1.y,
+                                 Scoped::Colors::FFT1.z,
+                                 Scoped::Colors::FFT1.w});
+  fft_p2->setColor(Scoped::Color{Scoped::Colors::FFT2.x, Scoped::Colors::FFT2.y,
+                                 Scoped::Colors::FFT2.z,
+                                 Scoped::Colors::FFT2.w});
 
   ch1->addProcessor(std::move(fft_p1));
   ch2->addProcessor(std::move(fft_p2));
 
   // Math processors
-  auto math_p1 = std::make_unique<Scoped::MathProcessor>("M1", 2048);
-  math_p1->setColor(Scoped::Color{Scoped::Colors::Math.x, Scoped::Colors::Math.y, Scoped::Colors::Math.z, Scoped::Colors::Math.w});
+  // 1 VirtualChannel per math processor
+  auto math_p1 = std::make_unique<Scoped::MathProcessor>("MATH1", 2048);
   vc1->addProcessor(std::move(math_p1));
 
+  auto math_p2 = std::make_unique<Scoped::MathProcessor>("MATH2", 2048);
+  vc2->addProcessor(std::move(math_p2));
+
   // Channel colors
-  ch1->setColor(Scoped::Color{Scoped::Colors::CH1.x, Scoped::Colors::CH1.y, Scoped::Colors::CH1.z, Scoped::Colors::CH1.w});
-  ch2->setColor(Scoped::Color{Scoped::Colors::CH2.x, Scoped::Colors::CH2.y, Scoped::Colors::CH2.z, Scoped::Colors::CH2.w});
-  vc1->setColor(Scoped::Color{Scoped::Colors::Math.x, Scoped::Colors::Math.y, Scoped::Colors::Math.z, Scoped::Colors::Math.w});
+  ch1->setColor(Scoped::Color{Scoped::Colors::CH1.x, Scoped::Colors::CH1.y,
+                              Scoped::Colors::CH1.z, Scoped::Colors::CH1.w});
+  ch2->setColor(Scoped::Color{Scoped::Colors::CH2.x, Scoped::Colors::CH2.y,
+                              Scoped::Colors::CH2.z, Scoped::Colors::CH2.w});
+  vc1->setColor(Scoped::Color{Scoped::Colors::VC1.x, Scoped::Colors::VC1.y,
+                              Scoped::Colors::VC1.z, Scoped::Colors::VC1.w});
+  vc2->setColor(Scoped::Color{Scoped::Colors::VC2.x, Scoped::Colors::VC2.y,
+                              Scoped::Colors::VC2.z, Scoped::Colors::VC2.w});
 
   osc.addHardwareChannel(ch1);
   osc.addHardwareChannel(ch2);
   osc.addVirtualChannel(vc1);
+  osc.addVirtualChannel(vc2);
 
   auto trigger = std::make_unique<Scoped::EdgeTrigger>(16384, 128.0f);
   osc.setTrigger(std::move(trigger));

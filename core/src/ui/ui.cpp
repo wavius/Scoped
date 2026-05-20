@@ -168,6 +168,58 @@ void OscilloscopeUI::drawGridLines(double w, double h) {
   }
 }
 
+void OscilloscopeUI::drawTriggerMarker(const std::string &label, double h_scale,
+                                       double h_offset, double w, double h,
+                                       const ImVec4 &color, float y_offset_rect) {
+  double trigger_frac = 0.5 - (h_offset / h_scale);
+  double trigger_x = w * trigger_frac;
+
+  std::string badge_text = label;
+  bool is_offscreen_left = trigger_x < 0.0;
+  bool is_offscreen_right = trigger_x > w;
+
+  if (is_offscreen_left) {
+    badge_text = "< " + label;
+  } else if (is_offscreen_right) {
+    badge_text = label + " >";
+  }
+
+  ImVec2 text_size = ImGui::CalcTextSize(badge_text.c_str());
+  float badge_width = std::max(14.0f, text_size.x + 6.0f);
+  float half_badge_w = badge_width * 0.5f;
+
+  double trigger_x_clamped = trigger_x;
+  if (is_offscreen_left) {
+    trigger_x_clamped = half_badge_w + 2.0f;
+  } else if (is_offscreen_right) {
+    trigger_x_clamped = w - half_badge_w - 2.0f;
+  }
+
+  ImVec2 center_pix = ImPlot::PlotToPixels(ImPlotPoint(trigger_x_clamped, h));
+  ImDrawList *draw_list = ImPlot::GetPlotDrawList();
+
+  ImU32 badge_color_u32 = ImGui::GetColorU32(color);
+  ImU32 text_color_u32 = ImGui::GetColorU32(ImVec4(0, 0, 0, 1)); // Black
+
+  // Draw background rounded rect
+  ImVec2 rect_min(center_pix.x - half_badge_w, center_pix.y - y_offset_rect - 13.0f);
+  ImVec2 rect_max(center_pix.x + half_badge_w, center_pix.y - y_offset_rect);
+  draw_list->AddRectFilled(rect_min, rect_max, badge_color_u32, 3.0f);
+
+  // Draw a small triangle pointing down to the exact horizontal position if it's on-screen
+  if (!is_offscreen_left && !is_offscreen_right) {
+    ImVec2 tri_p1(center_pix.x - 4.0f, center_pix.y - y_offset_rect);
+    ImVec2 tri_p2(center_pix.x + 4.0f, center_pix.y - y_offset_rect);
+    ImVec2 tri_p3(center_pix.x, center_pix.y - y_offset_rect + 5.0f);
+    draw_list->AddTriangleFilled(tri_p1, tri_p2, tri_p3, badge_color_u32);
+  }
+
+  // Draw text centered in the badge
+  ImVec2 text_pos(center_pix.x - text_size.x * 0.5f,
+                  center_pix.y - y_offset_rect - 6.5f - text_size.y * 0.5f);
+  draw_list->AddText(text_pos, text_color_u32, badge_text.c_str());
+}
+
 // Draws the trigger level line when the checkbox is enabled.
 void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
   auto *trigger = osc.getTrigger();
@@ -293,59 +345,12 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
       double h_scale = static_cast<double>(channel->getHorizontalScale());
       double h_offset = static_cast<double>(channel->getHorizontalOffset());
 
-      double trigger_frac = 0.5 - (h_offset / h_scale);
-      double trigger_x = w * trigger_frac;
-
-      std::string badge_text = "T";
-      bool is_offscreen_left = trigger_x < 0.0;
-      bool is_offscreen_right = trigger_x > w;
-
-      if (is_offscreen_left) {
-        badge_text = "< T";
-      } else if (is_offscreen_right) {
-        badge_text = "T >";
-      }
-
-      ImVec2 text_size = ImGui::CalcTextSize(badge_text.c_str());
-      float badge_width = std::max(14.0f, text_size.x + 6.0f);
-      float half_badge_w = badge_width * 0.5f;
-
-      double trigger_x_clamped = trigger_x;
-      if (is_offscreen_left) {
-        trigger_x_clamped = half_badge_w + 2.0f;
-      } else if (is_offscreen_right) {
-        trigger_x_clamped = w - half_badge_w - 2.0f;
-      }
-
-      ImVec2 center_pix =
-          ImPlot::PlotToPixels(ImPlotPoint(trigger_x_clamped, h));
-      ImDrawList *draw_list = ImPlot::GetPlotDrawList();
-
       ImVec4 badge_color = (src_idx == 0) ? Colors::CH1
                          : (src_idx == 1) ? Colors::CH2
                                           : Colors::TriggerMarker;
       badge_color.w = 1.0f;
-      ImU32 badge_color_u32 = ImGui::GetColorU32(badge_color);
-      ImU32 text_color_u32 = ImGui::GetColorU32(ImVec4(0, 0, 0, 1)); // Black
 
-      // Draw background rounded rect
-      ImVec2 rect_min(center_pix.x - half_badge_w, center_pix.y - 18.0f);
-      ImVec2 rect_max(center_pix.x + half_badge_w, center_pix.y - 5.0f);
-      draw_list->AddRectFilled(rect_min, rect_max, badge_color_u32, 3.0f);
-
-      // Draw a small triangle pointing down to the exact horizontal position if
-      // it's on-screen
-      if (!is_offscreen_left && !is_offscreen_right) {
-        ImVec2 tri_p1(center_pix.x - 4.0f, center_pix.y - 5.0f);
-        ImVec2 tri_p2(center_pix.x + 4.0f, center_pix.y - 5.0f);
-        ImVec2 tri_p3(center_pix.x, center_pix.y);
-        draw_list->AddTriangleFilled(tri_p1, tri_p2, tri_p3, badge_color_u32);
-      }
-
-      // Draw text centered in the badge
-      ImVec2 text_pos(center_pix.x - text_size.x * 0.5f,
-                      center_pix.y - 11.5f - text_size.y * 0.5f);
-      draw_list->AddText(text_pos, text_color_u32, badge_text.c_str());
+      drawTriggerMarker("T", h_scale, h_offset, w, h, badge_color, 5.0f);
     }
 
     // Draw horizontal trigger position indicator badge for the virtual channel (math)
@@ -353,56 +358,9 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
       if (vc->isEnabled()) {
         double v_scale = static_cast<double>(vc->getHorizontalScale());
         double v_offset = static_cast<double>(vc->getHorizontalOffset());
-
-        double v_trigger_frac = 0.5 - (v_offset / v_scale);
-        double v_trigger_x = w * v_trigger_frac;
-
-        std::string v_badge_text = "Tm";
-        bool v_is_offscreen_left = v_trigger_x < 0.0;
-        bool v_is_offscreen_right = v_trigger_x > w;
-
-        if (v_is_offscreen_left) {
-          v_badge_text = "< Tm";
-        } else if (v_is_offscreen_right) {
-          v_badge_text = "Tm >";
-        }
-
-        ImVec2 v_text_size = ImGui::CalcTextSize(v_badge_text.c_str());
-        float v_badge_width = std::max(14.0f, v_text_size.x + 6.0f);
-        float v_half_badge_w = v_badge_width * 0.5f;
-
-        double v_trigger_x_clamped = v_trigger_x;
-        if (v_is_offscreen_left) {
-          v_trigger_x_clamped = v_half_badge_w + 2.0f;
-        } else if (v_is_offscreen_right) {
-          v_trigger_x_clamped = w - v_half_badge_w - 2.0f;
-        }
-
-        ImVec2 v_center_pix =
-            ImPlot::PlotToPixels(ImPlotPoint(v_trigger_x_clamped, h));
-        ImDrawList *v_draw_list = ImPlot::GetPlotDrawList();
-
         ImVec4 v_badge_color = ImVec4(1.0f, 0.4f, 0.7f, 1.0f); // Pink/Magenta for math
-        ImU32 v_badge_color_u32 = ImGui::GetColorU32(v_badge_color);
-        ImU32 v_text_color_u32 = ImGui::GetColorU32(ImVec4(0, 0, 0, 1)); // Black
 
-        // Draw background rounded rect (stacked slightly above the main badge to prevent overlap)
-        ImVec2 v_rect_min(v_center_pix.x - v_half_badge_w, v_center_pix.y - 35.0f);
-        ImVec2 v_rect_max(v_center_pix.x + v_half_badge_w, v_center_pix.y - 22.0f);
-        v_draw_list->AddRectFilled(v_rect_min, v_rect_max, v_badge_color_u32, 3.0f);
-
-        // Draw a small triangle pointing down
-        if (!v_is_offscreen_left && !v_is_offscreen_right) {
-          ImVec2 v_tri_p1(v_center_pix.x - 4.0f, v_center_pix.y - 22.0f);
-          ImVec2 v_tri_p2(v_center_pix.x + 4.0f, v_center_pix.y - 22.0f);
-          ImVec2 v_tri_p3(v_center_pix.x, v_center_pix.y - 17.0f);
-          v_draw_list->AddTriangleFilled(v_tri_p1, v_tri_p2, v_tri_p3, v_badge_color_u32);
-        }
-
-        // Draw text centered in the badge
-        ImVec2 v_text_pos(v_center_pix.x - v_text_size.x * 0.5f,
-                          v_center_pix.y - 28.5f - v_text_size.y * 0.5f);
-        v_draw_list->AddText(v_text_pos, v_text_color_u32, v_badge_text.c_str());
+        drawTriggerMarker("Tm", v_scale, v_offset, w, h, v_badge_color, 22.0f);
       }
     }
 

@@ -47,6 +47,8 @@ private:
   // Plot canvas helpers
   void drawGridLines(double w, double h);
   void drawTriggerLine(Oscilloscope &osc);
+  void drawTriggerMarker(const std::string &label, double h_scale, double h_offset,
+                         double w, double h, const ImVec4 &color, float y_offset_rect);
   void drawFrequencyTraces(Oscilloscope &osc);
   void drawPlotArea(Oscilloscope &osc);
 
@@ -56,12 +58,6 @@ private:
   void drawVerticalControls(IChannel &channel, Oscilloscope &osc);
   void drawFFTControls(Oscilloscope &osc);
   void drawMathControls(Oscilloscope &osc);
-
-  // Legacy layout (V1)
-  void drawTopBar(Oscilloscope &osc);
-  void drawChannelBlock(IChannel &channel);
-  void drawHardwareStatus(Oscilloscope &osc);
-  void drawBottomBar(Oscilloscope &osc);
 
   // Dockable v2 layout
   void drawDockSpace();

@@ -292,6 +292,7 @@ public:
     base_trace.domain = Domain::Time;
     base_trace.vertical_scale = m_vertical_scale;
     base_trace.vertical_offset = m_vertical_offset;
+    base_trace.color = m_color;
 
     // Trigger point relative to the extracted frame
     size_t trigger_in_frame = trigger_idx - start;

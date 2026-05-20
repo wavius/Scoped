@@ -112,9 +112,6 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
         return;
       }
 
-      // Assign color from the channel's own color member
-      ImVec4 color = toImVec4(channel.getColor());
-
       const auto &traces = channel.getTraces();
 
       for (const auto &trace : traces) {
@@ -127,6 +124,7 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
             m_normalized_time[j] = trace.normalizeToIntensity(trace.data[j]);
           }
 
+          ImVec4 color = toImVec4(trace.color);
           m_display->processFrame(m_normalized_time.data(), count, color.x,
                                   color.y, color.z);
         }
@@ -275,15 +273,7 @@ void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
                                  static_cast<float>(m_display_height);
         }
 
-        // Find the processor that produced this trace (matched by name) for its
-        // color
-        ImVec4 trace_color = Colors::FFTLine;
-        for (auto *proc : channel->getProcessors()) {
-          if (proc->getName() == trace.name) {
-            trace_color = toImVec4(proc->getColor());
-            break;
-          }
-        }
+        ImVec4 trace_color = toImVec4(trace.color);
 
         double xscale = static_cast<double>(m_display_width) /
                         static_cast<double>(visible - 1);
@@ -361,18 +351,18 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
       bool has_enabled_processor = false;
       double v_scale = 2048.0;
       double v_offset = 0.0;
+      ImVec4 v_badge_color = toImVec4(vc->getColor());
       for (auto &proc : vc->getProcessors()) {
         if (proc->isEnabled()) {
           has_enabled_processor = true;
           v_scale = static_cast<double>(proc->getHorizontalScale());
           v_offset = static_cast<double>(
               static_cast<int>(proc->getHorizontalOffset()));
+          v_badge_color = toImVec4(proc->getColor());
           break;
         }
       }
       if (vc->isEnabled() && has_enabled_processor) {
-        ImVec4 v_badge_color = toImVec4(vc->getColor());
-
         drawTriggerMarker("TM", v_scale, v_offset, w, h, v_badge_color, 22.0f);
       }
     }
@@ -668,7 +658,7 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
       found_math = true;
 
       // Color coded label matching Trace
-      ImVec4 label_color = toImVec4(channel->getColor());
+      ImVec4 label_color = toImVec4(processor->getColor());
 
       bool enabled = processor->isEnabled();
       ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));

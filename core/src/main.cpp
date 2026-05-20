@@ -119,9 +119,13 @@ int main(int, char **) {
   // Math processors
   // 1 VirtualChannel per math processor
   auto math_p1 = std::make_unique<Scoped::MathProcessor>("MATH1", 2048);
+  math_p1->setColor(Scoped::Color{Scoped::Colors::VC1.x, Scoped::Colors::VC1.y,
+                                 Scoped::Colors::VC1.z, Scoped::Colors::VC1.w});
   vc1->addProcessor(std::move(math_p1));
 
   auto math_p2 = std::make_unique<Scoped::MathProcessor>("MATH2", 2048);
+  math_p2->setColor(Scoped::Color{Scoped::Colors::VC2.x, Scoped::Colors::VC2.y,
+                                 Scoped::Colors::VC2.z, Scoped::Colors::VC2.w});
   vc2->addProcessor(std::move(math_p2));
 
   // Channel colors

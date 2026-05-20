@@ -122,6 +122,7 @@ public:
     Trace fft_trace;
     fft_trace.name = this->m_name; // TODO: Add channel to name
     fft_trace.domain = Domain::Frequency;
+    fft_trace.color = m_color;
 
     size_t num_bins = frame_size / 2;
     size_t scale = (m_horizontal_scale == 0 || m_horizontal_scale > num_bins)

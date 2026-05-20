@@ -9,9 +9,6 @@ namespace Scoped {
 
 class IChannel;
 
-// RGBA color: each component in [0.0, 1.0]
-using Color = std::array<float, 4>;
-
 enum class ProcessorType {
   FFT,
   Math,
@@ -31,7 +28,7 @@ public:
   virtual float getVerticalOffset() const = 0;
   virtual size_t getHorizontalScale() const { return 0; }
   virtual size_t getHorizontalOffset() const { return 0; }
-  virtual Color getColor() const { return {1.0f, 1.0f, 1.0f, 1.0f}; }
+  virtual Color getColor() const = 0;
 
   // Setters
   virtual void setEnabled(bool enabled) = 0;
@@ -39,7 +36,7 @@ public:
   virtual void setVerticalOffset(float offset) = 0;
   virtual void setHorizontalScale(size_t /*scale*/) {}
   virtual void setHorizontalOffset(size_t /*offset*/) {}
-  virtual void setColor(const Color & /*color*/) {}
+  virtual void setColor(const Color &color) = 0;
 };
 
 // Base for processors operating across multiple channels.

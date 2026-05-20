@@ -1,10 +1,13 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <string>
 #include <vector>
 
 namespace Scoped {
+
+using Color = std::array<float, 4>;
 
 enum class Domain { Time, Frequency };
 
@@ -14,6 +17,7 @@ struct Trace {
   std::vector<float> data;
   float vertical_scale = 1.0f;
   float vertical_offset = 0.0f;
+  Color color = {1.0f, 1.0f, 1.0f, 1.0f};
 
   // Pipeline
   float normalizeToIntensity(float sample) const {

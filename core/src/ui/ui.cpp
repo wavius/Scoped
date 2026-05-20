@@ -355,9 +355,18 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
 
     // Draw horizontal trigger position indicator badge for the virtual channel (math)
     for (auto &vc : osc.getVirtualChannels()) {
-      if (vc->isEnabled()) {
-        double v_scale = static_cast<double>(vc->getHorizontalScale());
-        double v_offset = static_cast<double>(vc->getHorizontalOffset());
+      bool has_enabled_processor = false;
+      double v_scale = 2048.0;
+      double v_offset = 0.0;
+      for (auto &proc : vc->getProcessors()) {
+        if (proc->isEnabled()) {
+          has_enabled_processor = true;
+          v_scale = static_cast<double>(proc->getHorizontalScale());
+          v_offset = static_cast<double>(static_cast<int>(proc->getHorizontalOffset()));
+          break;
+        }
+      }
+      if (vc->isEnabled() && has_enabled_processor) {
         ImVec4 v_badge_color = ImVec4(1.0f, 0.4f, 0.7f, 1.0f); // Pink/Magenta for math
 
         drawTriggerMarker("Tm", v_scale, v_offset, w, h, v_badge_color, 22.0f);

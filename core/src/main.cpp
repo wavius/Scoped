@@ -110,9 +110,9 @@ int main(int, char **) {
   vc1->addSource(ch2.get());
   vc1->addProcessor(std::move(math_p1));
 
-  osc.addChannel(ch1);
-  osc.addChannel(ch2);
-  osc.addChannel(vc1);
+  osc.addHardwareChannel(ch1);
+  osc.addHardwareChannel(ch2);
+  osc.addVirtualChannel(vc1);
 
   auto trigger = std::make_unique<Scoped::EdgeTrigger>(16384, 128.0f);
   osc.setTrigger(std::move(trigger));

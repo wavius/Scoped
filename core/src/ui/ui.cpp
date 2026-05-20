@@ -47,7 +47,8 @@ OscilloscopeUI::OscilloscopeUI(size_t display_width, size_t display_height)
     : m_display_width(display_width), m_display_height(display_height) {}
 
 void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
-  const auto &channels = osc.getChannels();
+  const auto &hw_channels = osc.getHardwareChannels();
+  const auto &vc_channels = osc.getVirtualChannels();
 
   if (!m_display) {
     m_display =
@@ -55,15 +56,23 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
   }
 
   bool any_new_frame = false;
-  for (const auto &channel : channels) {
+  for (const auto &channel : hw_channels) {
     if (channel->hasNewFrame()) {
       any_new_frame = true;
       break;
     }
   }
+  if (!any_new_frame) {
+    for (const auto &channel : vc_channels) {
+      if (channel->hasNewFrame()) {
+        any_new_frame = true;
+        break;
+      }
+    }
+  }
 
   bool any_active = false;
-  for (const auto &ch : channels) {
+  for (const auto &ch : hw_channels) {
     if (ch->isEnabled()) {
       any_active = true;
       break;
@@ -74,8 +83,20 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
         break;
       }
     }
-    if (any_active)
-      break;
+  }
+  if (!any_active) {
+    for (const auto &ch : vc_channels) {
+      if (ch->isEnabled()) {
+        any_active = true;
+        break;
+      }
+      for (const auto *proc : ch->getProcessors()) {
+        if (proc->isEnabled()) {
+          any_active = true;
+          break;
+        }
+      }
+    }
   }
 
   if (any_new_frame || !any_active) {
@@ -84,25 +105,26 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
     if (!any_active)
       return; // Nothing to draw
 
-    for (size_t i = 0; i < channels.size(); ++i) {
-      auto &channel = *channels[i];
-
+    auto processChannelTraces = [&](IChannel &channel, size_t index, bool is_virtual) {
       if (!channel.isEnabled()) {
         channel.clearNewFrame();
-        continue;
+        return;
       }
 
-      // Assign color based on channel index
-      ImVec4 color = (i == 0)   ? Colors::CH1
-                     : (i == 1) ? Colors::CH2
-                                : ImVec4(1, 1, 1, 1);
+      // Assign color based on channel index / type
+      ImVec4 color = ImVec4(1, 1, 1, 1);
+      if (!is_virtual) {
+        color = (index == 0) ? Colors::CH1
+              : (index == 1) ? Colors::CH2
+                             : Colors::Black;
+      } else {
+        color = ImVec4(1.0f, 0.4f, 0.7f, 1.0f); // Pink/Magenta for virtual/math
+      }
 
       const auto &traces = channel.getTraces();
 
       for (const auto &trace : traces) {
         if (trace.domain == Domain::Time && channel.isEnabled()) {
-          // trace.data is already centered on the trigger point
-          // with exactly horizontalScale samples. Just render it all.
           size_t count = trace.data.size();
 
           m_normalized_time.resize(count);
@@ -117,6 +139,13 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
       }
 
       channel.clearNewFrame();
+    };
+
+    for (size_t i = 0; i < hw_channels.size(); ++i) {
+      processChannelTraces(*hw_channels[i], i, false);
+    }
+    for (size_t i = 0; i < vc_channels.size(); ++i) {
+      processChannelTraces(*vc_channels[i], i, true);
     }
   }
 }
@@ -142,7 +171,7 @@ void OscilloscopeUI::drawGridLines(double w, double h) {
 void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
   auto *trigger = osc.getTrigger();
 
-  if (!trigger || osc.getChannels().empty()) {
+  if (!trigger || osc.getHardwareChannels().empty()) {
     return;
   }
 
@@ -153,10 +182,10 @@ void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
   }
 
   size_t src_idx = osc.getTriggerSourceIndex();
-  if (src_idx >= osc.getChannels().size()) {
+  if (src_idx >= osc.getHardwareChannels().size()) {
     src_idx = 0;
   }
-  auto &channel = osc.getChannels()[src_idx];
+  auto &channel = osc.getHardwareChannels()[src_idx];
   auto traces = channel->getTraces();
 
   if (traces.empty()) {
@@ -179,7 +208,7 @@ void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
 
 // Draws FFT data over the scope display when FFT is enabled.
 void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
-  for (const auto &channel : osc.getChannels()) {
+  for (const auto &channel : osc.getHardwareChannels()) {
     for (const auto &trace : channel->getTraces()) {
       if (trace.domain == Domain::Frequency) {
         size_t visible = trace.data.size();
@@ -249,12 +278,12 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
     }
 
     // Draw horizontal trigger position indicator badge at the top of the grid
-    if (!osc.getChannels().empty()) {
+    if (!osc.getHardwareChannels().empty()) {
       size_t src_idx = osc.getTriggerSourceIndex();
-      if (src_idx >= osc.getChannels().size()) {
+      if (src_idx >= osc.getHardwareChannels().size()) {
         src_idx = 0;
       }
-      auto &channel = osc.getChannels()[src_idx];
+      auto &channel = osc.getHardwareChannels()[src_idx];
       double h_scale = static_cast<double>(channel->getHorizontalScale());
       double h_offset = static_cast<double>(channel->getHorizontalOffset());
 
@@ -418,7 +447,7 @@ void OscilloscopeUI::drawVerticalControls(IChannel &channel,
 void OscilloscopeUI::drawFFTControls(Oscilloscope &osc) {
   bool found_fft = false;
 
-  for (auto &channel : osc.getChannels()) {
+  for (auto &channel : osc.getHardwareChannels()) {
     ImGui::PushID(channel->getLabel().c_str());
 
     for (auto &processor : channel->getProcessors()) {
@@ -596,7 +625,7 @@ void OscilloscopeUI::drawFFTControls(Oscilloscope &osc) {
 void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
   bool found_math = false;
 
-  for (auto &channel : osc.getChannels()) {
+  for (auto &channel : osc.getVirtualChannels()) {
     ImGui::PushID(channel->getLabel().c_str());
 
     for (auto &processor : channel->getProcessors()) {
@@ -661,16 +690,16 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
           osc.forceReprocess();
         }
 
-        // Channels vector for dropdowns
+        // Channels vector for dropdowns (Hardware channels only)
         std::vector<std::string> channel_labels;
         std::vector<const char *> channel_labels_cstr;
-        size_t num_channels = osc.getChannels().size();
+        size_t num_channels = osc.getHardwareChannels().size();
         channel_labels.resize(num_channels);
         channel_labels_cstr.resize(num_channels);
         int src1_idx = 0;
         int src2_idx = 0;
         for (size_t i = 0; i < num_channels; i++) {
-          channel_labels[i] = osc.getChannels()[i]->getLabel();
+          channel_labels[i] = osc.getHardwareChannels()[i]->getLabel();
           channel_labels_cstr[i] = channel_labels[i].c_str();
           if (channel_labels[i] == math_proc->getSource1Label()) {
             src1_idx = static_cast<int>(i);
@@ -835,29 +864,18 @@ void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
   int trigger_source_idx = static_cast<int>(osc.getTriggerSourceIndex());
   std::vector<std::string> channel_labels;
   std::vector<const char *> channel_labels_cstr;
-  std::vector<size_t> hw_channel_indices;
-  for (size_t i = 0; i < osc.getChannels().size(); i++) {
-    if (osc.getChannels()[i]->isHardwareChannel()) {
-      channel_labels.push_back(osc.getChannels()[i]->getLabel());
-      hw_channel_indices.push_back(i);
-    }
-  }
-  channel_labels_cstr.resize(channel_labels.size());
-  for (size_t i = 0; i < channel_labels.size(); i++) {
+  size_t num_hw = osc.getHardwareChannels().size();
+  channel_labels.resize(num_hw);
+  channel_labels_cstr.resize(num_hw);
+  for (size_t i = 0; i < num_hw; i++) {
+    channel_labels[i] = osc.getHardwareChannels()[i]->getLabel();
     channel_labels_cstr[i] = channel_labels[i].c_str();
-  }
-  int current_hw_sel = 0;
-  for (size_t i = 0; i < hw_channel_indices.size(); i++) {
-    if (hw_channel_indices[i] == static_cast<size_t>(trigger_source_idx)) {
-      current_hw_sel = static_cast<int>(i);
-      break;
-    }
   }
 
   ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-  if (ImGui::Combo("##Source", &current_hw_sel, channel_labels_cstr.data(),
-                   static_cast<int>(channel_labels_cstr.size()))) {
-    osc.setTriggerSource(hw_channel_indices[current_hw_sel]);
+  if (ImGui::Combo("##Source", &trigger_source_idx, channel_labels_cstr.data(),
+                   static_cast<int>(num_hw))) {
+    osc.setTriggerSource(static_cast<size_t>(trigger_source_idx));
     osc.forceReprocess();
   }
 
@@ -939,17 +957,14 @@ void OscilloscopeUI::drawChannelWindow(Oscilloscope &osc) {
   ImGui::Begin("Channels");
   ImGui::SetWindowFontScale(1.15f);
 
-  if (osc.getChannels().empty()) {
+  if (osc.getHardwareChannels().empty()) {
     ImGui::TextDisabled("No channels available.");
     ImGui::End();
     return;
   }
 
   // Per-Channel Controls
-  for (auto &channel : osc.getChannels()) {
-    if (!channel->isHardwareChannel()) {
-      continue;
-    }
+  for (auto &channel : osc.getHardwareChannels()) {
     ImGui::PushID(channel->getLabel().c_str());
 
     // Default to Black
@@ -1005,20 +1020,16 @@ void OscilloscopeUI::drawHardwareWindow(Oscilloscope &osc) {
 
     if (ImGui::Button("Connect")) {
       if (usb.connect()) {
-        for (auto &channel : osc.getChannels()) {
-          if (channel->isHardwareChannel()) {
-            channel->clearBuffer();
-          }
+        for (auto &channel : osc.getHardwareChannels()) {
+          channel->clearBuffer();
         }
 
         if (osc.getTrigger()) {
           osc.getTrigger()->clear();
         }
 
-        if (!osc.getChannels().empty()) {
-          if (osc.getChannels()[0]->isHardwareChannel()) {
-            usb.startStreaming(osc.getChannels()[0].get());
-          }
+        if (!osc.getHardwareChannels().empty()) {
+          usb.startStreaming(osc.getHardwareChannels()[0].get());
         }
       }
     }
@@ -1034,10 +1045,11 @@ void OscilloscopeUI::drawDebugWindow(Oscilloscope &osc) {
 
   ImGui::Text("Display width: %zu", m_display_width);
   ImGui::Text("Display height: %zu", m_display_height);
-  ImGui::Text("Channels: %zu", osc.getChannels().size());
+  ImGui::Text("Hardware Channels: %zu", osc.getHardwareChannels().size());
+  ImGui::Text("Virtual Channels: %zu", osc.getVirtualChannels().size());
 
-  if (!osc.getChannels().empty()) {
-    auto &channel = osc.getChannels()[0];
+  if (!osc.getHardwareChannels().empty()) {
+    auto &channel = osc.getHardwareChannels()[0];
 
     ImGui::Separator();
     // TODO: add channel specific debug info

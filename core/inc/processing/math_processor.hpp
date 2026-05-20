@@ -29,7 +29,7 @@ private:
   // Plotting vars
   float m_vertical_scale = 0.9f;
   float m_vertical_offset = 0.0f;
-  size_t m_horizontal_scale = 0;
+  size_t m_horizontal_scale = 1024;
   size_t m_horizontal_offset = 0;
 
   // Assume m_math_output is resized already
@@ -187,8 +187,8 @@ public:
 
     // Extract the visible subset of the math trace using source1's trigger positioning
     size_t trigger_in_frame = source1->getLastTriggerInFrame();
-    size_t half_vis = source1->getHorizontalScale() / 2;
-    int offset_val = source1->getHorizontalOffset(); 
+    size_t half_vis = m_horizontal_scale / 2;
+    int offset_val = static_cast<int>(m_horizontal_offset); 
     
     long long center_idx = static_cast<long long>(trigger_in_frame) + offset_val;
     long long start_idx = center_idx - half_vis;
@@ -196,7 +196,7 @@ public:
     size_t time_start = (start_idx < 0) ? 0 : static_cast<size_t>(start_idx);
     if (time_start >= size) time_start = size - 1;
     
-    size_t time_width = std::min(source1->getHorizontalScale(), size - time_start);
+    size_t time_width = std::min(m_horizontal_scale, size - time_start);
 
     Trace math_trace;
     math_trace.name = m_name + " (" + source1->getLabel() + 

@@ -678,6 +678,40 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
         osc.forceReprocess();
       }
 
+      int h_scale = static_cast<int>(processor->getHorizontalScale());
+      ImGui::Text("Horizontal Scale");
+      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
+      if (ImGui::SliderInt("##Horizontal Scale", &h_scale, 256, 16384, "%d samples")) {
+        processor->setHorizontalScale(static_cast<size_t>(h_scale));
+        osc.forceReprocess();
+      }
+      ImGui::SameLine();
+      ImGui::SetNextItemWidth(-FLT_MIN);
+      if (ImGui::InputInt("##HScaleInput", &h_scale, 0, 0)) {
+        processor->setHorizontalScale(static_cast<size_t>(std::clamp(h_scale, 256, 16384)));
+        osc.forceReprocess();
+      }
+
+      int h_offset = static_cast<int>(processor->getHorizontalOffset());
+      int capture_width = static_cast<int>(osc.getMaxCaptureWidth());
+      int max_offset = std::max(0, (capture_width - h_scale) / 2);
+
+      ImGui::Spacing();
+      ImGui::Text("Horizontal Offset");
+      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
+      if (ImGui::SliderInt("##Horizontal Offset", &h_offset, -max_offset, max_offset, "%d samples")) {
+        processor->setHorizontalOffset(static_cast<size_t>(h_offset));
+        osc.forceReprocess();
+      }
+      ImGui::SameLine();
+      ImGui::SetNextItemWidth(-FLT_MIN);
+      if (ImGui::InputInt("##HOffsetInput", &h_offset, 0, 0)) {
+        processor->setHorizontalOffset(static_cast<size_t>(std::clamp(h_offset, -max_offset, max_offset)));
+        osc.forceReprocess();
+      }
+
+      ImGui::Spacing();
+
       auto *math_proc = dynamic_cast<MathProcessor *>(processor);
       if (math_proc) {
         // Operation Selection

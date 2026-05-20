@@ -835,18 +835,29 @@ void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
   int trigger_source_idx = static_cast<int>(osc.getTriggerSourceIndex());
   std::vector<std::string> channel_labels;
   std::vector<const char *> channel_labels_cstr;
-  size_t num_channels = osc.getChannels().size();
-  channel_labels.resize(num_channels);
-  channel_labels_cstr.resize(num_channels);
-  for (size_t i = 0; i < num_channels; i++) {
-    channel_labels[i] = osc.getChannels()[i]->getLabel();
+  std::vector<size_t> hw_channel_indices;
+  for (size_t i = 0; i < osc.getChannels().size(); i++) {
+    if (osc.getChannels()[i]->isHardwareChannel()) {
+      channel_labels.push_back(osc.getChannels()[i]->getLabel());
+      hw_channel_indices.push_back(i);
+    }
+  }
+  channel_labels_cstr.resize(channel_labels.size());
+  for (size_t i = 0; i < channel_labels.size(); i++) {
     channel_labels_cstr[i] = channel_labels[i].c_str();
+  }
+  int current_hw_sel = 0;
+  for (size_t i = 0; i < hw_channel_indices.size(); i++) {
+    if (hw_channel_indices[i] == static_cast<size_t>(trigger_source_idx)) {
+      current_hw_sel = static_cast<int>(i);
+      break;
+    }
   }
 
   ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-  if (ImGui::Combo("##Source", &trigger_source_idx, channel_labels_cstr.data(),
-                   static_cast<int>(num_channels))) {
-    osc.setTriggerSource(static_cast<size_t>(trigger_source_idx));
+  if (ImGui::Combo("##Source", &current_hw_sel, channel_labels_cstr.data(),
+                   static_cast<int>(channel_labels_cstr.size()))) {
+    osc.setTriggerSource(hw_channel_indices[current_hw_sel]);
     osc.forceReprocess();
   }
 
@@ -936,6 +947,9 @@ void OscilloscopeUI::drawChannelWindow(Oscilloscope &osc) {
 
   // Per-Channel Controls
   for (auto &channel : osc.getChannels()) {
+    if (!channel->isHardwareChannel()) {
+      continue;
+    }
     ImGui::PushID(channel->getLabel().c_str());
 
     // Default to Black

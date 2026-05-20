@@ -12,6 +12,12 @@ class IChannel;
 // RGBA color: each component in [0.0, 1.0]
 using Color = std::array<float, 4>;
 
+enum class ProcessorType {
+  FFT,
+  Math,
+  Unknown,
+};
+
 class IProcessorControl {
 public:
   // Lifecycle
@@ -19,6 +25,7 @@ public:
 
   // Accessors
   virtual std::string getName() const = 0;
+  virtual ProcessorType getType() const = 0;
   virtual bool isEnabled() const = 0;
   virtual float getVerticalScale() const = 0;
   virtual float getVerticalOffset() const = 0;

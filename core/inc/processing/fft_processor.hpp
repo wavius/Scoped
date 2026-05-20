@@ -54,6 +54,7 @@ public:
   // Accessors
   std::string getName() const override { return m_name; }
   bool isEnabled() const override { return m_enabled; }
+  ProcessorType getType() const override { return ProcessorType::FFT; }
   float getVerticalScale() const override { return m_vertical_scale; }
   float getVerticalOffset() const override { return m_vertical_offset; }
   bool getIsModeLinear() const { return m_isLinearMode; }

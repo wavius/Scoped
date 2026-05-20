@@ -486,8 +486,7 @@ void OscilloscopeUI::drawFFTControls(Oscilloscope &osc) {
     ImGui::PushID(channel->getLabel().c_str());
 
     for (auto &processor : channel->getProcessors()) {
-      std::string name = processor->getName();
-      if (name.find("FFT") == std::string::npos) {
+      if (processor->getType() != ProcessorType::FFT) {
         continue;
       }
 
@@ -504,7 +503,7 @@ void OscilloscopeUI::drawFFTControls(Oscilloscope &osc) {
       ImGui::PopStyleVar();
       ImGui::SameLine();
 
-      ImGui::TextColored(label_color, "%s", name.c_str());
+      ImGui::TextColored(label_color, "%s", processor->getName().c_str());
       ImGui::Spacing();
 
       float scale = processor->getVerticalScale();
@@ -659,8 +658,7 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
     ImGui::PushID(channel->getLabel().c_str());
 
     for (auto &processor : channel->getProcessors()) {
-      std::string name = processor->getName();
-      if (name.find("Math") == std::string::npos) {
+      if (processor->getType() != ProcessorType::Math) {
         continue;
       }
 
@@ -677,7 +675,7 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
       ImGui::PopStyleVar();
       ImGui::SameLine();
 
-      ImGui::TextColored(label_color, "%s", name.c_str());
+      ImGui::TextColored(label_color, "%s", processor->getName().c_str());
       ImGui::Spacing();
 
       float scale = processor->getVerticalScale();

@@ -1,3 +1,4 @@
+#include "common/oscilloscope.hpp"
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "implot.h"
@@ -9,8 +10,9 @@
 #include <string>
 #include <vector>
 
-#include <ui/ui.hpp>
 #include <processing/fft_processor.hpp>
+#include <processing/math_processor.hpp>
+#include <ui/ui.hpp>
 
 namespace Scoped {
 
@@ -255,53 +257,56 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
       auto &channel = osc.getChannels()[src_idx];
       double h_scale = static_cast<double>(channel->getHorizontalScale());
       double h_offset = static_cast<double>(channel->getHorizontalOffset());
-      
+
       double trigger_frac = 0.5 - (h_offset / h_scale);
       double trigger_x = w * trigger_frac;
-      
+
       std::string badge_text = "T";
       bool is_offscreen_left = trigger_x < 0.0;
       bool is_offscreen_right = trigger_x > w;
-      
+
       if (is_offscreen_left) {
         badge_text = "< T";
       } else if (is_offscreen_right) {
         badge_text = "T >";
       }
-      
+
       ImVec2 text_size = ImGui::CalcTextSize(badge_text.c_str());
       float badge_width = std::max(14.0f, text_size.x + 6.0f);
       float half_badge_w = badge_width * 0.5f;
-      
+
       double trigger_x_clamped = trigger_x;
       if (is_offscreen_left) {
         trigger_x_clamped = half_badge_w + 2.0f;
       } else if (is_offscreen_right) {
         trigger_x_clamped = w - half_badge_w - 2.0f;
       }
-      
-      ImVec2 center_pix = ImPlot::PlotToPixels(ImPlotPoint(trigger_x_clamped, h));
-      ImDrawList* draw_list = ImPlot::GetPlotDrawList();
-      
+
+      ImVec2 center_pix =
+          ImPlot::PlotToPixels(ImPlotPoint(trigger_x_clamped, h));
+      ImDrawList *draw_list = ImPlot::GetPlotDrawList();
+
       ImVec4 badge_color = Colors::TriggerMarker;
       ImU32 badge_color_u32 = ImGui::GetColorU32(badge_color);
       ImU32 text_color_u32 = ImGui::GetColorU32(ImVec4(0, 0, 0, 1)); // Black
-      
+
       // Draw background rounded rect
       ImVec2 rect_min(center_pix.x - half_badge_w, center_pix.y - 18.0f);
       ImVec2 rect_max(center_pix.x + half_badge_w, center_pix.y - 5.0f);
       draw_list->AddRectFilled(rect_min, rect_max, badge_color_u32, 3.0f);
-      
-      // Draw a small triangle pointing down to the exact horizontal position if it's on-screen
+
+      // Draw a small triangle pointing down to the exact horizontal position if
+      // it's on-screen
       if (!is_offscreen_left && !is_offscreen_right) {
         ImVec2 tri_p1(center_pix.x - 4.0f, center_pix.y - 5.0f);
         ImVec2 tri_p2(center_pix.x + 4.0f, center_pix.y - 5.0f);
         ImVec2 tri_p3(center_pix.x, center_pix.y);
         draw_list->AddTriangleFilled(tri_p1, tri_p2, tri_p3, badge_color_u32);
       }
-      
+
       // Draw text centered in the badge
-      ImVec2 text_pos(center_pix.x - text_size.x * 0.5f, center_pix.y - 11.5f - text_size.y * 0.5f);
+      ImVec2 text_pos(center_pix.x - text_size.x * 0.5f,
+                      center_pix.y - 11.5f - text_size.y * 0.5f);
       draw_list->AddText(text_pos, text_color_u32, badge_text.c_str());
     }
 
@@ -410,7 +415,7 @@ void OscilloscopeUI::drawVerticalControls(IChannel &channel,
 
 // Control pannels
 
-void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
+void OscilloscopeUI::drawFFTControls(Oscilloscope &osc) {
   bool found_fft = false;
 
   for (auto &channel : osc.getChannels()) {
@@ -513,7 +518,8 @@ void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
         ImGui::SetNextItemWidth(-FLT_MIN);
         if (ImGui::InputFloat("##SmoothingInput", &smoothing_factor, 0, 0,
                               "%.2f")) {
-          fft_proc->setSmoothingFactor(std::clamp(smoothing_factor, 0.0f, 1.0f));
+          fft_proc->setSmoothingFactor(
+              std::clamp(smoothing_factor, 0.0f, 1.0f));
           osc.forceReprocess();
         }
 
@@ -587,6 +593,127 @@ void OscilloscopeUI::drawFFTControl(Oscilloscope &osc) {
   }
 }
 
+void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
+  bool found_math = false;
+
+  for (auto &channel : osc.getChannels()) {
+    ImGui::PushID(channel->getLabel().c_str());
+
+    for (auto &processor : channel->getProcessors()) {
+      std::string name = processor->getName();
+      if (name.find("Math") == std::string::npos) {
+        continue;
+      }
+
+      found_math = true;
+
+      // Color coded label matching Trace
+      ImVec4 label_color = ImVec4(1.0f, 0.4f, 0.7f, 1.0f); // Default Neon Pink/Magenta for Math
+
+      bool enabled = processor->isEnabled();
+      ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
+      if (ImGui::Checkbox("##Enabled", &enabled)) {
+        processor->setEnabled(enabled);
+      }
+      ImGui::PopStyleVar();
+      ImGui::SameLine();
+
+      ImGui::TextColored(label_color, "%s", name.c_str());
+      ImGui::Spacing();
+
+      float scale = processor->getVerticalScale();
+      ImGui::Text("Vertical Scale");
+      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
+      if (ImGui::SliderFloat("##Scale", &scale, 0.01f, 10.00f, "%.2f")) {
+        processor->setVerticalScale(scale);
+        osc.forceReprocess();
+      }
+      ImGui::SameLine();
+      ImGui::SetNextItemWidth(-FLT_MIN);
+      if (ImGui::InputFloat("##ScaleInput", &scale, 0, 0, "%.2f")) {
+        processor->setVerticalScale(std::clamp(scale, 0.01f, 10.0f));
+        osc.forceReprocess();
+      }
+
+      float offset = processor->getVerticalOffset();
+      ImGui::Text("Vertical Offset");
+      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
+      if (ImGui::SliderFloat("##Offset", &offset, -500.0f, 500.0f, "%.1f")) {
+        processor->setVerticalOffset(offset);
+        osc.forceReprocess();
+      }
+      ImGui::SameLine();
+      ImGui::SetNextItemWidth(-FLT_MIN);
+      if (ImGui::InputFloat("##OffsetInput", &offset, 0, 0, "%.1f")) {
+        processor->setVerticalOffset(std::clamp(offset, -500.0f, 500.0f));
+        osc.forceReprocess();
+      }
+
+      auto *math_proc = dynamic_cast<MathProcessor *>(processor);
+      if (math_proc) {
+        // Operation Selection
+        const char *op_names[] = {"Add", "Subtract", "Multiply", "Invert", "Integrate", "Differentiate"};
+        int current_op = static_cast<int>(math_proc->getOperation());
+        ImGui::Text("Operation");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::Combo("##Operation", &current_op, op_names, 6)) {
+          math_proc->setOperation(static_cast<MathOperation>(current_op));
+          osc.forceReprocess();
+        }
+
+        // Channels vector for dropdowns
+        std::vector<std::string> channel_labels;
+        std::vector<const char *> channel_labels_cstr;
+        size_t num_channels = osc.getChannels().size();
+        channel_labels.resize(num_channels);
+        channel_labels_cstr.resize(num_channels);
+        int src1_idx = 0;
+        int src2_idx = 0;
+        for (size_t i = 0; i < num_channels; i++) {
+          channel_labels[i] = osc.getChannels()[i]->getLabel();
+          channel_labels_cstr[i] = channel_labels[i].c_str();
+          if (channel_labels[i] == math_proc->getSource1Label()) {
+            src1_idx = static_cast<int>(i);
+          }
+          if (channel_labels[i] == math_proc->getSource2Label()) {
+            src2_idx = static_cast<int>(i);
+          }
+        }
+
+        // Source 1 Selection
+        ImGui::Text("Source 1");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::Combo("##Source1", &src1_idx, channel_labels_cstr.data(), static_cast<int>(num_channels))) {
+          math_proc->setSource1Label(channel_labels[src1_idx]);
+          osc.forceReprocess();
+        }
+
+        // Source 2 Selection (hidden for single-source operations)
+        if (math_proc->getOperation() != MathOperation::INVERT &&
+            math_proc->getOperation() != MathOperation::INTEGRATE &&
+            math_proc->getOperation() != MathOperation::DIFFERENTIATE) {
+          ImGui::Text("Source 2");
+          ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+          if (ImGui::Combo("##Source2", &src2_idx, channel_labels_cstr.data(), static_cast<int>(num_channels))) {
+            math_proc->setSource2Label(channel_labels[src2_idx]);
+            osc.forceReprocess();
+          }
+        }
+      }
+
+      ImGui::Spacing();
+      ImGui::Separator();
+      ImGui::Spacing();
+    }
+
+    ImGui::PopID();
+  }
+
+  if (!found_math) {
+    ImGui::TextDisabled("No Math processor found.");
+  }
+}
+
 void OscilloscopeUI::buildDefaultDockLayout(ImGuiID dockspace_id,
                                             const ImVec2 &dockspace_size) {
   ImGui::DockBuilderRemoveNode(dockspace_id);
@@ -611,6 +738,7 @@ void OscilloscopeUI::buildDefaultDockLayout(ImGuiID dockspace_id,
   ImGui::DockBuilderDockWindow("Trigger", left_id);
 
   ImGui::DockBuilderDockWindow("FFT", right_id);
+  ImGui::DockBuilderDockWindow("Math", right_id);
   ImGui::DockBuilderDockWindow("Hardware", right_id);
 
   ImGui::DockBuilderDockWindow("Debug", bottom_id);
@@ -781,7 +909,16 @@ void OscilloscopeUI::drawFFTWindow(Oscilloscope &osc) {
   ImGui::Begin("FFT");
   ImGui::SetWindowFontScale(1.15f);
 
-  drawFFTControl(osc);
+  drawFFTControls(osc);
+
+  ImGui::End();
+}
+
+void OscilloscopeUI::drawMathWindow(Oscilloscope &osc) {
+  ImGui::Begin("Math");
+  ImGui::SetWindowFontScale(1.15f);
+
+  drawMathControls(osc);
 
   ImGui::End();
 }
@@ -906,6 +1043,7 @@ void OscilloscopeUI::render(Oscilloscope &osc) {
   drawChannelWindow(osc);
   drawTriggerWindow(osc);
   drawFFTWindow(osc);
+  drawMathWindow(osc);
   drawHardwareWindow(osc);
   drawDebugWindow(osc);
 }

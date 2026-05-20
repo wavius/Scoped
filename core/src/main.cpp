@@ -11,6 +11,7 @@
 #include <implot.h>
 #include <memory>
 #include <processing/fft_processor.hpp>
+#include <processing/math_processor.hpp>
 #include <processing/trigger.hpp>
 #include <ui/ui.hpp>
 
@@ -91,6 +92,9 @@ int main(int, char **) {
   auto ch1 = std::make_shared<Scoped::Channel<uint8_t>>("CH1", 16384 * 4, 2048);
   auto ch2 = std::make_shared<Scoped::Channel<uint8_t>>("CH2", 16384 * 4, 2048);
 
+  // Virtual Channels
+  auto vc1 = std::make_shared<Scoped::VirtualChannel>("VC1", 2048);
+
   // FFT processors
   auto fft_p1 = std::make_unique<Scoped::FFTProcessor<unsigned char>>(
       "FFT CH1", ui.getDisplayHeight(), 16384);
@@ -100,8 +104,15 @@ int main(int, char **) {
   ch1->addProcessor(std::move(fft_p1));
   ch2->addProcessor(std::move(fft_p2));
 
+  // Math processors
+  auto math_p1 = std::make_unique<Scoped::MathProcessor>();
+  vc1->addSource(ch1.get());
+  vc1->addSource(ch2.get());
+  vc1->addProcessor(std::move(math_p1));
+
   osc.addChannel(ch1);
   osc.addChannel(ch2);
+  osc.addChannel(vc1);
 
   auto trigger = std::make_unique<Scoped::EdgeTrigger>(16384, 128.0f);
   osc.setTrigger(std::move(trigger));

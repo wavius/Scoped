@@ -105,7 +105,8 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
     if (!any_active)
       return; // Nothing to draw
 
-    auto processChannelTraces = [&](IChannel &channel, size_t index, bool is_virtual) {
+    auto processChannelTraces = [&](IChannel &channel, size_t index,
+                                    bool is_virtual) {
       if (!channel.isEnabled()) {
         channel.clearNewFrame();
         return;
@@ -114,9 +115,9 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
       // Assign color based on channel index / type
       ImVec4 color = ImVec4(1, 1, 1, 1);
       if (!is_virtual) {
-        color = (index == 0) ? Colors::CH1
-              : (index == 1) ? Colors::CH2
-                             : Colors::Black;
+        color = (index == 0)   ? Colors::CH1
+                : (index == 1) ? Colors::CH2
+                               : Colors::Black;
       } else {
         color = ImVec4(1.0f, 0.4f, 0.7f, 1.0f); // Pink/Magenta for virtual/math
       }
@@ -194,6 +195,11 @@ void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
 
   auto &trace = traces[0];
 
+  ImVec4 trigger_color = (src_idx == 0) ? Colors::CH1
+                       : (src_idx == 1) ? Colors::CH2
+                                        : Colors::Trigger;
+  trigger_color.w = 0.5f;
+
   for (float level : levels) {
     float y_normalized = trace.normalizeToIntensity(level);
     // After flipping PlotImage, y_normalized=1.0 is top (h) and 0.0 is bottom
@@ -202,7 +208,7 @@ void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
 
     plotLineSegment("##TriggerLine", 0.0, y_level,
                     static_cast<double>(m_display_width), y_level,
-                    Colors::Trigger, 2.0f);
+                    trigger_color, 2.0f);
   }
 }
 
@@ -315,7 +321,10 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
           ImPlot::PlotToPixels(ImPlotPoint(trigger_x_clamped, h));
       ImDrawList *draw_list = ImPlot::GetPlotDrawList();
 
-      ImVec4 badge_color = Colors::TriggerMarker;
+      ImVec4 badge_color = (src_idx == 0) ? Colors::CH1
+                         : (src_idx == 1) ? Colors::CH2
+                                          : Colors::TriggerMarker;
+      badge_color.w = 1.0f;
       ImU32 badge_color_u32 = ImGui::GetColorU32(badge_color);
       ImU32 text_color_u32 = ImGui::GetColorU32(ImVec4(0, 0, 0, 1)); // Black
 
@@ -337,6 +346,64 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
       ImVec2 text_pos(center_pix.x - text_size.x * 0.5f,
                       center_pix.y - 11.5f - text_size.y * 0.5f);
       draw_list->AddText(text_pos, text_color_u32, badge_text.c_str());
+    }
+
+    // Draw horizontal trigger position indicator badge for the virtual channel (math)
+    for (auto &vc : osc.getVirtualChannels()) {
+      if (vc->isEnabled()) {
+        double v_scale = static_cast<double>(vc->getHorizontalScale());
+        double v_offset = static_cast<double>(vc->getHorizontalOffset());
+
+        double v_trigger_frac = 0.5 - (v_offset / v_scale);
+        double v_trigger_x = w * v_trigger_frac;
+
+        std::string v_badge_text = "Tm";
+        bool v_is_offscreen_left = v_trigger_x < 0.0;
+        bool v_is_offscreen_right = v_trigger_x > w;
+
+        if (v_is_offscreen_left) {
+          v_badge_text = "< Tm";
+        } else if (v_is_offscreen_right) {
+          v_badge_text = "Tm >";
+        }
+
+        ImVec2 v_text_size = ImGui::CalcTextSize(v_badge_text.c_str());
+        float v_badge_width = std::max(14.0f, v_text_size.x + 6.0f);
+        float v_half_badge_w = v_badge_width * 0.5f;
+
+        double v_trigger_x_clamped = v_trigger_x;
+        if (v_is_offscreen_left) {
+          v_trigger_x_clamped = v_half_badge_w + 2.0f;
+        } else if (v_is_offscreen_right) {
+          v_trigger_x_clamped = w - v_half_badge_w - 2.0f;
+        }
+
+        ImVec2 v_center_pix =
+            ImPlot::PlotToPixels(ImPlotPoint(v_trigger_x_clamped, h));
+        ImDrawList *v_draw_list = ImPlot::GetPlotDrawList();
+
+        ImVec4 v_badge_color = ImVec4(1.0f, 0.4f, 0.7f, 1.0f); // Pink/Magenta for math
+        ImU32 v_badge_color_u32 = ImGui::GetColorU32(v_badge_color);
+        ImU32 v_text_color_u32 = ImGui::GetColorU32(ImVec4(0, 0, 0, 1)); // Black
+
+        // Draw background rounded rect (stacked slightly above the main badge to prevent overlap)
+        ImVec2 v_rect_min(v_center_pix.x - v_half_badge_w, v_center_pix.y - 35.0f);
+        ImVec2 v_rect_max(v_center_pix.x + v_half_badge_w, v_center_pix.y - 22.0f);
+        v_draw_list->AddRectFilled(v_rect_min, v_rect_max, v_badge_color_u32, 3.0f);
+
+        // Draw a small triangle pointing down
+        if (!v_is_offscreen_left && !v_is_offscreen_right) {
+          ImVec2 v_tri_p1(v_center_pix.x - 4.0f, v_center_pix.y - 22.0f);
+          ImVec2 v_tri_p2(v_center_pix.x + 4.0f, v_center_pix.y - 22.0f);
+          ImVec2 v_tri_p3(v_center_pix.x, v_center_pix.y - 17.0f);
+          v_draw_list->AddTriangleFilled(v_tri_p1, v_tri_p2, v_tri_p3, v_badge_color_u32);
+        }
+
+        // Draw text centered in the badge
+        ImVec2 v_text_pos(v_center_pix.x - v_text_size.x * 0.5f,
+                          v_center_pix.y - 28.5f - v_text_size.y * 0.5f);
+        v_draw_list->AddText(v_text_pos, v_text_color_u32, v_badge_text.c_str());
+      }
     }
 
     ImPlot::EndPlot();
@@ -414,14 +481,14 @@ void OscilloscopeUI::drawVerticalControls(IChannel &channel,
   ImGui::Text("Vertical Scale");
   float scale = channel.getVerticalScale();
   ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-  if (ImGui::SliderFloat("##Vertical Scale", &scale, 0.1f, 10.0f, "%.1fx")) {
+  if (ImGui::SliderFloat("##Vertical Scale", &scale, 0.01f, 10.0f, "%.2f")) {
     channel.setVerticalScale(scale);
     osc.forceReprocess();
   }
   ImGui::SameLine();
   ImGui::SetNextItemWidth(-FLT_MIN);
   if (ImGui::InputFloat("##VScaleInput", &scale, 0, 0, "%.1f")) {
-    channel.setVerticalScale(std::clamp(scale, 0.1f, 10.0f));
+    channel.setVerticalScale(std::clamp(scale, 0.01f, 10.0f));
     osc.forceReprocess();
   }
 
@@ -637,7 +704,8 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
       found_math = true;
 
       // Color coded label matching Trace
-      ImVec4 label_color = ImVec4(1.0f, 0.4f, 0.7f, 1.0f); // Default Neon Pink/Magenta for Math
+      ImVec4 label_color =
+          ImVec4(1.0f, 0.4f, 0.7f, 1.0f); // Default Neon Pink/Magenta for Math
 
       bool enabled = processor->isEnabled();
       ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
@@ -681,14 +749,16 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
       int h_scale = static_cast<int>(processor->getHorizontalScale());
       ImGui::Text("Horizontal Scale");
       ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderInt("##Horizontal Scale", &h_scale, 256, 16384, "%d samples")) {
+      if (ImGui::SliderInt("##Horizontal Scale", &h_scale, 256, 16384,
+                           "%d samples")) {
         processor->setHorizontalScale(static_cast<size_t>(h_scale));
         osc.forceReprocess();
       }
       ImGui::SameLine();
       ImGui::SetNextItemWidth(-FLT_MIN);
       if (ImGui::InputInt("##HScaleInput", &h_scale, 0, 0)) {
-        processor->setHorizontalScale(static_cast<size_t>(std::clamp(h_scale, 256, 16384)));
+        processor->setHorizontalScale(
+            static_cast<size_t>(std::clamp(h_scale, 256, 16384)));
         osc.forceReprocess();
       }
 
@@ -699,14 +769,16 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
       ImGui::Spacing();
       ImGui::Text("Horizontal Offset");
       ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderInt("##Horizontal Offset", &h_offset, -max_offset, max_offset, "%d samples")) {
+      if (ImGui::SliderInt("##Horizontal Offset", &h_offset, -max_offset,
+                           max_offset, "%d samples")) {
         processor->setHorizontalOffset(static_cast<size_t>(h_offset));
         osc.forceReprocess();
       }
       ImGui::SameLine();
       ImGui::SetNextItemWidth(-FLT_MIN);
       if (ImGui::InputInt("##HOffsetInput", &h_offset, 0, 0)) {
-        processor->setHorizontalOffset(static_cast<size_t>(std::clamp(h_offset, -max_offset, max_offset)));
+        processor->setHorizontalOffset(
+            static_cast<size_t>(std::clamp(h_offset, -max_offset, max_offset)));
         osc.forceReprocess();
       }
 
@@ -715,7 +787,8 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
       auto *math_proc = dynamic_cast<MathProcessor *>(processor);
       if (math_proc) {
         // Operation Selection
-        const char *op_names[] = {"Add", "Subtract", "Multiply", "Invert", "Integrate", "Differentiate"};
+        const char *op_names[] = {"Add",    "Subtract",  "Multiply",
+                                  "Invert", "Integrate", "Differentiate"};
         int current_op = static_cast<int>(math_proc->getOperation());
         ImGui::Text("Operation");
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
@@ -746,7 +819,8 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
         // Source 1 Selection
         ImGui::Text("Source 1");
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::Combo("##Source1", &src1_idx, channel_labels_cstr.data(), static_cast<int>(num_channels))) {
+        if (ImGui::Combo("##Source1", &src1_idx, channel_labels_cstr.data(),
+                         static_cast<int>(num_channels))) {
           math_proc->setSource1Label(channel_labels[src1_idx]);
           osc.forceReprocess();
         }
@@ -757,7 +831,8 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
             math_proc->getOperation() != MathOperation::DIFFERENTIATE) {
           ImGui::Text("Source 2");
           ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-          if (ImGui::Combo("##Source2", &src2_idx, channel_labels_cstr.data(), static_cast<int>(num_channels))) {
+          if (ImGui::Combo("##Source2", &src2_idx, channel_labels_cstr.data(),
+                           static_cast<int>(num_channels))) {
             math_proc->setSource2Label(channel_labels[src2_idx]);
             osc.forceReprocess();
           }

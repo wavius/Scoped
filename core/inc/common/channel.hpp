@@ -71,6 +71,7 @@ private:
   // Horizontal plot settings
   size_t m_horizontal_scale;
   int m_horizontal_offset = 0;
+  size_t m_last_trigger_in_frame = 0;
 
 public:
   // Lifecycle
@@ -88,7 +89,7 @@ public:
   int getHorizontalOffset() const override { return m_horizontal_offset; }
   size_t getUnreadSampleCount() const override { return 0; }
   bool isHardwareChannel() const override { return false; }
-  size_t getLastTriggerInFrame() const override { return 0; }
+  size_t getLastTriggerInFrame() const override { return m_last_trigger_in_frame; }
 
   std::vector<IProcessorControl *> getProcessors() const override {
     std::vector<IProcessorControl *> list;
@@ -118,18 +119,28 @@ public:
   float getNormalizedSample(size_t /*index_offset*/) const override {
     return 0.0f;
   }
-  void extractAndProcessFrame(size_t /*trigger_idx*/,
-                              size_t /*max_width*/) override {
+  void extractAndProcessFrame(size_t trigger_idx,
+                              size_t max_width) override {
+    size_t half_max = max_width / 2;
+    size_t start = (trigger_idx >= half_max) ? trigger_idx - half_max : 0;
+    m_last_trigger_in_frame = trigger_idx - start;
+
     m_traces.clear();
     for (auto &proc : m_processors) {
       if (proc->isEnabled()) {
-        proc->process(m_sources, m_traces);
+        proc->process(m_sources, m_traces, m_last_trigger_in_frame);
       }
     }
     m_has_new_frame = true;
   }
   void reprocessLastFrame() override {
-    extractAndProcessFrame(0, 0); 
+    m_traces.clear();
+    for (auto &proc : m_processors) {
+      if (proc->isEnabled()) {
+        proc->process(m_sources, m_traces, m_last_trigger_in_frame);
+      }
+    }
+    m_has_new_frame = true;
   }
   void consumeBuffer(size_t /*amount*/) override {}
   void pushRawBytes(const uint8_t * /*data*/, size_t /*size*/) override {}
@@ -142,7 +153,11 @@ public:
       static std::vector<float> empty; 
       return empty; 
   }
-  void updateTriggerPoint(size_t /*idx*/) override {}
+  void updateTriggerPoint(size_t idx) override {
+    size_t half_max = 16384 / 2;
+    size_t start = (idx >= half_max) ? idx - half_max : 0;
+    m_last_trigger_in_frame = idx - start;
+  }
 };
 
 // Encapsulates the acquisition and processing pipeline for a single hardware

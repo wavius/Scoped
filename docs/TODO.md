@@ -2,6 +2,7 @@
 
 ## UI
 
+- Add reset settings button for each tab
 - Add a proper scale to signal and fft plots; this requires choosing an ADC so its on hold
 
 ## FFT
@@ -12,7 +13,6 @@
 
 - Add support for multiple concurrent hardware channels
 - Change FPGA USB to stream multiple channels and edit `OscilloscopeUI::drawHardwareStatus`
-- Trigger stops centering at origin after certain horizontal scale: this is because the horizontal scale doesn't dynamically calculate
 
 ## Trigger
 
@@ -20,7 +20,7 @@
 
 ## Math
 
-- Add math (add, sub, mul, div, ch1_ch2, sqrt)
+- Fix integrate and differentiate
 
 ## Measurements
 

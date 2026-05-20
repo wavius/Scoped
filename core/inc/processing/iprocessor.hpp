@@ -37,7 +37,8 @@ public:
 
   // Pipeline
   virtual void process(const std::vector<IChannel *> &sources,
-                       std::vector<Trace> &traces) = 0;
+                       std::vector<Trace> &traces,
+                       size_t trigger_in_frame) = 0;
 };
 
 // Base class for signal processing stages.

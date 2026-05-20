@@ -27,7 +27,7 @@ private:
   std::string m_source2_label = "CH2";
 
   // Plotting vars
-  float m_vertical_scale = 0.9f;
+  float m_vertical_scale = 1.0f;
   float m_vertical_offset = 0.0f;
   size_t m_horizontal_scale = 1024;
   size_t m_horizontal_offset = 0;
@@ -118,7 +118,8 @@ public:
 
   // Pipeline
   void process(const std::vector<IChannel *> &sources,
-               std::vector<Trace> &traces) override {
+               std::vector<Trace> &traces,
+               size_t trigger_in_frame) override {
 
     IChannel *source1 = nullptr;
     IChannel *source2 = nullptr;
@@ -186,8 +187,6 @@ public:
       break;
     }
 
-    // Extract the visible subset of the math trace using source1's trigger positioning
-    size_t trigger_in_frame = source1->getLastTriggerInFrame();
     size_t half_vis = m_horizontal_scale / 2;
     int offset_val = static_cast<int>(m_horizontal_offset); 
     

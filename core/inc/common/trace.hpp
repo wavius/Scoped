@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <common/constants.hpp>
 #include <string>
 #include <vector>
 
@@ -22,9 +23,9 @@ struct Trace {
   // Pipeline
   float normalizeToIntensity(float sample) const {
     if (domain == Domain::Time) {
-      float centered = sample - 128.0f;
-      float scaled = (centered * vertical_scale) + vertical_offset + 128.0f;
-      return std::clamp(scaled / 256.0f, 0.0f, 1.0f);
+      float centered = sample - Constants::ADC_MIDPOINT;
+      float scaled = (centered * vertical_scale) + vertical_offset + Constants::ADC_MIDPOINT;
+      return std::clamp(scaled / Constants::ADC_LEVELS, 0.0f, 1.0f);
     } else if (domain == Domain::Frequency) {
       // Frequency domain auto-scaling logic assumes subtraction
       float scaled = (sample * vertical_scale) - vertical_offset;

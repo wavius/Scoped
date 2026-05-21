@@ -6,6 +6,7 @@
 #include <cstdio>
 
 #include <common/channel.hpp>
+#include <common/constants.hpp>
 #include <common/oscilloscope.hpp>
 #include <hardware/usb.hpp>
 #include <implot.h>
@@ -119,15 +120,13 @@ int main(int, char **) {
   // Math processors
   // 1 VirtualChannel per math processor
   auto math_p1 = std::make_unique<Scoped::MathProcessor>("MATH1", 2048);
-  math_p1->setColor(
-      Scoped::Color{Scoped::Colors::MATH1.x, Scoped::Colors::MATH1.y,
-                    Scoped::Colors::MATH1.z, Scoped::Colors::MATH1.w});
+  math_p1->setColor(Scoped::Color{Scoped::Colors::MATH1.x, Scoped::Colors::MATH1.y,
+                                 Scoped::Colors::MATH1.z, Scoped::Colors::MATH1.w});
   vc1->addProcessor(std::move(math_p1));
 
   auto math_p2 = std::make_unique<Scoped::MathProcessor>("MATH2", 2048);
-  math_p2->setColor(
-      Scoped::Color{Scoped::Colors::MATH2.x, Scoped::Colors::MATH2.y,
-                    Scoped::Colors::MATH2.z, Scoped::Colors::MATH2.w});
+  math_p2->setColor(Scoped::Color{Scoped::Colors::MATH2.x, Scoped::Colors::MATH2.y,
+                                 Scoped::Colors::MATH2.z, Scoped::Colors::MATH2.w});
   vc2->addProcessor(std::move(math_p2));
 
   // Channel colors
@@ -135,7 +134,6 @@ int main(int, char **) {
                               Scoped::Colors::CH1.z, Scoped::Colors::CH1.w});
   ch2->setColor(Scoped::Color{Scoped::Colors::CH2.x, Scoped::Colors::CH2.y,
                               Scoped::Colors::CH2.z, Scoped::Colors::CH2.w});
-
   // Virtual channel colors not used for anything currently
   /*
   vc1->setColor(Scoped::Color{Scoped::Colors::VC1.x, Scoped::Colors::VC1.y,
@@ -143,12 +141,13 @@ int main(int, char **) {
   vc2->setColor(Scoped::Color{Scoped::Colors::VC2.x, Scoped::Colors::VC2.y,
                               Scoped::Colors::VC2.z, Scoped::Colors::VC2.w});
   */
+
   osc.addHardwareChannel(ch1);
   osc.addHardwareChannel(ch2);
   osc.addVirtualChannel(vc1);
   osc.addVirtualChannel(vc2);
 
-  auto trigger = std::make_unique<Scoped::EdgeTrigger>(16384, 128.0f);
+  auto trigger = std::make_unique<Scoped::EdgeTrigger>(16384, Scoped::Constants::ADC_MIDPOINT);
   osc.setTrigger(std::move(trigger));
   osc.setTriggerSource(0);
   osc.setMaxCaptureWidth(16384);

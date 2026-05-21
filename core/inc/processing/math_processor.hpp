@@ -1,6 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <common/channel.hpp>
+#include <common/constants.hpp>
+#include <limits>
 #include <processing/iprocessor.hpp>
 #include <processing/window.hpp>
 #include <vector>
@@ -33,27 +36,30 @@ private:
   size_t m_horizontal_offset = 0;
   Color m_color = {1.0f, 1.0f, 1.0f, 1.0f};
 
+  // Differentiate pre-smoothing: half-width of the box filter (samples)
+  size_t m_diff_smooth_radius = 16;
+
   // Assume m_math_output is resized already
-  // m_math_output = frame1 + frame2 - 128
+  // m_math_output = frame1 + frame2 - Constants::ADC_MIDPOINT
   void performAdd(const std::vector<float> &frame1,
                   const std::vector<float> &frame2) {
     for (size_t i = 0; i < m_math_output.size(); i++) {
-      m_math_output[i] = frame1[i] + frame2[i] - 128.0f;
+      m_math_output[i] = frame1[i] + frame2[i] - Constants::ADC_MIDPOINT;
     }
   }
 
-  // m_math_output = frame1 - frame2 + 128
+  // m_math_output = frame1 - frame2 + Constants::ADC_MIDPOINT
   void performSubtract(const std::vector<float> &frame1,
                        const std::vector<float> &frame2) {
     for (size_t i = 0; i < m_math_output.size(); i++) {
-      m_math_output[i] = frame1[i] - frame2[i] + 128.0f;
+      m_math_output[i] = frame1[i] - frame2[i] + Constants::ADC_MIDPOINT;
     }
   }
 
-  // m_math_output = 256 - frame1
+  // m_math_output = Constants::ADC_LEVELS - frame1
   void performInvert(const std::vector<float> &frame1) {
     for (size_t i = 0; i < m_math_output.size(); i++) {
-      m_math_output[i] = 256.0f - frame1[i];
+      m_math_output[i] = Constants::ADC_LEVELS - frame1[i];
     }
   }
 
@@ -61,31 +67,71 @@ private:
   void performMultiply(const std::vector<float> &frame1,
                        const std::vector<float> &frame2) {
     for (size_t i = 0; i < m_math_output.size(); i++) {
-      float val1 = (frame1[i] - 128.0f) / 128.0f;
-      float val2 = (frame2[i] - 128.0f) / 128.0f;
-      m_math_output[i] = (val1 * val2) * 128.0f + 128.0f;
+      float val1 = (frame1[i] - Constants::ADC_MIDPOINT) / Constants::ADC_MIDPOINT;
+      float val2 = (frame2[i] - Constants::ADC_MIDPOINT) / Constants::ADC_MIDPOINT;
+      m_math_output[i] = (val1 * val2) * Constants::ADC_MIDPOINT + Constants::ADC_MIDPOINT;
     }
   }
 
-  // m_math_output = integrate(frame1)
+  // Trapezoidal integration on DC-removed signal, auto-scaled to [0, Constants::ADC_MAX_VAL]
+  // Amplitude is normalized per frame
   void performIntegrate(const std::vector<float> &frame1) {
+    size_t n = m_math_output.size();
+
+    float mean = 0.0f;
+    for (size_t i = 0; i < n; i++)
+      mean += frame1[i];
+    mean /= static_cast<float>(n);
+
     float sum = 0.0f;
-    float dt = 0.01f;
-    for (size_t i = 0; i < m_math_output.size(); i++) {
-      sum += (frame1[i] - 128.0f) * dt;
-      m_math_output[i] = sum + 128.0f;
+    float min_val = 0.0f, max_val = 0.0f;
+    m_math_output[0] = 0.0f;
+    for (size_t i = 1; i < n; i++) {
+      sum += (frame1[i - 1] - mean + frame1[i] - mean) * 0.5f;
+      m_math_output[i] = sum;
+      if (sum < min_val)
+        min_val = sum;
+      if (sum > max_val)
+        max_val = sum;
     }
+
+    float range = max_val - min_val;
+    if (range < 1e-6f) {
+      std::fill(m_math_output.begin(), m_math_output.end(), Constants::ADC_MIDPOINT);
+      return;
+    }
+    for (size_t i = 0; i < n; i++)
+      m_math_output[i] = ((m_math_output[i] - min_val) / range) * Constants::ADC_MAX_VAL;
   }
 
-  // m_math_output = diff(frame1)
+  // Box-filter pre-smooth + central difference, centered at Constants::ADC_MIDPOINT
+  // Pre-smoothing with radius m_diff_smooth_radius reduces quantization noise
+  // before differentiating
   void performDifferentiate(const std::vector<float> &frame1) {
-    if (m_math_output.empty())
+    size_t n = m_math_output.size();
+    if (n < 3)
       return;
-    m_math_output[0] = 128.0f;
-    float scale = 5.0f;
-    for (size_t i = 1; i < m_math_output.size(); i++) {
-      m_math_output[i] = (frame1[i] - frame1[i - 1]) * scale + 128.0f;
+
+    size_t r = m_diff_smooth_radius;
+
+    // Prefix sum for O(n) sliding window average
+    std::vector<float> prefix(n + 1, 0.0f);
+    for (size_t i = 0; i < n; i++)
+      prefix[i + 1] = prefix[i] + frame1[i];
+
+    std::vector<float> smoothed(n);
+    for (size_t i = 0; i < n; i++) {
+      size_t lo = (i >= r) ? i - r : 0;
+      size_t hi = std::min(n - 1, i + r);
+      smoothed[i] =
+          (prefix[hi + 1] - prefix[lo]) / static_cast<float>(hi - lo + 1);
     }
+
+    for (size_t i = 1; i < n - 1; i++)
+      m_math_output[i] = (smoothed[i + 1] - smoothed[i - 1]) * 0.5f + Constants::ADC_MIDPOINT;
+
+    m_math_output[0] = m_math_output[1];
+    m_math_output[n - 1] = m_math_output[n - 2];
   }
 
 public:
@@ -107,6 +153,7 @@ public:
   MathOperation getOperation() const { return m_operation; }
   const std::string &getSource1Label() const { return m_source1_label; }
   const std::string &getSource2Label() const { return m_source2_label; }
+  size_t getDiffSmoothRadius() const { return m_diff_smooth_radius; }
 
   // Setters
   void setEnabled(bool enabled) override { m_enabled = enabled; }
@@ -121,6 +168,7 @@ public:
   void setOperation(MathOperation op) { m_operation = op; }
   void setSource1Label(const std::string &label) { m_source1_label = label; }
   void setSource2Label(const std::string &label) { m_source2_label = label; }
+  void setDiffSmoothRadius(size_t r) { m_diff_smooth_radius = r; }
 
   // Pipeline
   void process(const std::vector<IChannel *> &sources,

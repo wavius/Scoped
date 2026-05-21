@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <type_traits>
 #include <vector>
+#include <common/constants.hpp>
 
 namespace Scoped {
 
@@ -93,7 +94,7 @@ public:
       if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
         val = high ? static_cast<T>(1.0) : static_cast<T>(-1.0);
       } else {
-        val = high ? static_cast<T>(255) : static_cast<T>(0);
+        val = high ? static_cast<T>(Constants::ADC_MAX_VAL) : static_cast<T>(0);
       }
 
       m_buffer[write_idx] = val;
@@ -132,7 +133,8 @@ public:
       if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
         sample = static_cast<T>(val);
       } else {
-        sample = static_cast<T>((val * 127.5f) + 127.5f);
+        float half_max = Constants::ADC_MAX_VAL / 2.0f;
+        sample = static_cast<T>((val * half_max) + half_max);
       }
 
       m_buffer[write_idx] = sample;

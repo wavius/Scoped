@@ -20,7 +20,8 @@
 
 ## Math
 
-- Fix integrate and differentiate
+- Implement FFT differentiate
+- Once ADC sample rate is known, reimplement integration with `dt = 1/sample_rate` for physically accurate V·s output (requires `IChannel::getSampleRate()`)
 
 ## Measurements
 

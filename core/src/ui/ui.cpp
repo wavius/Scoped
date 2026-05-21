@@ -12,6 +12,7 @@
 
 #include <processing/fft_processor.hpp>
 #include <processing/math_processor.hpp>
+#include <common/constants.hpp>
 #include <ui/ui.hpp>
 
 namespace Scoped {
@@ -1102,6 +1103,12 @@ void OscilloscopeUI::drawDebugWindow(Oscilloscope &osc) {
   ImGui::Text("Display height: %zu", m_display_height);
   ImGui::Text("Hardware Channels: %zu", osc.getHardwareChannels().size());
   ImGui::Text("Virtual Channels: %zu", osc.getVirtualChannels().size());
+
+  ImGui::Separator();
+  ImGui::Text("ADC Configuration:");
+  ImGui::Text("  Resolution: %zu-bit", Constants::ADC_BITS);
+  ImGui::Text("  Levels: %.0f", Constants::ADC_LEVELS);
+  ImGui::Text("  Sample Rate: %.0f Hz", Constants::ADC_SAMPLE_RATE_HZ);
 
   if (!osc.getHardwareChannels().empty()) {
     auto &channel = osc.getHardwareChannels()[0];

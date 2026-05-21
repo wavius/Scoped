@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <common/circularbuffer.hpp>
+#include <common/constants.hpp>
 #include <cstdint>
 #include <memory>
 #include <processing/iprocessor.hpp>
@@ -34,6 +35,7 @@ public:
   virtual std::vector<IProcessorControl *> getProcessors() const = 0;
   virtual Color getColor() const = 0;
   virtual size_t getLastTriggerInFrame() const = 0;
+  virtual float getSampleRate() const = 0;
 
   // Setters
   virtual void setVerticalScale(float scale) = 0;
@@ -97,6 +99,10 @@ public:
   bool isHardwareChannel() const override { return false; }
   size_t getLastTriggerInFrame() const override { return m_last_trigger_in_frame; }
   Color getColor() const override { return m_color; }
+  float getSampleRate() const override {
+    return m_sources.empty() ? Constants::ADC_SAMPLE_RATE_HZ
+                             : m_sources[0]->getSampleRate();
+  }
 
   std::vector<IProcessorControl *> getProcessors() const override {
     std::vector<IProcessorControl *> list;
@@ -215,6 +221,7 @@ public:
   bool isHardwareChannel() const override { return true; }
   size_t getLastTriggerInFrame() const override { return m_last_trigger_in_frame; }
   Color getColor() const override { return m_color; }
+  float getSampleRate() const override { return Constants::ADC_SAMPLE_RATE_HZ; }
 
   std::vector<IProcessorControl *> getProcessors() const override {
     std::vector<IProcessorControl *> list;

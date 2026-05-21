@@ -84,7 +84,7 @@ public:
     
     // Scale fundamental phase to local frequency phase
     double phase = s_fundamental_phase * static_cast<double>(frequency);
-    double step = (1.0 / 1024.0) * static_cast<double>(frequency);
+    double step = (1.0 / static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ)) * static_cast<double>(frequency);
     size_t write_idx = m_write_idx.load(std::memory_order_relaxed);
 
     for (size_t i = 0; i < count; i++) {
@@ -105,9 +105,9 @@ public:
     m_write_idx.store(write_idx, std::memory_order_release);
     
     // Update master clock
-    s_fundamental_phase += (1.0 / 1024.0);
-    if (s_fundamental_phase >= 1024.0) {
-      s_fundamental_phase = std::fmod(s_fundamental_phase, 1024.0);
+    s_fundamental_phase += (1.0 / static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ));
+    if (s_fundamental_phase >= static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ)) {
+      s_fundamental_phase = std::fmod(s_fundamental_phase, static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ));
     }
   }
 
@@ -120,7 +120,7 @@ public:
     // This gives us automatic, free phase wrapping (integer overflow) and extreme speed.
     double local_phase_double = std::fmod(s_fundamental_phase * static_cast<double>(frequency), 1.0);
     uint32_t phase = static_cast<uint32_t>(local_phase_double * 4294967296.0);
-    uint32_t step = static_cast<uint32_t>(((1.0 / 1024.0) * static_cast<double>(frequency)) * 4294967296.0);
+    uint32_t step = static_cast<uint32_t>(((1.0 / static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ)) * static_cast<double>(frequency)) * 4294967296.0);
     
     size_t write_idx = m_write_idx.load(std::memory_order_relaxed);
 
@@ -147,9 +147,9 @@ public:
     m_write_idx.store(write_idx, std::memory_order_release);
 
     // Update master clock
-    s_fundamental_phase += (1.0 / 1024.0);
-    if (s_fundamental_phase >= 1024.0) {
-      s_fundamental_phase = std::fmod(s_fundamental_phase, 1024.0);
+    s_fundamental_phase += (1.0 / static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ));
+    if (s_fundamental_phase >= static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ)) {
+      s_fundamental_phase = std::fmod(s_fundamental_phase, static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ));
     }
   }
 };

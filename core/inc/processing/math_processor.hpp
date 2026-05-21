@@ -73,9 +73,9 @@ private:
     }
   }
 
-  // Trapezoidal integration on DC-removed signal, auto-scaled to [0, Constants::ADC_MAX_VAL]
-  // Amplitude is normalized per frame
-  void performIntegrate(const std::vector<float> &frame1) {
+  // Trapezoidal integration on DC-removed signal.
+  // Outputs physically accurate V·s scaling.
+  void performIntegrate(const std::vector<float> &frame1, float sample_rate) {
     size_t n = m_math_output.size();
 
     float mean = 0.0f;
@@ -84,30 +84,18 @@ private:
     mean /= static_cast<float>(n);
 
     float sum = 0.0f;
-    float min_val = 0.0f, max_val = 0.0f;
-    m_math_output[0] = 0.0f;
+    float dt = 1.0f / sample_rate;
+    m_math_output[0] = Constants::ADC_MIDPOINT;
     for (size_t i = 1; i < n; i++) {
-      sum += (frame1[i - 1] - mean + frame1[i] - mean) * 0.5f;
-      m_math_output[i] = sum;
-      if (sum < min_val)
-        min_val = sum;
-      if (sum > max_val)
-        max_val = sum;
+      sum += (frame1[i - 1] - mean + frame1[i] - mean) * 0.5f * dt;
+      m_math_output[i] = sum + Constants::ADC_MIDPOINT;
     }
-
-    float range = max_val - min_val;
-    if (range < 1e-6f) {
-      std::fill(m_math_output.begin(), m_math_output.end(), Constants::ADC_MIDPOINT);
-      return;
-    }
-    for (size_t i = 0; i < n; i++)
-      m_math_output[i] = ((m_math_output[i] - min_val) / range) * Constants::ADC_MAX_VAL;
   }
 
   // Box-filter pre-smooth + central difference, centered at Constants::ADC_MIDPOINT
   // Pre-smoothing with radius m_diff_smooth_radius reduces quantization noise
   // before differentiating
-  void performDifferentiate(const std::vector<float> &frame1) {
+  void performDifferentiate(const std::vector<float> &frame1, float sample_rate) {
     size_t n = m_math_output.size();
     if (n < 3)
       return;
@@ -128,7 +116,7 @@ private:
     }
 
     for (size_t i = 1; i < n - 1; i++)
-      m_math_output[i] = (smoothed[i + 1] - smoothed[i - 1]) * 0.5f + Constants::ADC_MIDPOINT;
+      m_math_output[i] = (smoothed[i + 1] - smoothed[i - 1]) * 0.5f * sample_rate + Constants::ADC_MIDPOINT;
 
     m_math_output[0] = m_math_output[1];
     m_math_output[n - 1] = m_math_output[n - 2];
@@ -230,10 +218,10 @@ public:
       performInvert(frame1);
       break;
     case (MathOperation::INTEGRATE):
-      performIntegrate(frame1);
+      performIntegrate(frame1, source1->getSampleRate());
       break;
     case (MathOperation::DIFFERENTIATE):
-      performDifferentiate(frame1);
+      performDifferentiate(frame1, source1->getSampleRate());
       break;
     default:
       break;

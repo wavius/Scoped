@@ -16,12 +16,9 @@
 
 ## Trigger
 
-- Edge trigger level hardcoded for 8 bit ADC
-
 ## Math
 
 - Implement FFT differentiate
-- Once ADC sample rate is known, reimplement integration with `dt = 1/sample_rate` for physically accurate V·s output (requires `IChannel::getSampleRate()`)
 
 ## Measurements
 

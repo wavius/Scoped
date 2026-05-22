@@ -120,13 +120,15 @@ int main(int, char **) {
   // Math processors
   // 1 VirtualChannel per math processor
   auto math_p1 = std::make_unique<Scoped::MathProcessor>("MATH1", 2048);
-  math_p1->setColor(Scoped::Color{Scoped::Colors::MATH1.x, Scoped::Colors::MATH1.y,
-                                 Scoped::Colors::MATH1.z, Scoped::Colors::MATH1.w});
+  math_p1->setColor(
+      Scoped::Color{Scoped::Colors::MATH1.x, Scoped::Colors::MATH1.y,
+                    Scoped::Colors::MATH1.z, Scoped::Colors::MATH1.w});
   vc1->addProcessor(std::move(math_p1));
 
   auto math_p2 = std::make_unique<Scoped::MathProcessor>("MATH2", 2048);
-  math_p2->setColor(Scoped::Color{Scoped::Colors::MATH2.x, Scoped::Colors::MATH2.y,
-                                 Scoped::Colors::MATH2.z, Scoped::Colors::MATH2.w});
+  math_p2->setColor(
+      Scoped::Color{Scoped::Colors::MATH2.x, Scoped::Colors::MATH2.y,
+                    Scoped::Colors::MATH2.z, Scoped::Colors::MATH2.w});
   vc2->addProcessor(std::move(math_p2));
 
   // Channel colors
@@ -147,7 +149,8 @@ int main(int, char **) {
   osc.addVirtualChannel(vc1);
   osc.addVirtualChannel(vc2);
 
-  auto trigger = std::make_unique<Scoped::EdgeTrigger>(16384, Scoped::Constants::ADC_MIDPOINT);
+  auto trigger = std::make_unique<Scoped::EdgeTrigger>(
+      16384, Scoped::Constants::ADC_MIDPOINT);
   osc.setTrigger(std::move(trigger));
   osc.setTriggerSource(0);
   osc.setMaxCaptureWidth(16384);

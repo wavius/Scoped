@@ -1,9 +1,10 @@
 #pragma once
 
+#include <../../extern/pocketfft/pocketfft_hdronly.h>
 #include <algorithm>
 #include <common/channel.hpp>
 #include <common/constants.hpp>
-#include <limits>
+#include <complex>
 #include <processing/iprocessor.hpp>
 #include <processing/window.hpp>
 #include <vector>
@@ -28,6 +29,11 @@ private:
   std::vector<float> m_math_output;
   std::string m_source1_label = "CH1";
   std::string m_source2_label = "CH2";
+
+  // Constants
+  static constexpr std::complex<float> I_COMPLEX{0.0f, 1.0f};
+  static constexpr float PI = 3.141592653589f;
+  static constexpr float EPSILON = 1e-8f;
 
   // Plotting vars
   float m_vertical_scale = 1.0f;
@@ -67,9 +73,12 @@ private:
   void performMultiply(const std::vector<float> &frame1,
                        const std::vector<float> &frame2) {
     for (size_t i = 0; i < m_math_output.size(); i++) {
-      float val1 = (frame1[i] - Constants::ADC_MIDPOINT) / Constants::ADC_MIDPOINT;
-      float val2 = (frame2[i] - Constants::ADC_MIDPOINT) / Constants::ADC_MIDPOINT;
-      m_math_output[i] = (val1 * val2) * Constants::ADC_MIDPOINT + Constants::ADC_MIDPOINT;
+      float val1 =
+          (frame1[i] - Constants::ADC_MIDPOINT) / Constants::ADC_MIDPOINT;
+      float val2 =
+          (frame2[i] - Constants::ADC_MIDPOINT) / Constants::ADC_MIDPOINT;
+      m_math_output[i] =
+          (val1 * val2) * Constants::ADC_MIDPOINT + Constants::ADC_MIDPOINT;
     }
   }
 
@@ -92,10 +101,11 @@ private:
     }
   }
 
-  // Box-filter pre-smooth + central difference, centered at Constants::ADC_MIDPOINT
-  // Pre-smoothing with radius m_diff_smooth_radius reduces quantization noise
-  // before differentiating
-  void performDifferentiate(const std::vector<float> &frame1, float sample_rate) {
+  // Box-filter pre-smooth + central difference, centered at
+  // Constants::ADC_MIDPOINT Pre-smoothing with radius m_diff_smooth_radius
+  // reduces quantization noise before differentiating
+  void performDifferentiate(const std::vector<float> &frame1,
+                            float sample_rate) {
     size_t n = m_math_output.size();
     if (n < 3)
       return;
@@ -116,10 +126,67 @@ private:
     }
 
     for (size_t i = 1; i < n - 1; i++)
-      m_math_output[i] = (smoothed[i + 1] - smoothed[i - 1]) * 0.5f * sample_rate + Constants::ADC_MIDPOINT;
+      m_math_output[i] =
+          (smoothed[i + 1] - smoothed[i - 1]) * 0.5f * sample_rate +
+          Constants::ADC_MIDPOINT;
 
     m_math_output[0] = m_math_output[1];
     m_math_output[n - 1] = m_math_output[n - 2];
+  }
+
+  // Differentiate using FFT
+  // F'(jw) = jw * F(jw)
+  void performDifferentiateFFT(const std::vector<float> &frame) {
+
+    // Center frame
+    size_t frame_size = frame.size();
+    float mean = calculateMean(frame);
+    std::vector<float> centered_frame;
+    centered_frame.resize(frame_size);
+    for (size_t i = 0; i < frame_size; i++) {
+      centered_frame[i] = frame[i] - mean;
+    }
+
+    pocketfft::shape_t shape{frame_size};
+
+    pocketfft::stride_t stride_in(1);
+    stride_in[0] = sizeof(float);
+
+    pocketfft::stride_t stride_out(1);
+    stride_out[0] = sizeof(std::complex<float>);
+
+    pocketfft::shape_t axes;
+    axes.push_back(0);
+
+    std::vector<std::complex<float>> fft_output;
+    fft_output.resize(frame_size);
+
+    // Forward FFT
+    pocketfft::r2c(shape, stride_in, stride_out, axes, pocketfft::FORWARD,
+                   centered_frame.data(), fft_output.data(),
+                   2.0f / static_cast<float>(frame_size));
+
+    /*
+  3. Multiply each bin by jω
+     ω_k = 2π·k / N
+     X[k] *= complex(0, ω_k)      // rotation by 90° + scale by ω_k
+     X[0] = 0                      // kill DC bin
+  4. Optional: apply low-pass window to suppress high-freq noise
+     X[k] *= hann(k, N/2)         // or just zero the top 10-20% of bins
+  5. Inverse FFT (complex→real)
+     result = pocketfft::c2r(X)
+  6. Rescale result to [0, 255] for display
+     (same min/max rescale as the current implementation)
+      */
+  }
+
+  // taken from fft_processor.hpp
+  float calculateMean(const std::vector<HardwareT> &frame) {
+    double sum = 0;
+    for (auto i : frame) {
+      sum += i;
+    }
+    return static_cast<float>(sum / frame.size());
   }
 
 public:

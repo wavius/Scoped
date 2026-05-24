@@ -791,6 +791,17 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
             osc.forceReprocess();
           }
         }
+
+        // Smoothing control for differentiation
+        if (math_proc->getOperation() == MathOperation::DIFFERENTIATE) {
+          int radius = static_cast<int>(math_proc->getDiffSmoothRadius());
+          ImGui::Text("Smoothing Radius");
+          ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+          if (ImGui::SliderInt("##SmoothRadius", &radius, 0, 128, "%d samples")) {
+            math_proc->setDiffSmoothRadius(static_cast<size_t>(radius));
+            osc.forceReprocess();
+          }
+        }
       }
 
       ImGui::Spacing();

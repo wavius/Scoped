@@ -103,9 +103,7 @@ private:
     }
   }
 
-  // Box-filter pre-smooth + central difference, centered at
-  // Constants::ADC_MIDPOINT Pre-smoothing with radius m_diff_smooth_radius
-  // reduces quantization noise before differentiating
+  [[deprecated("Use FFT differentiation.")]]
   void performDifferentiate(const std::vector<float> &frame1,
                             float sample_rate) {
     size_t n = m_math_output.size();
@@ -138,7 +136,8 @@ private:
 
   // Differentiate using FFT
   // F'(jw) = jw * F(jw)
-  void performDifferentiateFFT(const std::vector<float> &frame) {
+  void performDifferentiateFFT(const std::vector<float> &frame,
+                               float sample_rate) {
 
     // Center frame
     size_t frame_size = frame.size();
@@ -149,56 +148,67 @@ private:
       centered_frame[i] = frame[i] - mean;
     }
 
+    // Shape holds vector size
     pocketfft::shape_t shape{frame_size};
 
-    pocketfft::stride_t stride_in(1);
-    stride_in[0] = sizeof(float);
+    // Stride holds bytes between consecutive elements
+    pocketfft::stride_t stride_float(1);
+    stride_float[0] = sizeof(float);
 
-    pocketfft::stride_t stride_out(1);
-    stride_out[0] = sizeof(std::complex<float>);
+    pocketfft::stride_t stride_complex(1);
+    stride_complex[0] = sizeof(std::complex<float>);
 
+    // Axes holds which dimensions to FFT over
     pocketfft::shape_t axes;
     axes.push_back(0);
 
     std::vector<std::complex<float>> fft_output;
     fft_output.resize(frame_size);
 
-    // Forward FFT
-    pocketfft::r2c(shape, stride_in, stride_out, axes, pocketfft::FORWARD,
-                   centered_frame.data(), fft_output.data(),
+    // Forward FFT: real to complex
+    pocketfft::r2c(shape, stride_float, stride_complex, axes,
+                   pocketfft::FORWARD, centered_frame.data(), fft_output.data(),
                    2.0f / static_cast<float>(frame_size));
 
     // Multiply each bin by jω
-    // Apply low-pass window
+    // Apply low-pass window (raised-cosine) to suppress high-freq noise
+    // We map m_diff_smooth_radius to a cutoff bin: larger radius -> lower cutoff
     std::complex<float> w =
-        2.0f * I_COMPLEX * PI / static_cast<float>(frame_size);
-    m_window.setSize(frame_size); 
-    const auto window_values = m_window.getFunction(); // default window type is HANN
-    for (size_t k = 1; k < frame_size; k++) {
-      fft_output[k] *= (w * k) * window_values[k];
+        2.0f * I_COMPLEX * PI * sample_rate / static_cast<float>(frame_size);
+    m_window.setSize(frame_size);
+    const auto window_values =
+        m_window.getFunction(); // default window type is HANN
+    size_t num_bins = frame_size / 2;
+
+    size_t cutoff_bin = num_bins;
+    if (m_diff_smooth_radius > 0) {
+      cutoff_bin = std::max(size_t(1), frame_size / (2 * m_diff_smooth_radius + 1));
+      cutoff_bin = std::min(cutoff_bin, num_bins);
     }
 
+    for (size_t k = 1; k <= num_bins; k++) {
+      float lp = 0.0f;
+      if (k <= cutoff_bin) {
+        // Smoothly rolls off to 0.0 at cutoff_bin
+        float phase = PI * static_cast<float>(k) / static_cast<float>(cutoff_bin);
+        lp = 0.5f * (1.0f + std::cos(phase));
+      }
+      fft_output[k] *= (w * static_cast<float>(k)) * lp;
+    }
 
-    // Apply low-pass window
-    for (size_t i = )    
+    // Inverse FFT: complex to real
+    pocketfft::c2r(shape, stride_complex, stride_float, axes,
+                   pocketfft::BACKWARD, fft_output.data(), m_math_output.data(),
+                   0.5f);
 
-
-    // Optional: apply low-pass window to suppress high-freq noise
-    // X[k] *= hann(k, N/2)         // or just zero the top 10-20% of bins
-
-  /*
-  5. Inverse FFT (complex→real)
-     result = pocketfft::c2r(X)
-  */
-
-  /*
-  6. Rescale result to [0, 255] for display
-     (same min/max rescale as the current implementation)
-      */
+    // Shift result to be centered around ADC midpoint for display
+    for (size_t i = 0; i < frame_size; i++) {
+      m_math_output[i] += Constants::ADC_MIDPOINT;
+    }
   }
 
   // taken from fft_processor.hpp
-  float calculateMean(const std::vector<HardwareT> &frame) {
+  float calculateMean(const std::vector<float> &frame) {
     double sum = 0;
     for (auto i : frame) {
       sum += i;
@@ -305,7 +315,7 @@ public:
       performIntegrate(frame1, source1->getSampleRate());
       break;
     case (MathOperation::DIFFERENTIATE):
-      performDifferentiate(frame1, source1->getSampleRate());
+      performDifferentiateFFT(frame1, source1->getSampleRate());
       break;
     default:
       break;

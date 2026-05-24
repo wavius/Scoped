@@ -18,7 +18,8 @@
 
 ## Math
 
-- Implement FFT differentiate
+- Fix integration visual stretching
+- Add scaling for integration and differentiation
 
 ## Measurements
 

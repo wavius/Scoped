@@ -46,7 +46,7 @@ public:
   // Lifecycle
   FFTProcessor(const std::string &name, size_t display_height,
                size_t initial_fft_size)
-      : m_name(name), m_window(initial_fft_size, WindowType::Hann),
+      : m_name(name), m_window(initial_fft_size, WindowType::HANN),
         m_fft_size(initial_fft_size) {
     m_max_height = display_height;
   }

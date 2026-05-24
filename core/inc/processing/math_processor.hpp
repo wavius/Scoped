@@ -35,6 +35,8 @@ private:
   static constexpr float PI = 3.141592653589f;
   static constexpr float EPSILON = 1e-8f;
 
+  Scoped::Window m_window;
+
   // Plotting vars
   float m_vertical_scale = 1.0f;
   float m_vertical_offset = 0.0f;
@@ -166,15 +168,30 @@ private:
                    centered_frame.data(), fft_output.data(),
                    2.0f / static_cast<float>(frame_size));
 
-    /*
-  3. Multiply each bin by jω
-     ω_k = 2π·k / N
-     X[k] *= complex(0, ω_k)      // rotation by 90° + scale by ω_k
-     X[0] = 0                      // kill DC bin
-  4. Optional: apply low-pass window to suppress high-freq noise
-     X[k] *= hann(k, N/2)         // or just zero the top 10-20% of bins
+    // Multiply each bin by jω
+    // Apply low-pass window
+    std::complex<float> w =
+        2.0f * I_COMPLEX * PI / static_cast<float>(frame_size);
+    m_window.setSize(frame_size); 
+    const auto window_values = m_window.getFunction(); // default window type is HANN
+    for (size_t k = 1; k < frame_size; k++) {
+      fft_output[k] *= (w * k) * window_values[k];
+    }
+
+
+    // Apply low-pass window
+    for (size_t i = )    
+
+
+    // Optional: apply low-pass window to suppress high-freq noise
+    // X[k] *= hann(k, N/2)         // or just zero the top 10-20% of bins
+
+  /*
   5. Inverse FFT (complex→real)
      result = pocketfft::c2r(X)
+  */
+
+  /*
   6. Rescale result to [0, 255] for display
      (same min/max rescale as the current implementation)
       */

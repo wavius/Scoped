@@ -12,6 +12,7 @@ class IChannel;
 enum class ProcessorType {
   FFT,
   Math,
+  Filter,
   Unknown,
 };
 

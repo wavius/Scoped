@@ -6,11 +6,13 @@
 #include <cstdio>
 
 #include <common/channel.hpp>
+#include <common/constants.hpp>
 #include <common/oscilloscope.hpp>
 #include <hardware/usb.hpp>
 #include <implot.h>
 #include <memory>
 #include <processing/fft_processor.hpp>
+#include <processing/math_processor.hpp>
 #include <processing/trigger.hpp>
 #include <ui/ui.hpp>
 
@@ -91,19 +93,64 @@ int main(int, char **) {
   auto ch1 = std::make_shared<Scoped::Channel<uint8_t>>("CH1", 16384 * 4, 2048);
   auto ch2 = std::make_shared<Scoped::Channel<uint8_t>>("CH2", 16384 * 4, 2048);
 
+  // Virtual Channels
+  auto vc1 = std::make_shared<Scoped::VirtualChannel>("VC1", 2048);
+  vc1->addSource(ch1.get());
+  vc1->addSource(ch2.get());
+
+  auto vc2 = std::make_shared<Scoped::VirtualChannel>("VC2", 2048);
+  vc2->addSource(ch1.get());
+  vc2->addSource(ch2.get());
+
   // FFT processors
   auto fft_p1 = std::make_unique<Scoped::FFTProcessor<unsigned char>>(
-      "FFT CH1", ui.getDisplayHeight());
+      "FFT1", ui.getDisplayHeight(), 16384);
   auto fft_p2 = std::make_unique<Scoped::FFTProcessor<unsigned char>>(
-      "FFT CH2", ui.getDisplayHeight());
+      "FFT2", ui.getDisplayHeight(), 16384);
+  fft_p1->setColor(Scoped::Color{Scoped::Colors::FFT1.x, Scoped::Colors::FFT1.y,
+                                 Scoped::Colors::FFT1.z,
+                                 Scoped::Colors::FFT1.w});
+  fft_p2->setColor(Scoped::Color{Scoped::Colors::FFT2.x, Scoped::Colors::FFT2.y,
+                                 Scoped::Colors::FFT2.z,
+                                 Scoped::Colors::FFT2.w});
 
   ch1->addProcessor(std::move(fft_p1));
   ch2->addProcessor(std::move(fft_p2));
 
-  osc.addChannel(ch1);
-  osc.addChannel(ch2);
+  // Math processors
+  // 1 VirtualChannel per math processor
+  auto math_p1 = std::make_unique<Scoped::MathProcessor>("MATH1", 2048);
+  math_p1->setColor(
+      Scoped::Color{Scoped::Colors::MATH1.x, Scoped::Colors::MATH1.y,
+                    Scoped::Colors::MATH1.z, Scoped::Colors::MATH1.w});
+  vc1->addProcessor(std::move(math_p1));
 
-  auto trigger = std::make_unique<Scoped::EdgeTrigger>(16384, 128.0f);
+  auto math_p2 = std::make_unique<Scoped::MathProcessor>("MATH2", 2048);
+  math_p2->setColor(
+      Scoped::Color{Scoped::Colors::MATH2.x, Scoped::Colors::MATH2.y,
+                    Scoped::Colors::MATH2.z, Scoped::Colors::MATH2.w});
+  vc2->addProcessor(std::move(math_p2));
+
+  // Channel colors
+  ch1->setColor(Scoped::Color{Scoped::Colors::CH1.x, Scoped::Colors::CH1.y,
+                              Scoped::Colors::CH1.z, Scoped::Colors::CH1.w});
+  ch2->setColor(Scoped::Color{Scoped::Colors::CH2.x, Scoped::Colors::CH2.y,
+                              Scoped::Colors::CH2.z, Scoped::Colors::CH2.w});
+  // Virtual channel colors not used for anything currently
+  /*
+  vc1->setColor(Scoped::Color{Scoped::Colors::VC1.x, Scoped::Colors::VC1.y,
+                              Scoped::Colors::VC1.z, Scoped::Colors::VC1.w});
+  vc2->setColor(Scoped::Color{Scoped::Colors::VC2.x, Scoped::Colors::VC2.y,
+                              Scoped::Colors::VC2.z, Scoped::Colors::VC2.w});
+  */
+
+  osc.addHardwareChannel(ch1);
+  osc.addHardwareChannel(ch2);
+  osc.addVirtualChannel(vc1);
+  osc.addVirtualChannel(vc2);
+
+  auto trigger = std::make_unique<Scoped::EdgeTrigger>(
+      16384, Scoped::Constants::ADC_MIDPOINT);
   osc.setTrigger(std::move(trigger));
   osc.setTriggerSource(0);
   osc.setMaxCaptureWidth(16384);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <common/trace.hpp>
 #include <string>
 #include <vector>
@@ -8,6 +9,13 @@ namespace Scoped {
 
 class IChannel;
 
+enum class ProcessorType {
+  FFT,
+  Math,
+  Filter,
+  Unknown,
+};
+
 class IProcessorControl {
 public:
   // Lifecycle
@@ -15,24 +23,21 @@ public:
 
   // Accessors
   virtual std::string getName() const = 0;
+  virtual ProcessorType getType() const = 0;
   virtual bool isEnabled() const = 0;
-  virtual float getScale() const = 0;
-  virtual bool getIsModeLinear() const = 0;
-  virtual float getSmoothingFactor() const = 0;
-  virtual std::string getWindowTypeName() const { return "None"; }
-  virtual size_t getWindowSize() const { return 16384; }
+  virtual float getVerticalScale() const = 0;
+  virtual float getVerticalOffset() const = 0;
   virtual size_t getHorizontalScale() const { return 0; }
   virtual size_t getHorizontalOffset() const { return 0; }
+  virtual Color getColor() const = 0;
 
   // Setters
   virtual void setEnabled(bool enabled) = 0;
-  virtual void setScale(float scale) = 0;
-  virtual void setIsModeLinear(bool mode) = 0;
-  virtual void setSmoothingFactor(float factor) = 0;
-  virtual void setWindowType(int /*type*/) {}
-  virtual void setWindowSize(size_t /*size*/) {}
+  virtual void setVerticalScale(float scale) = 0;
+  virtual void setVerticalOffset(float offset) = 0;
   virtual void setHorizontalScale(size_t /*scale*/) {}
   virtual void setHorizontalOffset(size_t /*offset*/) {}
+  virtual void setColor(const Color &color) = 0;
 };
 
 // Base for processors operating across multiple channels.
@@ -43,7 +48,8 @@ public:
 
   // Pipeline
   virtual void process(const std::vector<IChannel *> &sources,
-                       std::vector<Trace> &traces) = 0;
+                       std::vector<Trace> &traces,
+                       size_t trigger_in_frame) = 0;
 };
 
 // Base class for signal processing stages.

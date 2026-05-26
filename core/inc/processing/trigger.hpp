@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <common/channel.hpp>
+#include <common/constants.hpp>
 #include <string>
 
 namespace Scoped {
@@ -183,7 +184,7 @@ protected:
 
 public:
   // Lifecycle
-  explicit EdgeTrigger(size_t width = 1024, float level = 128.0f)
+  explicit EdgeTrigger(size_t width = 1024, float level = Constants::ADC_MIDPOINT)
       : ITrigger(width), m_threshold(level), m_direction(EdgeDirection::RISING),
         m_prev_sample(0) {
     m_hysteresis_margin = 2.0f;
@@ -197,7 +198,7 @@ public:
     std::vector<TriggerParameter> params;
 
     params.push_back(
-        {"Level", -128, 128, static_cast<int>(m_threshold) - 128, {}});
+        {"Level", -static_cast<int>(Constants::ADC_MIDPOINT), static_cast<int>(Constants::ADC_MIDPOINT), static_cast<int>(m_threshold - Constants::ADC_MIDPOINT), {}});
 
     std::vector<std::string> dirs = {"Rising", "Falling"};
     int dir_idx = (m_direction == EdgeDirection::RISING) ? 0 : 1;
@@ -213,7 +214,7 @@ public:
   void setDirection(EdgeDirection dir) { m_direction = dir; }
   void setUIParameter(const std::string &name, int val) override {
     if (name == "Level") {
-      m_threshold = static_cast<float>(val + 128);
+      m_threshold = static_cast<float>(val) + Constants::ADC_MIDPOINT;
     } else if (name == "Edge") {
       m_direction = (val == 0) ? EdgeDirection::RISING : EdgeDirection::FALLING;
     } else if (name == "Hysteresis") {

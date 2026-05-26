@@ -1,7 +1,9 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <common/circularbuffer.hpp>
+#include <common/constants.hpp>
 #include <cstdint>
 #include <memory>
 #include <processing/iprocessor.hpp>
@@ -31,6 +33,9 @@ public:
   virtual size_t getUnreadSampleCount() const = 0;
   virtual bool isHardwareChannel() const = 0;
   virtual std::vector<IProcessorControl *> getProcessors() const = 0;
+  virtual Color getColor() const = 0;
+  virtual size_t getLastTriggerInFrame() const = 0;
+  virtual float getSampleRate() const = 0;
 
   // Setters
   virtual void setVerticalScale(float scale) = 0;
@@ -39,6 +44,7 @@ public:
   virtual void setHorizontalOffset(int offset) = 0;
   virtual void setEnabled(bool enabled) = 0;
   virtual void clearNewFrame() = 0;
+  virtual void setColor(const Color &color) = 0;
 
   // Pipeline
   virtual float getNormalizedSample(size_t index_offset) const = 0;
@@ -70,6 +76,10 @@ private:
   // Horizontal plot settings
   size_t m_horizontal_scale;
   int m_horizontal_offset = 0;
+  size_t m_last_trigger_in_frame = 0;
+
+  // Display color
+  Color m_color = {1.0f, 1.0f, 1.0f, 1.0f};
 
 public:
   // Lifecycle
@@ -87,6 +97,12 @@ public:
   int getHorizontalOffset() const override { return m_horizontal_offset; }
   size_t getUnreadSampleCount() const override { return 0; }
   bool isHardwareChannel() const override { return false; }
+  size_t getLastTriggerInFrame() const override { return m_last_trigger_in_frame; }
+  Color getColor() const override { return m_color; }
+  float getSampleRate() const override {
+    return m_sources.empty() ? Constants::ADC_SAMPLE_RATE_HZ
+                             : m_sources[0]->getSampleRate();
+  }
 
   std::vector<IProcessorControl *> getProcessors() const override {
     std::vector<IProcessorControl *> list;
@@ -106,6 +122,7 @@ public:
   }
   void setEnabled(bool enabled) override { m_enabled = enabled; }
   void clearNewFrame() override { m_has_new_frame = false; }
+  void setColor(const Color &color) override { m_color = color; }
 
   void addSource(IChannel *source) { m_sources.push_back(source); }
   void addProcessor(std::unique_ptr<IVirtualProcessor> proc) {
@@ -116,18 +133,28 @@ public:
   float getNormalizedSample(size_t /*index_offset*/) const override {
     return 0.0f;
   }
-  void extractAndProcessFrame(size_t /*trigger_idx*/,
-                              size_t /*max_width*/) override {
+  void extractAndProcessFrame(size_t trigger_idx,
+                              size_t max_width) override {
+    size_t half_max = max_width / 2;
+    size_t start = (trigger_idx >= half_max) ? trigger_idx - half_max : 0;
+    m_last_trigger_in_frame = trigger_idx - start;
+
     m_traces.clear();
     for (auto &proc : m_processors) {
       if (proc->isEnabled()) {
-        proc->process(m_sources, m_traces);
+        proc->process(m_sources, m_traces, m_last_trigger_in_frame);
       }
     }
     m_has_new_frame = true;
   }
   void reprocessLastFrame() override {
-    extractAndProcessFrame(0, 0); 
+    m_traces.clear();
+    for (auto &proc : m_processors) {
+      if (proc->isEnabled()) {
+        proc->process(m_sources, m_traces, m_last_trigger_in_frame);
+      }
+    }
+    m_has_new_frame = true;
   }
   void consumeBuffer(size_t /*amount*/) override {}
   void pushRawBytes(const uint8_t * /*data*/, size_t /*size*/) override {}
@@ -140,7 +167,11 @@ public:
       static std::vector<float> empty; 
       return empty; 
   }
-  void updateTriggerPoint(size_t /*idx*/) override {}
+  void updateTriggerPoint(size_t idx) override {
+    size_t half_max = 16384 / 2;
+    size_t start = (idx >= half_max) ? idx - half_max : 0;
+    m_last_trigger_in_frame = idx - start;
+  }
 };
 
 // Encapsulates the acquisition and processing pipeline for a single hardware
@@ -166,6 +197,9 @@ private:
   bool m_enabled = true;
   bool m_has_new_frame = false;
 
+  // Display color
+  Color m_color = {1.0f, 1.0f, 1.0f, 1.0f};
+
 public:
   // Lifecycle
   Channel(const std::string &label, size_t buffer_size, size_t horizontal_scale)
@@ -185,6 +219,9 @@ public:
     return m_buffer.getUnreadCount();
   }
   bool isHardwareChannel() const override { return true; }
+  size_t getLastTriggerInFrame() const override { return m_last_trigger_in_frame; }
+  Color getColor() const override { return m_color; }
+  float getSampleRate() const override { return Constants::ADC_SAMPLE_RATE_HZ; }
 
   std::vector<IProcessorControl *> getProcessors() const override {
     std::vector<IProcessorControl *> list;
@@ -203,6 +240,7 @@ public:
   }
   void setEnabled(bool enabled) override { m_enabled = enabled; }
   void clearNewFrame() override { m_has_new_frame = false; }
+  void setColor(const Color &color) override { m_color = color; }
 
   // Configuration
   void addProcessor(std::unique_ptr<IProcessor<HardwareT>> proc) {
@@ -261,6 +299,7 @@ public:
     base_trace.domain = Domain::Time;
     base_trace.vertical_scale = m_vertical_scale;
     base_trace.vertical_offset = m_vertical_offset;
+    base_trace.color = m_color;
 
     // Trigger point relative to the extracted frame
     size_t trigger_in_frame = trigger_idx - start;

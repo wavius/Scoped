@@ -6,69 +6,51 @@
 
 namespace Scoped {
 
-/**
- * @brief Enum class for supported window function types.
- */
 enum class WindowType {
-  Rectangular,
-  Hann,
-  Hamming,
-  BlackmanHarris,
-  FlatTop
+  RECTANGULAR,
+  HANN,
+  HAMMING,
+  BLACKMAN_HARRIS,
+  FLAT_TOP
 };
 
-/**
- * @brief Represents a window function object that manages its own coefficients.
- * Automatically regenerates the coefficients whenever the type or size changes.
- */
 class Window {
 private:
   size_t m_size = 0;
-  WindowType m_type = WindowType::Hann;
+  WindowType m_type = WindowType::HANN;
   std::vector<float> m_function;
 
 public:
-  /**
-   * @brief Constructor for a Window object.
-   * @param size Initial number of samples.
-   * @param type Initial window type.
-   */
-  Window(size_t size = 0, WindowType type = WindowType::Hann)
+  // Lifecycle
+  Window(size_t size = 0, WindowType type = WindowType::HANN)
       : m_size(size), m_type(type) {
     if (m_size > 0) {
       generate();
     }
   }
 
-  // --- Getters ---
+  // Accessors
   size_t getSize() const { return m_size; }
   WindowType getType() const { return m_type; }
   const std::vector<float> &getFunction() const { return m_function; }
-
-  /**
-   * @brief Returns the human-readable name of the current window type.
-   */
   std::string getTypeName() const {
     switch (m_type) {
-    case WindowType::Rectangular:
+    case WindowType::RECTANGULAR:
       return "Rectangular";
-    case WindowType::Hann:
+    case WindowType::HANN:
       return "Hann";
-    case WindowType::Hamming:
+    case WindowType::HAMMING:
       return "Hamming";
-    case WindowType::BlackmanHarris:
+    case WindowType::BLACKMAN_HARRIS:
       return "Blackman-Harris";
-    case WindowType::FlatTop:
+    case WindowType::FLAT_TOP:
       return "Flat Top";
     default:
       return "Unknown";
     }
   }
 
-  // --- Setters ---
-  /**
-   * @brief Updates the window size and regenerates the coefficients.
-   */
+  // Setters 
   void setSize(size_t size) {
     if (m_size == size)
       return;
@@ -76,9 +58,6 @@ public:
     generate();
   }
 
-  /**
-   * @brief Updates the window type and regenerates the coefficients.
-   */
   void setType(WindowType type) {
     if (m_type == type)
       return;
@@ -86,9 +65,7 @@ public:
     generate();
   }
 
-  /**
-   * @brief Regenerates the window coefficients based on current members.
-   */
+  // Utilities
   void generate() {
     if (m_size == 0) {
       m_function.clear();
@@ -100,7 +77,7 @@ public:
     }
 
     // Rectangular window is just all ones
-    if (m_type == WindowType::Rectangular) {
+    if (m_type == WindowType::RECTANGULAR) {
       std::fill(m_function.begin(), m_function.end(), 1.0f);
       return;
     }
@@ -111,18 +88,18 @@ public:
       float phase = (2.0f * PI * i) / (static_cast<float>(m_size) - 1.0f);
 
       switch (m_type) {
-      case WindowType::Hann:
+      case WindowType::HANN:
         m_function[i] = 0.5f * (1.0f - std::cos(phase));
         break;
-      case WindowType::Hamming:
+      case WindowType::HAMMING:
         m_function[i] = 0.54f - 0.46f * std::cos(phase);
         break;
-      case WindowType::BlackmanHarris:
+      case WindowType::BLACKMAN_HARRIS:
         m_function[i] = 0.35875f - 0.48829f * std::cos(phase) +
                         0.14128f * std::cos(2.0f * phase) -
                         0.01168f * std::cos(3.0f * phase);
         break;
-      case WindowType::FlatTop:
+      case WindowType::FLAT_TOP:
         m_function[i] = 0.21557895f - 0.41663158f * std::cos(phase) +
                         0.277263158f * std::cos(2.0f * phase) -
                         0.083578947f * std::cos(3.0f * phase) +

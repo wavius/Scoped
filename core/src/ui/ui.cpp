@@ -10,9 +10,9 @@
 #include <string>
 #include <vector>
 
+#include <common/constants.hpp>
 #include <processing/fft_processor.hpp>
 #include <processing/math_processor.hpp>
-#include <common/constants.hpp>
 #include <ui/ui.hpp>
 
 namespace Scoped {
@@ -42,6 +42,69 @@ void setupChannelColormap(ImVec4 color) {
   ImPlot::AddColormap("ChannelMap", gradient, 2);
 
   initialized = true;
+}
+
+bool OscilloscopeUI::drawSliderFloatWithInput(const char* label, float* v, float v_min, float v_max, const char* format, bool add_spacing) {
+  bool changed = false;
+  if (add_spacing) {
+    ImGui::Spacing();
+  }
+  ImGui::Text("%s", label);
+  ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
+  
+  std::string slider_id = std::string("##Slider_") + label;
+  if (ImGui::SliderFloat(slider_id.c_str(), v, v_min, v_max, format)) {
+    changed = true;
+  }
+  
+  ImGui::SameLine();
+  ImGui::SetNextItemWidth(-FLT_MIN);
+  
+  std::string input_id = std::string("##Input_") + label;
+  if (ImGui::InputFloat(input_id.c_str(), v, 0.0f, 0.0f, format)) {
+    *v = std::clamp(*v, v_min, v_max);
+    changed = true;
+  }
+  return changed;
+}
+
+bool OscilloscopeUI::drawSliderIntWithInput(const char* label, int* v, int v_min, int v_max, const char* format, bool add_spacing) {
+  bool changed = false;
+  if (add_spacing) {
+    ImGui::Spacing();
+  }
+  ImGui::Text("%s", label);
+  ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
+  
+  std::string slider_id = std::string("##Slider_") + label;
+  if (ImGui::SliderInt(slider_id.c_str(), v, v_min, v_max, format)) {
+    changed = true;
+  }
+  
+  ImGui::SameLine();
+  ImGui::SetNextItemWidth(-FLT_MIN);
+  
+  std::string input_id = std::string("##Input_") + label;
+  if (ImGui::InputInt(input_id.c_str(), v, 0, 0)) {
+    *v = std::clamp(*v, v_min, v_max);
+    changed = true;
+  }
+  return changed;
+}
+
+bool OscilloscopeUI::drawCombo(const char* label, int* current_item, const char* const items[], int items_count, bool add_spacing) {
+  bool changed = false;
+  if (add_spacing) {
+    ImGui::Spacing();
+  }
+  ImGui::Text("%s", label);
+  ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+  
+  std::string combo_id = std::string("##Combo_") + label;
+  if (ImGui::Combo(combo_id.c_str(), current_item, items, items_count)) {
+    changed = true;
+  }
+  return changed;
 }
 
 OscilloscopeUI::OscilloscopeUI(size_t display_width, size_t display_height)
@@ -397,42 +460,18 @@ void OscilloscopeUI::drawModeCombo(Oscilloscope &osc) {
 void OscilloscopeUI::drawHorizontalControls(IChannel &channel,
                                             Oscilloscope &osc) {
   int samples = static_cast<int>(channel.getHorizontalScale());
-
-  ImGui::Text("Horizontal Scale");
-  ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-  if (ImGui::SliderInt("##Horizontal Scale", &samples, 256, 16384,
-                       "%d samples")) {
+  if (drawSliderIntWithInput("Horizontal Scale", &samples, 256, 16384, "%d samples", false)) {
     channel.setHorizontalScale(static_cast<size_t>(samples));
     osc.forceReprocess();
   }
-  ImGui::SameLine();
-  ImGui::SetNextItemWidth(-FLT_MIN);
-  if (ImGui::InputInt("##HScaleInput", &samples, 0, 0)) {
-    channel.setHorizontalScale(
-        static_cast<size_t>(std::clamp(samples, 256, 16384)));
-    osc.forceReprocess();
-  }
 
-  ImGui::Spacing();
-  ImGui::Text("Horizontal Offset");
   int h_offset = channel.getHorizontalOffset();
-
-  // Dynamic limits: how far can we pan before the window edge hits the buffer
-  // edge?
   int capture_width = static_cast<int>(osc.getMaxCaptureWidth());
   int visible_width = static_cast<int>(channel.getHorizontalScale());
   int max_offset = std::max(0, (capture_width - visible_width) / 2);
 
-  ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-  if (ImGui::SliderInt("##Horizontal Offset", &h_offset, -max_offset,
-                       max_offset, "%d samples")) {
+  if (drawSliderIntWithInput("Horizontal Offset", &h_offset, -max_offset, max_offset, "%d samples", true)) {
     channel.setHorizontalOffset(h_offset);
-    osc.forceReprocess();
-  }
-  ImGui::SameLine();
-  ImGui::SetNextItemWidth(-FLT_MIN);
-  if (ImGui::InputInt("##HOffsetInput", &h_offset, 0, 0)) {
-    channel.setHorizontalOffset(std::clamp(h_offset, -max_offset, max_offset));
     osc.forceReprocess();
   }
 }
@@ -440,33 +479,15 @@ void OscilloscopeUI::drawHorizontalControls(IChannel &channel,
 // TODO: Change this to voltage division instead of Scale
 void OscilloscopeUI::drawVerticalControls(IChannel &channel,
                                           Oscilloscope &osc) {
-  ImGui::Text("Vertical Scale");
   float scale = channel.getVerticalScale();
-  ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-  if (ImGui::SliderFloat("##Vertical Scale", &scale, 0.01f, 10.0f, "%.2f")) {
+  if (drawSliderFloatWithInput("Vertical Scale", &scale, 0.01f, 10.0f, "%.2f", false)) {
     channel.setVerticalScale(scale);
     osc.forceReprocess();
   }
-  ImGui::SameLine();
-  ImGui::SetNextItemWidth(-FLT_MIN);
-  if (ImGui::InputFloat("##VScaleInput", &scale, 0, 0, "%.1f")) {
-    channel.setVerticalScale(std::clamp(scale, 0.01f, 10.0f));
-    osc.forceReprocess();
-  }
 
-  ImGui::Spacing();
-  ImGui::Text("Vertical Offset");
   float offset = channel.getVerticalOffset();
-  ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-  if (ImGui::SliderFloat("##Vertical Offset", &offset, -255.0f, 255.0f,
-                         "%.1f")) {
+  if (drawSliderFloatWithInput("Vertical Offset", &offset, -255.0f, 255.0f, "%.1f", true)) {
     channel.setVerticalOffset(offset);
-    osc.forceReprocess();
-  }
-  ImGui::SameLine();
-  ImGui::SetNextItemWidth(-FLT_MIN);
-  if (ImGui::InputFloat("##VOffsetInput", &offset, 0, 0, "%.1f")) {
-    channel.setVerticalOffset(std::clamp(offset, -255.0f, 255.0f));
     osc.forceReprocess();
   }
 }
@@ -484,152 +505,93 @@ void OscilloscopeUI::drawFFTControls(Oscilloscope &osc) {
         continue;
       }
 
+      auto *fft_proc = dynamic_cast<FFTProcessor *>(processor);
+      if (!fft_proc) {
+        continue;
+      }
+
       found_fft = true;
 
       // Color coded label matching Trace
-      ImVec4 label_color = toImVec4(processor->getColor());
+      ImVec4 label_color = toImVec4(fft_proc->getColor());
 
-      bool enabled = processor->isEnabled();
+      bool enabled = fft_proc->isEnabled();
       ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
       if (ImGui::Checkbox("##Enabled", &enabled)) {
-        processor->setEnabled(enabled);
+        fft_proc->setEnabled(enabled);
       }
       ImGui::PopStyleVar();
       ImGui::SameLine();
 
-      ImGui::TextColored(label_color, "%s", processor->getName().c_str());
+      ImGui::TextColored(label_color, "%s", fft_proc->getName().c_str());
       ImGui::Spacing();
 
-      float scale = processor->getVerticalScale();
-      ImGui::Text("Vertical Scale");
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderFloat("##Scale", &scale, 0.01f, 10.00f, "%.2f")) {
-        processor->setVerticalScale(scale);
-        osc.forceReprocess();
-      }
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputFloat("##ScaleInput", &scale, 0, 0, "%.2f")) {
-        processor->setVerticalScale(std::clamp(scale, 0.01f, 10.0f));
+      float scale = fft_proc->getVerticalScale();
+      if (drawSliderFloatWithInput("Vertical Scale", &scale, 0.01f, 10.00f, "%.2f", false)) {
+        fft_proc->setVerticalScale(scale);
         osc.forceReprocess();
       }
 
-      float offset = processor->getVerticalOffset();
-      ImGui::Text("Vertical Offset");
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderFloat("##Offset", &offset, -500.0f, 500.0f, "%.1f")) {
-        processor->setVerticalOffset(offset);
-        osc.forceReprocess();
-      }
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputFloat("##OffsetInput", &offset, 0, 0, "%.1f")) {
-        processor->setVerticalOffset(std::clamp(offset, -500.0f, 500.0f));
+      float offset = fft_proc->getVerticalOffset();
+      if (drawSliderFloatWithInput("Vertical Offset", &offset, -500.0f, 500.0f, "%.1f", true)) {
+        fft_proc->setVerticalOffset(offset);
         osc.forceReprocess();
       }
 
-      auto *fft_proc = dynamic_cast<FFTProcessor<unsigned char> *>(processor);
-      if (fft_proc) {
-        ImGui::Text("Representation");
-        int selected_mode = fft_proc->getIsModeLinear() ? 0 : 1;
-        const char *modes[] = {"Linear", "Decibel"};
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::Combo("##Representation", &selected_mode, modes, 2)) {
-          fft_proc->setIsModeLinear(selected_mode == 0);
-          osc.forceReprocess();
-        }
+      int fft_size = static_cast<int>(fft_proc->getWindowSize());
+      int num_bins = fft_size / 2;
+      int h_scale = static_cast<int>(fft_proc->getHorizontalScale());
+      if (h_scale == 0 || h_scale > num_bins)
+        h_scale = num_bins;
+      if (drawSliderIntWithInput("Horizontal Scale", &h_scale, 2, num_bins, "%d bins", false)) {
+        fft_proc->setHorizontalScale(static_cast<size_t>(h_scale));
+        osc.forceReprocess();
+      }
 
-        // Window Type Selection
-        ImGui::Text("Window Function");
-        const char *window_types[] = {"Rectangular", "Hann", "Hamming",
-                                      "Blackman-Harris", "Flat Top"};
-        int current_type = 0;
-        std::string current_name = fft_proc->getWindowTypeName();
-        for (int i = 0; i < 5; i++) {
-          if (current_name == window_types[i]) {
-            current_type = i;
-            break;
-          }
-        }
+      int h_offset = static_cast<int>(fft_proc->getHorizontalOffset());
+      int max_offset = std::max(1, num_bins - h_scale);
+      if (h_offset > max_offset) {
+        h_offset = max_offset;
+        fft_proc->setHorizontalOffset(static_cast<size_t>(h_offset));
+      }
+      if (drawSliderIntWithInput("Horizontal Offset", &h_offset, 0, max_offset, "%d bins", true)) {
+        fft_proc->setHorizontalOffset(static_cast<size_t>(h_offset));
+        osc.forceReprocess();
+      }
 
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::Combo("##WindowType", &current_type, window_types, 5)) {
-          fft_proc->setWindowType(current_type);
-          osc.forceReprocess();
-        }
+      int selected_mode = fft_proc->getIsModeLinear() ? 0 : 1;
+      const char *modes[] = {"Linear", "Decibel"};
+      if (drawCombo("Representation", &selected_mode, modes, 2, true)) {
+        fft_proc->setIsModeLinear(selected_mode == 0);
+        osc.forceReprocess();
+      }
 
-        float smoothing_factor = fft_proc->getSmoothingFactor();
-        ImGui::Text("Smoothing");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-        if (ImGui::SliderFloat("##Smoothing", &smoothing_factor, 0.0f, 1.00f,
-                               "%.2f")) {
-          fft_proc->setSmoothingFactor(smoothing_factor);
-          osc.forceReprocess();
+      // Window Type Selection
+      const char *window_types[] = {"Rectangular", "Hann", "Hamming",
+                                    "Blackman-Harris", "Flat Top"};
+      int current_type = 0;
+      std::string current_name = fft_proc->getWindowTypeName();
+      for (int i = 0; i < 5; i++) {
+        if (current_name == window_types[i]) {
+          current_type = i;
+          break;
         }
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::InputFloat("##SmoothingInput", &smoothing_factor, 0, 0,
-                              "%.2f")) {
-          fft_proc->setSmoothingFactor(
-              std::clamp(smoothing_factor, 0.0f, 1.0f));
-          osc.forceReprocess();
-        }
+      }
 
-        int fft_size = static_cast<int>(fft_proc->getWindowSize());
-        ImGui::Text("Resolution");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-        if (ImGui::SliderInt("##SampleCount", &fft_size, 256, 16384,
-                             "%d samples")) {
-          fft_proc->setWindowSize(static_cast<size_t>(fft_size));
-          osc.forceReprocess();
-        }
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::InputInt("##ResolutionInput", &fft_size, 0, 0)) {
-          fft_proc->setWindowSize(
-              static_cast<size_t>(std::clamp(fft_size, 256, 16384)));
-          osc.forceReprocess();
-        }
+      if (drawCombo("Window Function", &current_type, window_types, 5, true)) {
+        fft_proc->setWindowType(current_type);
+        osc.forceReprocess();
+      }
 
-        int num_bins = fft_size / 2;
-        int h_scale = static_cast<int>(processor->getHorizontalScale());
-        if (h_scale == 0 || h_scale > num_bins)
-          h_scale = num_bins;
-        ImGui::Text("Horizontal Scale");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-        if (ImGui::SliderInt("##FFTHorizontalScale", &h_scale, 2, num_bins,
-                             "%d bins")) {
-          processor->setHorizontalScale(static_cast<size_t>(h_scale));
-          osc.forceReprocess();
-        }
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::InputInt("##FFTHScaleInput", &h_scale, 0, 0)) {
-          processor->setHorizontalScale(
-              static_cast<size_t>(std::clamp(h_scale, 2, num_bins)));
-          osc.forceReprocess();
-        }
+      float smoothing_factor = fft_proc->getSmoothingFactor();
+      if (drawSliderFloatWithInput("Smoothing", &smoothing_factor, 0.0f, 1.00f, "%.2f", true)) {
+        fft_proc->setSmoothingFactor(smoothing_factor);
+        osc.forceReprocess();
+      }
 
-        int h_offset = static_cast<int>(processor->getHorizontalOffset());
-        int max_offset = std::max(1, num_bins - h_scale);
-        if (h_offset > max_offset) {
-          h_offset = max_offset;
-          processor->setHorizontalOffset(static_cast<size_t>(h_offset));
-        }
-        ImGui::Text("Horizontal Offset");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-        if (ImGui::SliderInt("##FFTHorizontalOffset", &h_offset, 0, max_offset,
-                             "%d bins")) {
-          processor->setHorizontalOffset(static_cast<size_t>(h_offset));
-          osc.forceReprocess();
-        }
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::InputInt("##FFTHOffsetInput", &h_offset, 0, 0)) {
-          processor->setHorizontalOffset(
-              static_cast<size_t>(std::clamp(h_offset, 0, max_offset)));
-          osc.forceReprocess();
-        }
+      if (drawSliderIntWithInput("Resolution", &fft_size, 256, 16384, "%d samples", true)) {
+        fft_proc->setWindowSize(static_cast<size_t>(fft_size));
+        osc.forceReprocess();
       }
 
       ImGui::Spacing();
@@ -673,46 +635,20 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
       ImGui::Spacing();
 
       float scale = processor->getVerticalScale();
-      ImGui::Text("Vertical Scale");
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderFloat("##Scale", &scale, 0.01f, 10.00f, "%.2f")) {
+      if (drawSliderFloatWithInput("Vertical Scale", &scale, 0.01f, 10.00f, "%.2f", false)) {
         processor->setVerticalScale(scale);
-        osc.forceReprocess();
-      }
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputFloat("##ScaleInput", &scale, 0, 0, "%.2f")) {
-        processor->setVerticalScale(std::clamp(scale, 0.01f, 10.0f));
         osc.forceReprocess();
       }
 
       float offset = processor->getVerticalOffset();
-      ImGui::Text("Vertical Offset");
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderFloat("##Offset", &offset, -500.0f, 500.0f, "%.1f")) {
+      if (drawSliderFloatWithInput("Vertical Offset", &offset, -500.0f, 500.0f, "%.1f", true)) {
         processor->setVerticalOffset(offset);
-        osc.forceReprocess();
-      }
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputFloat("##OffsetInput", &offset, 0, 0, "%.1f")) {
-        processor->setVerticalOffset(std::clamp(offset, -500.0f, 500.0f));
         osc.forceReprocess();
       }
 
       int h_scale = static_cast<int>(processor->getHorizontalScale());
-      ImGui::Text("Horizontal Scale");
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderInt("##Horizontal Scale", &h_scale, 256, 16384,
-                           "%d samples")) {
+      if (drawSliderIntWithInput("Horizontal Scale", &h_scale, 256, 16384, "%d samples", false)) {
         processor->setHorizontalScale(static_cast<size_t>(h_scale));
-        osc.forceReprocess();
-      }
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputInt("##HScaleInput", &h_scale, 0, 0)) {
-        processor->setHorizontalScale(
-            static_cast<size_t>(std::clamp(h_scale, 256, 16384)));
         osc.forceReprocess();
       }
 
@@ -720,19 +656,8 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
       int capture_width = static_cast<int>(osc.getMaxCaptureWidth());
       int max_offset = std::max(0, (capture_width - h_scale) / 2);
 
-      ImGui::Spacing();
-      ImGui::Text("Horizontal Offset");
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderInt("##Horizontal Offset", &h_offset, -max_offset,
-                           max_offset, "%d samples")) {
+      if (drawSliderIntWithInput("Horizontal Offset", &h_offset, -max_offset, max_offset, "%d samples", true)) {
         processor->setHorizontalOffset(static_cast<size_t>(h_offset));
-        osc.forceReprocess();
-      }
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputInt("##HOffsetInput", &h_offset, 0, 0)) {
-        processor->setHorizontalOffset(
-            static_cast<size_t>(std::clamp(h_offset, -max_offset, max_offset)));
         osc.forceReprocess();
       }
 
@@ -744,9 +669,7 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
         const char *op_names[] = {"Add",    "Subtract",  "Multiply",
                                   "Invert", "Integrate", "Differentiate"};
         int current_op = static_cast<int>(math_proc->getOperation());
-        ImGui::Text("Operation");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::Combo("##Operation", &current_op, op_names, 6)) {
+        if (drawCombo("Operation", &current_op, op_names, 6, true)) {
           math_proc->setOperation(static_cast<MathOperation>(current_op));
           osc.forceReprocess();
         }
@@ -770,11 +693,7 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
           }
         }
 
-        // Source 1 Selection
-        ImGui::Text("Source 1");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::Combo("##Source1", &src1_idx, channel_labels_cstr.data(),
-                         static_cast<int>(num_channels))) {
+        if (drawCombo("Source 1", &src1_idx, channel_labels_cstr.data(), static_cast<int>(num_channels), true)) {
           math_proc->setSource1Label(channel_labels[src1_idx]);
           osc.forceReprocess();
         }
@@ -783,10 +702,7 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
         if (math_proc->getOperation() != MathOperation::INVERT &&
             math_proc->getOperation() != MathOperation::INTEGRATE &&
             math_proc->getOperation() != MathOperation::DIFFERENTIATE) {
-          ImGui::Text("Source 2");
-          ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-          if (ImGui::Combo("##Source2", &src2_idx, channel_labels_cstr.data(),
-                           static_cast<int>(num_channels))) {
+          if (drawCombo("Source 2", &src2_idx, channel_labels_cstr.data(), static_cast<int>(num_channels), true)) {
             math_proc->setSource2Label(channel_labels[src2_idx]);
             osc.forceReprocess();
           }
@@ -795,9 +711,7 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
         // Smoothing control for differentiation
         if (math_proc->getOperation() == MathOperation::DIFFERENTIATE) {
           int radius = static_cast<int>(math_proc->getDiffSmoothRadius());
-          ImGui::Text("Smoothing Radius");
-          ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-          if (ImGui::SliderInt("##SmoothRadius", &radius, 0, 128, "%d samples")) {
+          if (drawSliderIntWithInput("Smoothing Radius", &radius, 0, 128, "%d samples", true)) {
             math_proc->setDiffSmoothRadius(static_cast<size_t>(radius));
             osc.forceReprocess();
           }
@@ -1054,8 +968,8 @@ void OscilloscopeUI::drawChannelWindow(Oscilloscope &osc) {
     ImGui::TextColored(label_color, "%s", channel->getLabel().c_str());
     ImGui::Spacing();
 
-    drawHorizontalControls(*channel, osc);
     drawVerticalControls(*channel, osc);
+    drawHorizontalControls(*channel, osc);
 
     ImGui::Spacing();
     ImGui::Separator();

@@ -42,6 +42,11 @@ private:
   void drawFFTControls(Oscilloscope &osc);
   void drawMathControls(Oscilloscope &osc);
 
+  // Common UI Control Helpers
+  bool drawSliderFloatWithInput(const char* label, float* v, float v_min, float v_max, const char* format = "%.2f", bool add_spacing = true);
+  bool drawSliderIntWithInput(const char* label, int* v, int v_min, int v_max, const char* format = "%d", bool add_spacing = true);
+  bool drawCombo(const char* label, int* current_item, const char* const items[], int items_count, bool add_spacing = true);
+
   // Dockable v2 layout
   void drawDockSpace();
   void buildDefaultDockLayout(ImGuiID dockspace_id,

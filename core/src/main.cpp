@@ -103,9 +103,9 @@ int main(int, char **) {
   vc2->addSource(ch2.get());
 
   // FFT processors
-  auto fft_p1 = std::make_unique<Scoped::FFTProcessor<unsigned char>>(
+  auto fft_p1 = std::make_unique<Scoped::FFTProcessor>(
       "FFT1", ui.getDisplayHeight(), 16384);
-  auto fft_p2 = std::make_unique<Scoped::FFTProcessor<unsigned char>>(
+  auto fft_p2 = std::make_unique<Scoped::FFTProcessor>(
       "FFT2", ui.getDisplayHeight(), 16384);
   fft_p1->setColor(Scoped::Color{Scoped::Colors::FFT1.x, Scoped::Colors::FFT1.y,
                                  Scoped::Colors::FFT1.z,

@@ -11,8 +11,7 @@
 namespace Scoped {
 
 // Class to apply FFT to channel
-template <typename HardwareT>
-class FFTProcessor : public IProcessor<HardwareT> {
+class FFTProcessor : public IProcessor {
 private:
   bool m_enabled = false;
   std::string m_name = "FFT";
@@ -83,7 +82,7 @@ public:
   void setColor(const Color &color) override { m_color = color; }
 
   // Pipeline
-  void process(const std::vector<HardwareT> &raw_frame,
+  void process(const std::vector<float> &raw_frame,
                std::vector<Trace> &traces) override {
 
     size_t frame_size = std::min(m_fft_size, raw_frame.size());
@@ -100,7 +99,7 @@ public:
     float mean = calculateMean(raw_frame);
     for (size_t i = 0; i < frame_size; i++) {
       centered_frame[i] =
-          (static_cast<float>(raw_frame[i]) - mean) * window_func[i];
+          (raw_frame[i] - mean) * window_func[i];
     }
 
     // Real to complex Fourier Transform
@@ -215,7 +214,7 @@ public:
     }
   }
 
-  float calculateMean(const std::vector<HardwareT> &frame) {
+  float calculateMean(const std::vector<float> &frame) {
     double sum = 0;
     for (auto i : frame) {
       sum += i;

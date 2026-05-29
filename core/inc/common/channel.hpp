@@ -180,7 +180,7 @@ template <typename HardwareT> class Channel : public IChannel {
 private:
   std::string m_label;
   CircularBuffer<HardwareT> m_buffer;
-  std::vector<std::unique_ptr<IProcessor<HardwareT>>> m_processors;
+  std::vector<std::unique_ptr<IProcessor>> m_processors;
 
   // Vertical (voltage)
   float m_vertical_scale = 1.0f;
@@ -243,7 +243,7 @@ public:
   void setColor(const Color &color) override { m_color = color; }
 
   // Configuration
-  void addProcessor(std::unique_ptr<IProcessor<HardwareT>> proc) {
+  void addProcessor(std::unique_ptr<IProcessor> proc) {
     m_processors.push_back(std::move(proc));
   }
   void clearProcessors() { m_processors.clear(); }
@@ -326,7 +326,7 @@ public:
     // 4. Run processors on the full raw frame
     for (auto &proc : m_processors) {
       if (proc->isEnabled()) {
-        proc->process(m_raw_frame, m_traces);
+        proc->process(m_float_frame, m_traces);
       }
     }
 
@@ -364,9 +364,15 @@ public:
 
     m_traces.push_back(std::move(base_trace));
 
+    // Ensure m_float_frame is correct size and populated
+    m_float_frame.resize(actual_width);
+    for (size_t i = 0; i < actual_width; ++i) {
+      m_float_frame[i] = static_cast<float>(m_raw_frame[i]);
+    }
+
     for (auto &proc : m_processors) {
       if (proc->isEnabled()) {
-        proc->process(m_raw_frame, m_traces);
+        proc->process(m_float_frame, m_traces);
       }
     }
 

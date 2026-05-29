@@ -7,7 +7,7 @@
 
 ## FFT
 
-- Add vertical scale and offset
+- Fix vertical offset
 
 ## Hardware
 

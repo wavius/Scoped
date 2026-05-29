@@ -53,14 +53,14 @@ public:
 };
 
 // Base class for signal processing stages.
-template <typename HardwareT> class IProcessor : public IProcessorControl {
+class IProcessor : public IProcessorControl {
 public:
   // Lifecycle
   virtual ~IProcessor() = default;
 
   // Pipeline
   // Applies the processing operation and generates/mutates traces.
-  virtual void process(const std::vector<HardwareT> &raw_frame,
+  virtual void process(const std::vector<float> &raw_frame,
                        std::vector<Trace> &traces) = 0;
 };
 

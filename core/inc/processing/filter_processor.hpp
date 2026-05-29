@@ -6,10 +6,52 @@
 #include <processing/iprocessor.hpp>
 #include <string>
 #include <vector>
+#include <common/constants.hpp>
 
 namespace Scoped {
 
-class FilterProcessor : public IVirtualProcessor {
+enum class FilterType { Lowpass, Highpass, Bandpass, Bandstop };
+enum class FilterResponse { Butterworth, Chebyshev, Bessel, Basic };
+
+class Biquad {
+private:
+  // Coefficients
+  float m_a0 = 0.0f, m_a1 = 0.0f, m_a2 = 0.0f;
+  float m_b1 = 0.0f, m_b2 = 0.0f;
+
+  // Filter state
+  float m_x1 = 0.0f, m_x2 = 0.0f;
+  float m_y1 = 0.0f, m_y2 = 0.0f;
+
+  // Config
+  float m_cutoff = 0.0f;
+  float m_center_frequency = 0.0f;
+  float m_quality_factor = 0.707f;
+  float m_gain = 1.0f;
+  float m_order = 1.0f;
+  float m_sample_rate = Constants::ADC_SAMPLE_RATE_HZ;
+
+public:
+  Biquad() = default;
+
+  // Setters
+  void setCutoff(float cutoff) { m_cutoff = cutoff; }
+  void setCenterFrequency(float center_freq) { m_center_frequency = center_freq; }
+  void setQualityFactor(float q) { m_quality_factor = q; }
+  void setGain(float gain) { m_gain = gain; }
+  void setOrder(float order) { m_order = order; }
+  void setSampleRate(float sample_rate) { m_sample_rate = sample_rate; }
+
+  // Accessors
+  float getCutoff() const { return m_cutoff; }
+  float getCenterFrequency() const { return m_center_frequency; }
+  float getQualityFactor() const { return m_quality_factor; }
+  float getGain() const { return m_gain; }
+  float getOrder() const { return m_order; }
+  float getSampleRate() const { return m_sample_rate; }
+};
+
+class FilterProcessor : public IProcessor {
 private:
   bool m_enabled = false;
   std::string m_name;
@@ -46,50 +88,8 @@ public:
   void setColor(const Color &color) override { m_color = color; }
 
   // Pipeline
-  void process(const std::vector<IChannel *> &sources,
-               std::vector<Trace> &traces, size_t trigger_in_frame) override {
-    if (!m_enabled || sources.empty()) {
-      return;
-    }
-
-    auto *source1 = sources[0];
-    if (!source1) {
-      return;
-    }
-
-    const auto &frame = source1->getBuffer();
-    if (frame.empty()) {
-      return;
-    }
-
-    size_t size = frame.size();
-    size_t half_vis = m_horizontal_scale / 2;
-    int offset_val = static_cast<int>(m_horizontal_offset);
-
-    long long center_idx =
-        static_cast<long long>(trigger_in_frame) + offset_val;
-    long long start_idx = center_idx - half_vis;
-
-    size_t time_start = (start_idx < 0) ? 0 : static_cast<size_t>(start_idx);
-    if (time_start >= size)
-      time_start = size - 1;
-
-    size_t time_width = std::min(m_horizontal_scale, size - time_start);
-
-    Trace filter_trace;
-    filter_trace.name = m_name + " (" + source1->getLabel() + ")";
-    filter_trace.domain = Domain::Time;
-    filter_trace.vertical_scale = m_vertical_scale;
-    filter_trace.vertical_offset = m_vertical_offset;
-    filter_trace.color = m_color;
-
-    filter_trace.data.resize(time_width);
-    for (size_t i = 0; i < time_width; ++i) {
-      filter_trace.data[i] = frame[time_start + i];
-    }
-
-    traces.push_back(std::move(filter_trace));
-  }
+  void process(const std::vector<float> &raw_frame,
+               std::vector<Trace> &traces) override {}
 };
 
 } // namespace Scoped

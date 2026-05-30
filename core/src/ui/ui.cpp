@@ -15,6 +15,54 @@
 #include <processing/math_processor.hpp>
 #include <ui/ui.hpp>
 
+namespace {
+    template <typename T>
+    void drawComponentHeader(T* component, const std::string& name, Scoped::Oscilloscope& osc, size_t default_h_scale = 1024) {
+        ImVec4 label_color = Scoped::toImVec4(component->getColor());
+        bool enabled = component->isEnabled();
+        
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
+        if (ImGui::Checkbox("##Enabled", &enabled)) {
+            component->setEnabled(enabled);
+        }
+        ImGui::PopStyleVar();
+        ImGui::SameLine();
+        
+        ImGui::TextColored(label_color, "%s", name.c_str());
+        ImGui::SameLine(ImGui::GetWindowWidth() - 70.0f);
+        
+        std::string reset_label = "Reset##" + name;
+        if (ImGui::Button(reset_label.c_str())) {
+            component->setVerticalScale(1.0f);
+            component->setVerticalOffset(0.0f);
+            component->setHorizontalScale(default_h_scale);
+            component->setHorizontalOffset(0);
+            
+            if constexpr (std::is_same_v<std::remove_cv_t<T>, Scoped::FFTProcessor>) {
+                component->setIsModeLinear(false);
+                component->setSmoothingFactor(0.0f);
+            }
+            osc.forceReprocess();
+        }
+        ImGui::Spacing();
+    }
+
+    template <typename T, typename DrawSliderFunc>
+    void drawVerticalControlsT(T* target, Scoped::Oscilloscope& osc, float v_min, float v_max, const char* format_offset, DrawSliderFunc drawSlider) {
+        float scale = target->getVerticalScale();
+        if (drawSlider("Vertical Scale", &scale, 0.01f, 10.0f, "%.2f", false)) {
+            target->setVerticalScale(scale);
+            osc.forceReprocess();
+        }
+        
+        float offset = target->getVerticalOffset();
+        if (drawSlider("Vertical Offset", &offset, v_min, v_max, format_offset, true)) {
+            target->setVerticalOffset(offset);
+            osc.forceReprocess();
+        }
+    }
+}
+
 namespace Scoped {
 
 // colors
@@ -679,17 +727,10 @@ void OscilloscopeUI::drawHorizontalControls(IChannel &channel,
 // TODO: Change this to voltage division instead of Scale
 void OscilloscopeUI::drawVerticalControls(IChannel &channel,
                                           Oscilloscope &osc) {
-  float scale = channel.getVerticalScale();
-  if (drawSliderFloatWithInput("Vertical Scale", &scale, 0.01f, 10.0f, "%.2f", false)) {
-    channel.setVerticalScale(scale);
-    osc.forceReprocess();
-  }
-
-  float offset = channel.getVerticalOffset();
-  if (drawSliderFloatWithInput("Vertical Offset", &offset, -255.0f, 255.0f, "%.1f", true)) {
-    channel.setVerticalOffset(offset);
-    osc.forceReprocess();
-  }
+  auto drawSlider = [&](const char* label, float* v, float v_min, float v_max, const char* format, bool add_spacing) {
+      return this->drawSliderFloatWithInput(label, v, v_min, v_max, format, add_spacing);
+  };
+  drawVerticalControlsT(&channel, osc, -255.0f, 255.0f, "%.1f", drawSlider);
 }
 
 // Control pannels
@@ -712,42 +753,12 @@ void OscilloscopeUI::drawFFTControls(Oscilloscope &osc) {
 
       found_fft = true;
 
-      // Color coded label matching Trace
-      ImVec4 label_color = toImVec4(fft_proc->getColor());
-
-      bool enabled = fft_proc->isEnabled();
-      ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
-      if (ImGui::Checkbox("##Enabled", &enabled)) {
-        fft_proc->setEnabled(enabled);
-      }
-      ImGui::PopStyleVar();
-      ImGui::SameLine();
-
-      ImGui::TextColored(label_color, "%s", fft_proc->getName().c_str());
-      ImGui::SameLine(ImGui::GetWindowWidth() - 70.0f);
-      std::string reset_label = "Reset##" + fft_proc->getName();
-      if (ImGui::Button(reset_label.c_str())) {
-        fft_proc->setVerticalScale(1.0f);
-        fft_proc->setVerticalOffset(0.0f);
-        fft_proc->setHorizontalScale(fft_proc->getWindowSize() / 2);
-        fft_proc->setHorizontalOffset(0);
-        fft_proc->setIsModeLinear(false);
-        fft_proc->setSmoothingFactor(0.0f);
-        osc.forceReprocess();
-      }
-      ImGui::Spacing();
-
-      float scale = fft_proc->getVerticalScale();
-      if (drawSliderFloatWithInput("Vertical Scale", &scale, 0.01f, 10.00f, "%.2f", false)) {
-        fft_proc->setVerticalScale(scale);
-        osc.forceReprocess();
-      }
-
-      float offset = fft_proc->getVerticalOffset();
-      if (drawSliderFloatWithInput("Vertical Offset", &offset, -500.0f, 500.0f, "%.1f", true)) {
-        fft_proc->setVerticalOffset(offset);
-        osc.forceReprocess();
-      }
+      drawComponentHeader(fft_proc, fft_proc->getName(), osc, fft_proc->getWindowSize() / 2);
+      
+      auto drawSlider = [&](const char* label, float* v, float v_min, float v_max, const char* format, bool add_spacing) {
+          return this->drawSliderFloatWithInput(label, v, v_min, v_max, format, add_spacing);
+      };
+      drawVerticalControlsT(fft_proc, osc, -500.0f, 500.0f, "%.1f", drawSlider);
 
       int fft_size = static_cast<int>(fft_proc->getWindowSize());
       int num_bins = fft_size / 2;
@@ -831,40 +842,12 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
 
       found_math = true;
 
-      // Color coded label matching Trace
-      ImVec4 label_color = toImVec4(processor->getColor());
-
-      bool enabled = processor->isEnabled();
-      ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
-      if (ImGui::Checkbox("##Enabled", &enabled)) {
-        processor->setEnabled(enabled);
-      }
-      ImGui::PopStyleVar();
-      ImGui::SameLine();
-
-      ImGui::TextColored(label_color, "%s", processor->getName().c_str());
-      ImGui::SameLine(ImGui::GetWindowWidth() - 70.0f);
-      std::string reset_label = "Reset##" + processor->getName();
-      if (ImGui::Button(reset_label.c_str())) {
-        processor->setVerticalScale(1.0f);
-        processor->setVerticalOffset(0.0f);
-        processor->setHorizontalScale(1024);
-        processor->setHorizontalOffset(0);
-        osc.forceReprocess();
-      }
-      ImGui::Spacing();
-
-      float scale = processor->getVerticalScale();
-      if (drawSliderFloatWithInput("Vertical Scale", &scale, 0.01f, 10.00f, "%.2f", false)) {
-        processor->setVerticalScale(scale);
-        osc.forceReprocess();
-      }
-
-      float offset = processor->getVerticalOffset();
-      if (drawSliderFloatWithInput("Vertical Offset", &offset, -500.0f, 500.0f, "%.1f", true)) {
-        processor->setVerticalOffset(offset);
-        osc.forceReprocess();
-      }
+      drawComponentHeader(processor, processor->getName(), osc);
+      
+      auto drawSlider = [&](const char* label, float* v, float v_min, float v_max, const char* format, bool add_spacing) {
+          return this->drawSliderFloatWithInput(label, v, v_min, v_max, format, add_spacing);
+      };
+      drawVerticalControlsT(processor, osc, -500.0f, 500.0f, "%.1f", drawSlider);
 
       int h_scale = static_cast<int>(processor->getHorizontalScale());
       if (drawSliderIntWithInput("Horizontal Scale", &h_scale, 256, 16384, "%d samples", false)) {
@@ -1175,28 +1158,7 @@ void OscilloscopeUI::drawChannelWindow(Oscilloscope &osc) {
   for (auto &channel : osc.getHardwareChannels()) {
     ImGui::PushID(channel->getLabel().c_str());
 
-    ImVec4 label_color = toImVec4(channel->getColor());
-
-    bool enabled = channel->isEnabled();
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
-    if (ImGui::Checkbox("##Enabled", &enabled)) {
-      channel->setEnabled(enabled);
-    }
-    ImGui::PopStyleVar();
-    ImGui::SameLine();
-
-    ImGui::TextColored(label_color, "%s", channel->getLabel().c_str());
-    ImGui::SameLine(ImGui::GetWindowWidth() - 70.0f);
-    std::string reset_label = "Reset##" + channel->getLabel();
-    if (ImGui::Button(reset_label.c_str())) {
-      channel->setVerticalScale(1.0f);
-      channel->setVerticalOffset(0.0f);
-      channel->setHorizontalScale(1024);
-      channel->setHorizontalOffset(0);
-      osc.forceReprocess();
-    }
-    ImGui::Spacing();
-
+    drawComponentHeader(channel.get(), channel->getLabel(), osc);
     drawVerticalControls(*channel, osc);
     drawHorizontalControls(*channel, osc);
 

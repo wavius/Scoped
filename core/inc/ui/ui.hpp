@@ -23,6 +23,8 @@ private:
   std::vector<float> m_normalized_freq;
   bool m_show_trigger_line = false;
   bool m_reset_dock_layout = true;
+  IChannel* m_active_channel = nullptr;
+  IProcessorControl* m_active_processor = nullptr;
 
   // Data pipeline — runs once per new frame
   void processNewFrames(Oscilloscope &osc);
@@ -33,6 +35,7 @@ private:
   void drawTriggerMarker(const std::string &label, double h_scale, double h_offset,
                          double w, double h, const ImVec4 &color, float y_offset_rect);
   void drawFrequencyTraces(Oscilloscope &osc);
+  void drawVirtualTimeTraces(Oscilloscope &osc);
   void drawPlotArea(Oscilloscope &osc);
 
   // Control helpers

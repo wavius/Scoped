@@ -1,12 +1,11 @@
 #pragma once
 
-#include <algorithm>
+#include <cmath>
 #include <common/channel.hpp>
 #include <common/constants.hpp>
 #include <processing/iprocessor.hpp>
 #include <string>
 #include <vector>
-#include <common/constants.hpp>
 
 namespace Scoped {
 
@@ -36,7 +35,9 @@ public:
 
   // Setters
   void setCutoff(float cutoff) { m_cutoff = cutoff; }
-  void setCenterFrequency(float center_freq) { m_center_frequency = center_freq; }
+  void setCenterFrequency(float center_freq) {
+    m_center_frequency = center_freq;
+  }
   void setQualityFactor(float q) { m_quality_factor = q; }
   void setGain(float gain) { m_gain = gain; }
   void setOrder(float order) { m_order = order; }
@@ -49,6 +50,86 @@ public:
   float getGain() const { return m_gain; }
   float getOrder() const { return m_order; }
   float getSampleRate() const { return m_sample_rate; }
+
+  // Pipeline
+  float processSample(float current_input) {
+    float new_output = (m_a0 * current_input) + (m_a1 * m_x1) + (m_a2 * m_x2) -
+                       (m_b1 * m_y1) - (m_b2 * m_y2);
+
+    m_x2 = m_x1;
+    m_x1 = current_input;
+
+    m_y2 = m_y1;
+    m_y1 = new_output;
+
+    return new_output;
+  }
+
+  void calculateCoefficients(FilterType type) {
+    if (m_sample_rate <= 0.0f)
+      return;
+
+    // Convert frequency to radians
+    float w0 = 2.0f * M_PI * m_cutoff / m_sample_rate;
+    float cos_w0 = std::cos(w0);
+    float sin_w0 = std::sin(w0);
+
+    // Alpha determines the resonance (Q)
+    float alpha = sin_w0 / (2.0f * m_quality_factor);
+
+    float b0, b1, b2, a0, a1, a2;
+
+    switch (type) {
+    case FilterType::Lowpass:
+      b0 = (1.0f - cos_w0) / 2.0f;
+      b1 = 1.0f - cos_w0;
+      b2 = (1.0f - cos_w0) / 2.0f;
+      a0 = 1.0f + alpha;
+      a1 = -2.0f * cos_w0;
+      a2 = 1.0f - alpha;
+      break;
+
+    case FilterType::Highpass:
+      b0 = (1.0f + cos_w0) / 2.0f;
+      b1 = -(1.0f + cos_w0);
+      b2 = (1.0f + cos_w0) / 2.0f;
+      a0 = 1.0f + alpha;
+      a1 = -2.0f * cos_w0;
+      a2 = 1.0f - alpha;
+      break;
+
+    case FilterType::Bandpass:
+      // Bandpass (constant 0 dB peak gain)
+      b0 = alpha;
+      b1 = 0.0f;
+      b2 = -alpha;
+      a0 = 1.0f + alpha;
+      a1 = -2.0f * cos_w0;
+      a2 = 1.0f - alpha;
+      break;
+
+    case FilterType::Bandstop:
+      b0 = 1.0f;
+      b1 = -2.0f * cos_w0;
+      b2 = 1.0f;
+      a0 = 1.0f + alpha;
+      a1 = -2.0f * cos_w0;
+      a2 = 1.0f - alpha;
+      break;
+    }
+
+    // Normalize all coefficients so a0 is always 1.0
+    float a0_inv = 1.0f / a0;
+
+    // In audio cookbook, 'b' terms are feedforward, 'a' terms are feedback.
+    // Our struct maps feedforward to m_aX and feedback to m_bX.
+    m_a0 = b0 * a0_inv;
+    m_a1 = b1 * a0_inv;
+    m_a2 = b2 * a0_inv;
+
+    m_b1 = a1 * a0_inv;
+    m_b2 = a2 * a0_inv;
+  }
 };
 
 class FilterProcessor : public IProcessor {
@@ -56,11 +137,30 @@ private:
   bool m_enabled = false;
   std::string m_name;
 
+  FilterType m_filter_type = FilterType::Lowpass;
+  FilterResponse m_response = FilterResponse::Butterworth;
+
+  float m_cutoff = 1000.0f;
+
+  bool m_dirty = true;
+
+  Biquad m_biquad;
+
   float m_vertical_scale = 1.0f;
   float m_vertical_offset = 0.0f;
-  size_t m_horizontal_scale = 1024;
+  size_t m_horizontal_scale = 0;
   size_t m_horizontal_offset = 0;
   Color m_color = {1.0f, 1.0f, 1.0f, 1.0f};
+
+  void updateCoefficients() {
+    if (!m_dirty)
+      return;
+
+    m_biquad.setCutoff(m_cutoff);
+    m_biquad.calculateCoefficients(m_filter_type);
+
+    m_dirty = false;
+  }
 
 public:
   explicit FilterProcessor(const std::string &name,
@@ -77,6 +177,10 @@ public:
   size_t getHorizontalOffset() const override { return m_horizontal_offset; }
   Color getColor() const override { return m_color; }
 
+  FilterType getFilterType() const { return m_filter_type; }
+  FilterResponse getFilterResponse() const { return m_response; }
+  float getCutoff() const { return m_cutoff; }
+
   // Setters
   void setEnabled(bool enabled) override { m_enabled = enabled; }
   void setVerticalScale(float scale) override { m_vertical_scale = scale; }
@@ -87,9 +191,62 @@ public:
   }
   void setColor(const Color &color) override { m_color = color; }
 
+  void setFilterType(FilterType type) {
+    m_filter_type = type;
+    m_dirty = true;
+  }
+  void setFilterResponse(FilterResponse resp) {
+    m_response = resp;
+
+    float q = 0.707f; // Butterworth
+    if (m_response == FilterResponse::Bessel)
+      q = 0.577f;
+    else if (m_response == FilterResponse::Basic)
+      q = 0.5f;
+    else if (m_response == FilterResponse::Chebyshev)
+      q = 1.0f;
+
+    m_biquad.setQualityFactor(q);
+
+    m_dirty = true;
+  }
+  void setCutoff(float cutoff) {
+    m_cutoff = cutoff;
+    m_dirty = true;
+  }
+
   // Pipeline
   void process(const std::vector<float> &raw_frame,
-               std::vector<Trace> &traces) override {}
+               std::vector<Trace> &traces) override {
+    if (!m_enabled || raw_frame.empty())
+      return;
+
+    updateCoefficients();
+
+    std::vector<float> filtered_frame;
+    filtered_frame.reserve(raw_frame.size());
+
+    for (float sample : raw_frame) {
+      filtered_frame.push_back(m_biquad.processSample(sample));
+    }
+
+    Trace filter_trace;
+    filter_trace.name = this->m_name;
+    filter_trace.color = m_color;
+
+    filter_trace.data.resize(filtered_frame.size());
+    for (size_t i = 0; i < filtered_frame.size(); i++) {
+      filter_trace.data[i] = filtered_frame[i];
+    }
+
+    // Scale + offset
+    filter_trace.vertical_scale = m_vertical_scale;
+    filter_trace.vertical_offset = m_vertical_offset;
+    filter_trace.horizontal_scale = m_horizontal_scale;
+    filter_trace.horizontal_offset = static_cast<int>(m_horizontal_offset);
+
+    traces.push_back(std::move(filter_trace));
+  }
 };
 
 } // namespace Scoped

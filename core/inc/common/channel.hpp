@@ -145,6 +145,9 @@ public:
         proc->process(m_sources, m_traces, m_last_trigger_in_frame);
       }
     }
+    for (auto &trace : m_traces) {
+      trace.trigger_index = m_last_trigger_in_frame;
+    }
     m_has_new_frame = true;
   }
   void reprocessLastFrame() override {
@@ -153,6 +156,9 @@ public:
       if (proc->isEnabled()) {
         proc->process(m_sources, m_traces, m_last_trigger_in_frame);
       }
+    }
+    for (auto &trace : m_traces) {
+      trace.trigger_index = m_last_trigger_in_frame;
     }
     m_has_new_frame = true;
   }
@@ -299,6 +305,8 @@ public:
     base_trace.domain = Domain::Time;
     base_trace.vertical_scale = m_vertical_scale;
     base_trace.vertical_offset = m_vertical_offset;
+    base_trace.horizontal_scale = m_horizontal_scale;
+    base_trace.horizontal_offset = m_horizontal_offset;
     base_trace.color = m_color;
 
     // Trigger point relative to the extracted frame
@@ -329,6 +337,9 @@ public:
         proc->process(m_float_frame, m_traces);
       }
     }
+    for (auto &trace : m_traces) {
+      trace.trigger_index = trigger_in_frame;
+    }
 
     m_has_new_frame = true;
   }
@@ -344,6 +355,9 @@ public:
     base_trace.domain = Domain::Time;
     base_trace.vertical_scale = m_vertical_scale;
     base_trace.vertical_offset = m_vertical_offset;
+    base_trace.horizontal_scale = m_horizontal_scale;
+    base_trace.horizontal_offset = m_horizontal_offset;
+    base_trace.color = m_color;
 
     size_t trigger_in_frame = m_last_trigger_in_frame;
     size_t half_vis = m_horizontal_scale / 2;
@@ -374,6 +388,9 @@ public:
       if (proc->isEnabled()) {
         proc->process(m_float_frame, m_traces);
       }
+    }
+    for (auto &trace : m_traces) {
+      trace.trigger_index = trigger_in_frame;
     }
 
     m_has_new_frame = true;

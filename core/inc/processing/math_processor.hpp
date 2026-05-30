@@ -321,19 +321,6 @@ public:
       break;
     }
 
-    size_t half_vis = m_horizontal_scale / 2;
-    int offset_val = static_cast<int>(m_horizontal_offset);
-
-    long long center_idx =
-        static_cast<long long>(trigger_in_frame) + offset_val;
-    long long start_idx = center_idx - half_vis;
-
-    size_t time_start = (start_idx < 0) ? 0 : static_cast<size_t>(start_idx);
-    if (time_start >= size)
-      time_start = size - 1;
-
-    size_t time_width = std::min(m_horizontal_scale, size - time_start);
-
     Trace math_trace;
     math_trace.name =
         m_name + " (" + source1->getLabel() +
@@ -350,12 +337,11 @@ public:
     math_trace.domain = Domain::Time;
     math_trace.vertical_scale = m_vertical_scale;
     math_trace.vertical_offset = m_vertical_offset;
+    math_trace.horizontal_scale = m_horizontal_scale;
+    math_trace.horizontal_offset = static_cast<int>(m_horizontal_offset);
     math_trace.color = m_color;
 
-    math_trace.data.resize(time_width);
-    for (size_t i = 0; i < time_width; ++i) {
-      math_trace.data[i] = m_math_output[time_start + i];
-    }
+    math_trace.data = m_math_output;
 
     traces.push_back(std::move(math_trace));
   }

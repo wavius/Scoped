@@ -35,9 +35,9 @@ private:
   std::vector<float> m_smoothed_data; // Smooothed FFT data
   size_t m_fft_size;                  // Window size for FFT
 
-  float m_vertical_scale = 1.0f;  // Scale factor applied to FFT output
-  float m_vertical_offset = 0.0f; // Vertical offset
-  size_t m_horizontal_scale = 0;  // 0 means auto/full
+  float m_vertical_scale = 1.0f;
+  float m_vertical_offset = 0.0f;
+  size_t m_horizontal_scale = 0; // 0 = auto/full
   size_t m_horizontal_offset = 0;
   Color m_color = {1.0f, 1.0f, 1.0f, 1.0f};
 
@@ -98,8 +98,7 @@ public:
     centered_frame.resize(frame_size);
     float mean = calculateMean(raw_frame);
     for (size_t i = 0; i < frame_size; i++) {
-      centered_frame[i] =
-          (raw_frame[i] - mean) * window_func[i];
+      centered_frame[i] = (raw_frame[i] - mean) * window_func[i];
     }
 
     // Real to complex Fourier Transform
@@ -150,8 +149,7 @@ public:
 
       val = m_smoothed_data[i];
 
-      // Calculate min/max over the entire FFT so scrolling doesn't change the
-      // scale
+      // Calculate min/max over the entire FFT
       max = val > max ? val : max;
       min = val < min ? val : min;
 
@@ -164,7 +162,11 @@ public:
     float range =
         (max - min) > 0.001f ? max - min : 1.0f; // Prevent division by 0
     fft_trace.vertical_scale = (1.0f / range) * m_vertical_scale;
-    fft_trace.vertical_offset = min * fft_trace.vertical_scale;
+    
+    fft_trace.vertical_offset = (min * fft_trace.vertical_scale) - (m_vertical_offset / 256.0f);
+    
+    fft_trace.horizontal_scale = m_horizontal_scale;
+    fft_trace.horizontal_offset = static_cast<int>(m_horizontal_offset);
 
     traces.push_back(std::move(fft_trace));
   }

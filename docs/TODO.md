@@ -2,12 +2,10 @@
 
 ## UI
 
-- Add reset settings button for each tab
 - Add a proper scale to signal and fft plots; this requires choosing an ADC so its on hold
 
 ## FFT
 
-- Fix vertical offset
 
 ## Hardware
 

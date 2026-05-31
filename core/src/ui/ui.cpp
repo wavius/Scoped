@@ -12,12 +12,13 @@
 
 #include <common/constants.hpp>
 #include <processing/fft_processor.hpp>
+#include <processing/filter_processor.hpp>
 #include <processing/math_processor.hpp>
 #include <ui/ui.hpp>
 
 namespace {
     template <typename T>
-    void drawComponentHeader(T* component, const std::string& name, Scoped::Oscilloscope& osc, size_t default_h_scale = 1024) {
+    void drawComponentHeader(T* component, const std::string& name, Scoped::Oscilloscope& osc, size_t default_h_scale = Scoped::Constants::DEFAULT_HORIZONTAL_SCALE) {
         ImVec4 label_color = Scoped::toImVec4(component->getColor());
         bool enabled = component->isEnabled();
         
@@ -33,10 +34,10 @@ namespace {
         
         std::string reset_label = "Reset##" + name;
         if (ImGui::Button(reset_label.c_str())) {
-            component->setVerticalScale(1.0f);
-            component->setVerticalOffset(0.0f);
+            component->setVerticalScale(Scoped::Constants::DEFAULT_VERTICAL_SCALE);
+            component->setVerticalOffset(Scoped::Constants::DEFAULT_VERTICAL_OFFSET);
             component->setHorizontalScale(default_h_scale);
-            component->setHorizontalOffset(0);
+            component->setHorizontalOffset(Scoped::Constants::DEFAULT_HORIZONTAL_OFFSET);
             
             if constexpr (std::is_same_v<std::remove_cv_t<T>, Scoped::FFTProcessor>) {
                 component->setIsModeLinear(false);
@@ -864,8 +865,6 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
         osc.forceReprocess();
       }
 
-      ImGui::Spacing();
-
       auto *math_proc = dynamic_cast<MathProcessor *>(processor);
       if (math_proc) {
         // Operation Selection
@@ -934,6 +933,105 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
   }
 }
 
+void OscilloscopeUI::drawFilterControls(Oscilloscope &osc) {
+  bool found_filter = false;
+
+  for (auto &channel : osc.getVirtualChannels()) {
+    ImGui::PushID(channel->getLabel().c_str());
+
+    for (auto &processor : channel->getProcessors()) {
+      if (processor->getType() != ProcessorType::Filter) {
+        continue;
+      }
+
+      auto *filter_proc = dynamic_cast<FilterProcessor *>(processor);
+      if (!filter_proc) {
+        continue;
+      }
+
+      found_filter = true;
+
+      drawComponentHeader(filter_proc, filter_proc->getName(), osc, Scoped::Constants::DEFAULT_HORIZONTAL_SCALE);
+      
+      auto drawSlider = [&](const char* label, float* v, float v_min, float v_max, const char* format, bool add_spacing) {
+          return this->drawSliderFloatWithInput(label, v, v_min, v_max, format, add_spacing);
+      };
+      drawVerticalControlsT(filter_proc, osc, -500.0f, 500.0f, "%.1f", drawSlider);
+
+      int h_scale = static_cast<int>(filter_proc->getHorizontalScale());
+      if (drawSliderIntWithInput("Horizontal Scale", &h_scale, 256, 16384, "%d samples", false)) {
+        filter_proc->setHorizontalScale(static_cast<size_t>(h_scale));
+        osc.forceReprocess();
+      }
+
+      int h_offset = static_cast<int>(filter_proc->getHorizontalOffset());
+      int capture_width = static_cast<int>(osc.getMaxCaptureWidth());
+      int visible_width = static_cast<int>(filter_proc->getHorizontalScale());
+      int max_offset = std::max(0, (capture_width - visible_width) / 2);
+      if (h_offset > max_offset) {
+        h_offset = max_offset;
+        filter_proc->setHorizontalOffset(static_cast<size_t>(h_offset));
+      }
+      if (drawSliderIntWithInput("Horizontal Offset", &h_offset, -max_offset, max_offset, "%d samples", true)) {
+        filter_proc->setHorizontalOffset(static_cast<size_t>(h_offset));
+        osc.forceReprocess();
+      }
+
+      int selected_type = static_cast<int>(filter_proc->getFilterType());
+      const char *types[] = {"Lowpass", "Highpass", "Bandpass", "Bandstop"};
+      if (drawCombo("Filter Type", &selected_type, types, 4, true)) {
+        filter_proc->setFilterType(static_cast<FilterType>(selected_type));
+        osc.forceReprocess();
+      }
+
+      int selected_resp = static_cast<int>(filter_proc->getFilterResponse());
+      const char *resps[] = {"Butterworth", "Chebyshev", "Bessel", "Basic"};
+      if (drawCombo("Response", &selected_resp, resps, 4, true)) {
+        filter_proc->setFilterResponse(static_cast<FilterResponse>(selected_resp));
+        osc.forceReprocess();
+      }
+
+      std::vector<std::string> channel_labels;
+      std::vector<const char *> channel_labels_cstr;
+      size_t num_channels = osc.getHardwareChannels().size();
+      channel_labels.resize(num_channels);
+      channel_labels_cstr.resize(num_channels);
+      int src1_idx = 0;
+      for (size_t i = 0; i < num_channels; i++) {
+        channel_labels[i] = osc.getHardwareChannels()[i]->getLabel();
+        channel_labels_cstr[i] = channel_labels[i].c_str();
+        if (channel_labels[i] == filter_proc->getSource1Label()) {
+          src1_idx = static_cast<int>(i);
+        }
+      }
+
+      float cutoff = filter_proc->getCutoff();
+      float nyquist = Scoped::Constants::ADC_SAMPLE_RATE_HZ / 2.0f;
+      ImGui::Text("Cutoff Frequency");
+      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+      if (ImGui::InputFloat("##Cutoff Frequency", &cutoff, 0.0f, 0.0f, "%.1f Hz")) {
+        filter_proc->setCutoff(std::clamp(cutoff, 1.0f, nyquist));
+        osc.forceReprocess();
+      }
+      
+      if (drawCombo("Source", &src1_idx, channel_labels_cstr.data(), static_cast<int>(num_channels), true)) {
+        filter_proc->setSource1Label(channel_labels[src1_idx]);
+        osc.forceReprocess();
+      }
+
+      ImGui::Spacing();
+      ImGui::Separator();
+      ImGui::Spacing();
+    }
+
+    ImGui::PopID();
+  }
+
+  if (!found_filter) {
+    ImGui::TextDisabled("No filter processor found.");
+  }
+}
+
 void OscilloscopeUI::buildDefaultDockLayout(ImGuiID dockspace_id,
                                             const ImVec2 &dockspace_size) {
   ImGui::DockBuilderRemoveNode(dockspace_id);
@@ -959,6 +1057,7 @@ void OscilloscopeUI::buildDefaultDockLayout(ImGuiID dockspace_id,
 
   ImGui::DockBuilderDockWindow("FFT", right_id);
   ImGui::DockBuilderDockWindow("Math", right_id);
+  ImGui::DockBuilderDockWindow("Filter", right_id);
   ImGui::DockBuilderDockWindow("Hardware", right_id);
 
   ImGui::DockBuilderDockWindow("Debug", bottom_id);
@@ -1143,6 +1242,15 @@ void OscilloscopeUI::drawMathWindow(Oscilloscope &osc) {
   ImGui::End();
 }
 
+void OscilloscopeUI::drawFilterWindow(Oscilloscope &osc) {
+  ImGui::Begin("Filter");
+  ImGui::SetWindowFontScale(1.15f);
+
+  drawFilterControls(osc);
+
+  ImGui::End();
+}
+
 // Channel controls window.
 void OscilloscopeUI::drawChannelWindow(Oscilloscope &osc) {
   ImGui::Begin("Channels");
@@ -1248,6 +1356,7 @@ void OscilloscopeUI::render(Oscilloscope &osc) {
   drawTriggerWindow(osc);
   drawFFTWindow(osc);
   drawMathWindow(osc);
+  drawFilterWindow(osc);
   drawHardwareWindow(osc);
   drawDebugWindow(osc);
 }

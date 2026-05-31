@@ -44,6 +44,7 @@ private:
   void drawVerticalControls(IChannel &channel, Oscilloscope &osc);
   void drawFFTControls(Oscilloscope &osc);
   void drawMathControls(Oscilloscope &osc);
+  void drawFilterControls(Oscilloscope &osc);
 
   // Common UI Control Helpers
   bool drawSliderFloatWithInput(const char* label, float* v, float v_min, float v_max, const char* format = "%.2f", bool add_spacing = true);
@@ -59,6 +60,7 @@ private:
   void drawTriggerWindow(Oscilloscope &osc);
   void drawFFTWindow(Oscilloscope &osc);
   void drawMathWindow(Oscilloscope &osc);
+  void drawFilterWindow(Oscilloscope &osc);
   void drawChannelWindow(Oscilloscope &osc);
   void drawHardwareWindow(Oscilloscope &osc);
   void drawDebugWindow(Oscilloscope &osc);

@@ -70,12 +70,12 @@ private:
   bool m_has_new_frame = false;
 
   // Vertical plot settings
-  float m_vertical_scale = 1.0f;
-  float m_vertical_offset = 0.0f;
+  float m_vertical_scale = Constants::DEFAULT_VERTICAL_SCALE;
+  float m_vertical_offset = Constants::DEFAULT_VERTICAL_OFFSET;
 
   // Horizontal plot settings
   size_t m_horizontal_scale;
-  int m_horizontal_offset = 0;
+  int m_horizontal_offset = Constants::DEFAULT_HORIZONTAL_OFFSET;
   size_t m_last_trigger_in_frame = 0;
 
   // Display color
@@ -83,7 +83,7 @@ private:
 
 public:
   // Lifecycle
-  VirtualChannel(const std::string &label, size_t horizontal_scale)
+  VirtualChannel(const std::string &label, size_t horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE)
       : m_label(label), m_horizontal_scale(horizontal_scale) {}
 
   // Accessors
@@ -189,12 +189,12 @@ private:
   std::vector<std::unique_ptr<IProcessor>> m_processors;
 
   // Vertical (voltage)
-  float m_vertical_scale = 1.0f;
-  float m_vertical_offset = 0.0f;
+  float m_vertical_scale = Constants::DEFAULT_VERTICAL_SCALE;
+  float m_vertical_offset = Constants::DEFAULT_VERTICAL_OFFSET;
 
   // Horizontal (time)
   size_t m_horizontal_scale;
-  int m_horizontal_offset = 0;
+  int m_horizontal_offset = Constants::DEFAULT_HORIZONTAL_OFFSET;
 
   std::vector<HardwareT> m_raw_frame;
   std::vector<float> m_float_frame;
@@ -208,7 +208,7 @@ private:
 
 public:
   // Lifecycle
-  Channel(const std::string &label, size_t buffer_size, size_t horizontal_scale)
+  Channel(const std::string &label, size_t buffer_size = Constants::BUFFER_SIZE, size_t horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE)
       : m_label(label), m_buffer(buffer_size),
         m_horizontal_scale(horizontal_scale) {}
 

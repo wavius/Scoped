@@ -65,6 +65,13 @@ public:
     return new_output;
   }
 
+  void reset() {
+    m_x1 = 0.0f;
+    m_x2 = 0.0f;
+    m_y1 = 0.0f;
+    m_y2 = 0.0f;
+  }
+
   void calculateCoefficients(FilterType type) {
     if (m_sample_rate <= 0.0f)
       return;
@@ -121,8 +128,6 @@ public:
     // Normalize all coefficients so a0 is always 1.0
     float a0_inv = 1.0f / a0;
 
-    // In audio cookbook, 'b' terms are feedforward, 'a' terms are feedback.
-    // Our struct maps feedforward to m_aX and feedback to m_bX.
     m_a0 = b0 * a0_inv;
     m_a1 = b1 * a0_inv;
     m_a2 = b2 * a0_inv;
@@ -132,29 +137,33 @@ public:
   }
 };
 
-class FilterProcessor : public IProcessor {
+class FilterProcessor : public IVirtualProcessor {
 private:
   bool m_enabled = false;
   std::string m_name;
+  std::string m_source1_label = "CH1";
 
   FilterType m_filter_type = FilterType::Lowpass;
-  FilterResponse m_response = FilterResponse::Butterworth;
+  FilterResponse m_response = FilterResponse::Basic;
 
-  float m_cutoff = 1000.0f;
+  float m_cutoff = 0.0f;
 
   bool m_dirty = true;
 
   Biquad m_biquad;
 
-  float m_vertical_scale = 1.0f;
-  float m_vertical_offset = 0.0f;
-  size_t m_horizontal_scale = 0;
-  size_t m_horizontal_offset = 0;
+  float m_vertical_scale = Constants::DEFAULT_VERTICAL_SCALE;
+  float m_vertical_offset = Constants::DEFAULT_VERTICAL_OFFSET;
+  size_t m_horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE;
+  size_t m_horizontal_offset = Constants::DEFAULT_HORIZONTAL_OFFSET;
   Color m_color = {1.0f, 1.0f, 1.0f, 1.0f};
 
   void updateCoefficients() {
     if (!m_dirty)
       return;
+
+    float max_cutoff = Constants::ADC_SAMPLE_RATE_HZ / 2.0f;
+    m_cutoff = std::clamp(m_cutoff, 1.0f, max_cutoff - 0.1f);
 
     m_biquad.setCutoff(m_cutoff);
     m_biquad.calculateCoefficients(m_filter_type);
@@ -163,8 +172,9 @@ private:
   }
 
 public:
-  explicit FilterProcessor(const std::string &name,
-                           size_t horizontal_scale = 1024)
+  explicit FilterProcessor(
+      const std::string &name,
+      size_t horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE)
       : m_name(name), m_horizontal_scale(horizontal_scale) {}
 
   // Accessors
@@ -180,8 +190,13 @@ public:
   FilterType getFilterType() const { return m_filter_type; }
   FilterResponse getFilterResponse() const { return m_response; }
   float getCutoff() const { return m_cutoff; }
+  std::string getSource1Label() const { return m_source1_label; }
 
   // Setters
+  void setSource1Label(const std::string &label) {
+    m_source1_label = label;
+    m_dirty = true;
+  }
   void setEnabled(bool enabled) override { m_enabled = enabled; }
   void setVerticalScale(float scale) override { m_vertical_scale = scale; }
   void setVerticalOffset(float offset) override { m_vertical_offset = offset; }
@@ -216,12 +231,28 @@ public:
   }
 
   // Pipeline
-  void process(const std::vector<float> &raw_frame,
-               std::vector<Trace> &traces) override {
-    if (!m_enabled || raw_frame.empty())
+  void process(const std::vector<IChannel *> &sources,
+               std::vector<Trace> &traces, size_t trigger_in_frame) override {
+    if (!m_enabled || sources.empty())
       return;
 
+    const std::vector<float> *raw_frame_ptr = nullptr;
+    for (auto *ch : sources) {
+      if (ch->getLabel() == m_source1_label) {
+        raw_frame_ptr = &ch->getRawFrame();
+        break;
+      }
+    }
+
+    if (!raw_frame_ptr || raw_frame_ptr->empty())
+      return;
+    const auto &raw_frame = *raw_frame_ptr;
+
     updateCoefficients();
+
+    // Reset the biquad's internal state memory so frame discontinuities don't
+    // explode the math
+    m_biquad.reset();
 
     std::vector<float> filtered_frame;
     filtered_frame.reserve(raw_frame.size());
@@ -232,6 +263,7 @@ public:
 
     Trace filter_trace;
     filter_trace.name = this->m_name;
+    filter_trace.domain = Domain::Time;
     filter_trace.color = m_color;
 
     filter_trace.data.resize(filtered_frame.size());

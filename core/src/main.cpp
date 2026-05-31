@@ -12,6 +12,7 @@
 #include <implot.h>
 #include <memory>
 #include <processing/fft_processor.hpp>
+#include <processing/filter_processor.hpp>
 #include <processing/math_processor.hpp>
 #include <processing/trigger.hpp>
 #include <ui/ui.hpp>
@@ -90,23 +91,23 @@ int main(int, char **) {
   Scoped::Oscilloscope osc;
 
   // Channels
-  auto ch1 = std::make_shared<Scoped::Channel<uint8_t>>("CH1", 16384 * 4, 2048);
-  auto ch2 = std::make_shared<Scoped::Channel<uint8_t>>("CH2", 16384 * 4, 2048);
+  auto ch1 = std::make_shared<Scoped::Channel<uint8_t>>("CH1");
+  auto ch2 = std::make_shared<Scoped::Channel<uint8_t>>("CH2");
 
   // Virtual Channels
-  auto vc1 = std::make_shared<Scoped::VirtualChannel>("VC1", 2048);
+  auto vc1 = std::make_shared<Scoped::VirtualChannel>("VC1");
   vc1->addSource(ch1.get());
   vc1->addSource(ch2.get());
 
-  auto vc2 = std::make_shared<Scoped::VirtualChannel>("VC2", 2048);
+  auto vc2 = std::make_shared<Scoped::VirtualChannel>("VC2");
   vc2->addSource(ch1.get());
   vc2->addSource(ch2.get());
 
   // FFT processors
   auto fft_p1 = std::make_unique<Scoped::FFTProcessor>(
-      "FFT1", ui.getDisplayHeight(), 16384);
+      "FFT1", ui.getDisplayHeight());
   auto fft_p2 = std::make_unique<Scoped::FFTProcessor>(
-      "FFT2", ui.getDisplayHeight(), 16384);
+      "FFT2", ui.getDisplayHeight());
   fft_p1->setColor(Scoped::Color{Scoped::Colors::FFT1.x, Scoped::Colors::FFT1.y,
                                  Scoped::Colors::FFT1.z,
                                  Scoped::Colors::FFT1.w});
@@ -117,15 +118,24 @@ int main(int, char **) {
   ch1->addProcessor(std::move(fft_p1));
   ch2->addProcessor(std::move(fft_p2));
 
+  // Filter processors
+  auto filter_p1 = std::make_unique<Scoped::FilterProcessor>("FILTER1");
+  auto filter_p2 = std::make_unique<Scoped::FilterProcessor>("FILTER2");
+  filter_p1->setColor(Scoped::Color{1.0f, 0.5f, 0.0f, 1.0f}); // Orange
+  filter_p2->setColor(Scoped::Color{0.0f, 0.8f, 1.0f, 1.0f}); // Cyan
+  
+  vc1->addProcessor(std::move(filter_p1));
+  vc2->addProcessor(std::move(filter_p2));
+
   // Math processors
   // 1 VirtualChannel per math processor
-  auto math_p1 = std::make_unique<Scoped::MathProcessor>("MATH1", 2048);
+  auto math_p1 = std::make_unique<Scoped::MathProcessor>("MATH1");
   math_p1->setColor(
       Scoped::Color{Scoped::Colors::MATH1.x, Scoped::Colors::MATH1.y,
                     Scoped::Colors::MATH1.z, Scoped::Colors::MATH1.w});
   vc1->addProcessor(std::move(math_p1));
 
-  auto math_p2 = std::make_unique<Scoped::MathProcessor>("MATH2", 2048);
+  auto math_p2 = std::make_unique<Scoped::MathProcessor>("MATH2");
   math_p2->setColor(
       Scoped::Color{Scoped::Colors::MATH2.x, Scoped::Colors::MATH2.y,
                     Scoped::Colors::MATH2.z, Scoped::Colors::MATH2.w});

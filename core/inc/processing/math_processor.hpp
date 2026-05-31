@@ -38,10 +38,10 @@ private:
   Scoped::Window m_window;
 
   // Plotting vars
-  float m_vertical_scale = 1.0f;
-  float m_vertical_offset = 0.0f;
-  size_t m_horizontal_scale = 1024;
-  size_t m_horizontal_offset = 0;
+  float m_vertical_scale = Constants::DEFAULT_VERTICAL_SCALE;
+  float m_vertical_offset = Constants::DEFAULT_VERTICAL_OFFSET;
+  size_t m_horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE;
+  size_t m_horizontal_offset = Constants::DEFAULT_HORIZONTAL_OFFSET;
   Color m_color = {1.0f, 1.0f, 1.0f, 1.0f};
 
   // Differentiate pre-smoothing: half-width of the box filter (samples)
@@ -172,7 +172,8 @@ private:
 
     // Multiply each bin by jω
     // Apply low-pass window (raised-cosine) to suppress high-freq noise
-    // We map m_diff_smooth_radius to a cutoff bin: larger radius -> lower cutoff
+    // We map m_diff_smooth_radius to a cutoff bin: larger radius -> lower
+    // cutoff
     std::complex<float> w =
         2.0f * I_COMPLEX * PI * sample_rate / static_cast<float>(frame_size);
     m_window.setSize(frame_size);
@@ -182,7 +183,8 @@ private:
 
     size_t cutoff_bin = num_bins;
     if (m_diff_smooth_radius > 0) {
-      cutoff_bin = std::max(size_t(1), frame_size / (2 * m_diff_smooth_radius + 1));
+      cutoff_bin =
+          std::max(size_t(1), frame_size / (2 * m_diff_smooth_radius + 1));
       cutoff_bin = std::min(cutoff_bin, num_bins);
     }
 
@@ -190,7 +192,8 @@ private:
       float lp = 0.0f;
       if (k <= cutoff_bin) {
         // Smoothly rolls off to 0.0 at cutoff_bin
-        float phase = PI * static_cast<float>(k) / static_cast<float>(cutoff_bin);
+        float phase =
+            PI * static_cast<float>(k) / static_cast<float>(cutoff_bin);
         lp = 0.5f * (1.0f + std::cos(phase));
       }
       fft_output[k] *= (w * static_cast<float>(k)) * lp;
@@ -219,7 +222,7 @@ private:
 public:
   // Lifecycle
   explicit MathProcessor(const std::string &name,
-                         size_t horizontal_scale = 1024)
+                         size_t horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE)
       : m_name(name), m_horizontal_scale(horizontal_scale) {}
 
   // Accessors

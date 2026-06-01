@@ -176,6 +176,7 @@ public:
 class FilterProcessor : public IVirtualProcessor {
 private:
   bool m_enabled = false;
+  bool m_show_preview = false;
   std::string m_name;
   std::string m_source1_label = "CH1";
 
@@ -212,7 +213,9 @@ public:
   explicit FilterProcessor(
       const std::string &name,
       size_t horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE)
-      : m_name(name), m_horizontal_scale(horizontal_scale) {}
+      : m_name(name), m_horizontal_scale(horizontal_scale) {
+    updateCoefficients();
+  }
 
   // Accessors
   std::string getName() const override { return m_name; }
@@ -222,6 +225,7 @@ public:
   float getVerticalOffset() const override { return m_vertical_offset; }
   size_t getHorizontalScale() const override { return m_horizontal_scale; }
   size_t getHorizontalOffset() const override { return m_horizontal_offset; }
+  bool getShowPreview() const { return m_show_preview; }
   Color getColor() const override { return m_color; }
 
   FilterType getFilterType() const { return m_filter_type; }
@@ -235,6 +239,8 @@ public:
     m_dirty = true;
   }
   void setEnabled(bool enabled) override { m_enabled = enabled; }
+  void setShowPreview(bool show) { m_show_preview = show; }
+
   void setVerticalScale(float scale) override { m_vertical_scale = scale; }
   void setVerticalOffset(float offset) override { m_vertical_offset = offset; }
   void setHorizontalScale(size_t scale) override { m_horizontal_scale = scale; }
@@ -268,7 +274,10 @@ public:
     m_dirty = true;
   }
 
-  const Biquad &getBiquad() const { return m_biquad; }
+  Biquad& getBiquad() { 
+    updateCoefficients();
+    return m_biquad; 
+  }
 
   // Pipeline
   void process(const std::vector<IChannel *> &sources,

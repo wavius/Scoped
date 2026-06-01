@@ -121,8 +121,10 @@ int main(int, char **) {
   // Filter processors
   auto filter_p1 = std::make_unique<Scoped::FilterProcessor>("FILTER1");
   auto filter_p2 = std::make_unique<Scoped::FilterProcessor>("FILTER2");
-  filter_p1->setColor(Scoped::Color{1.0f, 0.5f, 0.0f, 1.0f}); // Orange
-  filter_p2->setColor(Scoped::Color{0.0f, 0.8f, 1.0f, 1.0f}); // Cyan
+  filter_p1->setColor(Scoped::Color{Scoped::Colors::FILTER1.x, Scoped::Colors::FILTER1.y,
+                                    Scoped::Colors::FILTER1.z, Scoped::Colors::FILTER1.w});
+  filter_p2->setColor(Scoped::Color{Scoped::Colors::FILTER2.x, Scoped::Colors::FILTER2.y,
+                                    Scoped::Colors::FILTER2.z, Scoped::Colors::FILTER2.w});
   
   vc1->addProcessor(std::move(filter_p1));
   vc2->addProcessor(std::move(filter_p2));

@@ -1020,6 +1020,19 @@ void OscilloscopeUI::drawFilterControls(Oscilloscope &osc) {
       }
 
       ImGui::Spacing();
+      
+      const auto& mag_resp = filter_proc->getBiquad().getMagnitudeResponse();
+      if (!mag_resp.empty()) {
+        if (ImPlot::BeginPlot("Frequency Response", ImVec2(-1, 150), ImPlotFlags_NoTitle | ImPlotFlags_NoLegend | ImPlotFlags_NoInputs)) {
+          ImPlot::SetupAxes("Frequency (Hz)", "Gain (dB)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+          ImPlot::SetupAxisLimits(ImAxis_X1, 0, nyquist, ImPlotCond_Always);
+          ImPlot::SetupAxisLimits(ImAxis_Y1, -60, 10, ImPlotCond_Always);
+          
+          ImPlot::PlotLine("##Resp", mag_resp.data(), static_cast<int>(mag_resp.size()), nyquist / mag_resp.size());
+          ImPlot::EndPlot();
+        }
+      }
+
       ImGui::Separator();
       ImGui::Spacing();
     }

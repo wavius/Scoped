@@ -3,6 +3,7 @@
 #include <cmath>
 #include <common/channel.hpp>
 #include <common/constants.hpp>
+#include <complex>
 #include <processing/iprocessor.hpp>
 #include <string>
 #include <vector>
@@ -21,6 +22,8 @@ private:
   // Filter state
   float m_x1 = 0.0f, m_x2 = 0.0f;
   float m_y1 = 0.0f, m_y2 = 0.0f;
+
+  std::vector<float> m_magnitude_array;
 
   // Config
   float m_cutoff = 0.0f;
@@ -135,6 +138,39 @@ public:
     m_b1 = a1 * a0_inv;
     m_b2 = a2 * a0_inv;
   }
+
+  const std::vector<float> &getMagnitudeResponse() const {
+    return m_magnitude_array;
+  }
+
+  void calculateMagnitudeResponse(size_t points = 512) {
+    if (m_sample_rate <= 0.0f)
+      return;
+
+    if (m_magnitude_array.size() != points) {
+      m_magnitude_array.resize(points);
+    }
+
+    // Evaluate from 0 to Nyquist
+    for (size_t i = 0; i < points; i++) {
+      float f = (Constants::ADC_SAMPLE_RATE_HZ / 2.0f) *
+                (static_cast<float>(i) / static_cast<float>(points - 1));
+      float w = 2.0f * M_PI * f / Constants::ADC_SAMPLE_RATE_HZ;
+
+      std::complex<float> z_inv(std::cos(w), -std::sin(w));
+      std::complex<float> z_inv2 = z_inv * z_inv;
+
+      std::complex<float> num = m_a0 + m_a1 * z_inv + m_a2 * z_inv2;
+      std::complex<float> den = 1.0f + m_b1 * z_inv + m_b2 * z_inv2;
+
+      float mag = std::abs(num) / (std::abs(den) + 1e-8f);
+
+      // Calculate dB
+      // Clamping to a floor to avoid -infinity
+      float mag_db = 20.0f * std::log10(std::max(mag, 1e-5f));
+      m_magnitude_array[i] = mag_db;
+    }
+  }
 };
 
 class FilterProcessor : public IVirtualProcessor {
@@ -167,6 +203,7 @@ private:
 
     m_biquad.setCutoff(m_cutoff);
     m_biquad.calculateCoefficients(m_filter_type);
+    m_biquad.calculateMagnitudeResponse();
 
     m_dirty = false;
   }
@@ -210,6 +247,7 @@ public:
     m_filter_type = type;
     m_dirty = true;
   }
+
   void setFilterResponse(FilterResponse resp) {
     m_response = resp;
 
@@ -229,6 +267,8 @@ public:
     m_cutoff = cutoff;
     m_dirty = true;
   }
+
+  const Biquad &getBiquad() const { return m_biquad; }
 
   // Pipeline
   void process(const std::vector<IChannel *> &sources,

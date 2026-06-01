@@ -4,20 +4,19 @@
 
 - Add a proper scale to signal and fft plots; this requires choosing an ADC so its on hold
 
-## FFT
-
-
 ## Hardware
 
 - Add support for multiple concurrent hardware channels
 - Change FPGA USB to stream multiple channels and edit `OscilloscopeUI::drawHardwareStatus`
 
-## Trigger
+## Filter
+
+- Add support for high-pass and band-pass filters
+- Fix beginning of filter array
 
 ## Math
 
 - Fix integration visual stretching
-- Add scaling for integration and differentiation
 
 ## Measurements
 

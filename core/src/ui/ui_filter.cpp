@@ -105,14 +105,14 @@ void OscilloscopeUI::drawFilterControls(Oscilloscope &osc) {
       ImGui::Spacing();
 
       bool show_preview = filter_proc->getShowPreview();
-      if (ImGui::Checkbox("Preview Graph Window", &show_preview)) {
+      if (ImGui::Checkbox("Preview Frequency Response", &show_preview)) {
         filter_proc->setShowPreview(show_preview);
       }
 
       if (show_preview) {
         ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
         std::string window_name =
-            filter_proc->getName() + std::string(" Preview:");
+            filter_proc->getName() + std::string(" Frequency Response:");
 
         if (ImGui::Begin(window_name.c_str(), &show_preview)) {
           ImGui::SetWindowFontScale(1.25f); // Make the graph text 25% larger

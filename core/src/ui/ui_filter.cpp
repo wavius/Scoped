@@ -86,14 +86,38 @@ void OscilloscopeUI::drawFilterControls(Oscilloscope &osc) {
         }
       }
 
-      float cutoff = filter_proc->getCutoff();
       float nyquist = Scoped::Constants::ADC_SAMPLE_RATE_HZ / 2.0f;
-      ImGui::Text("Cutoff Frequency");
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-      if (ImGui::InputFloat("##Cutoff Frequency", &cutoff, 0.0f, 0.0f,
-                            "%.1f Hz")) {
-        filter_proc->setCutoff(std::clamp(cutoff, 1.0f, nyquist));
-        osc.forceReprocess();
+      FilterType type = filter_proc->getFilterType();
+      
+      if (type == FilterType::Bandpass || type == FilterType::Bandstop) {
+        float cutoff1 = filter_proc->getCutoff();
+        ImGui::Text("Lower Cutoff Frequency");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::InputFloat("##Lower Cutoff Frequency", &cutoff1, 0.0f, 0.0f,
+                              "%.1f Hz")) {
+          cutoff1 = std::clamp(cutoff1, 1.0f, std::min(filter_proc->getCutoff2() - 1.0f, nyquist));
+          filter_proc->setCutoff(cutoff1);
+          osc.forceReprocess();
+        }
+
+        float cutoff2 = filter_proc->getCutoff2();
+        ImGui::Text("Upper Cutoff Frequency");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::InputFloat("##Upper Cutoff Frequency", &cutoff2, 0.0f, 0.0f,
+                              "%.1f Hz")) {
+          cutoff2 = std::clamp(cutoff2, std::max(filter_proc->getCutoff() + 1.0f, 1.0f), nyquist);
+          filter_proc->setCutoff2(cutoff2);
+          osc.forceReprocess();
+        }
+      } else {
+        float cutoff = filter_proc->getCutoff();
+        ImGui::Text("Cutoff Frequency");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::InputFloat("##Cutoff Frequency", &cutoff, 0.0f, 0.0f,
+                              "%.1f Hz")) {
+          filter_proc->setCutoff(std::clamp(cutoff, 1.0f, nyquist));
+          osc.forceReprocess();
+        }
       }
 
       if (drawCombo("Source", &src1_idx, channel_labels_cstr.data(),
@@ -117,24 +141,43 @@ void OscilloscopeUI::drawFilterControls(Oscilloscope &osc) {
         if (ImGui::Begin(window_name.c_str(), &show_preview)) {
           ImGui::SetWindowFontScale(1.25f); // Make the graph text 25% larger
           const auto &mag_resp =
-              filter_proc->getBiquad().getMagnitudeResponse();
+              filter_proc->getMagnitudeResponse();
           if (!mag_resp.empty()) {
             if (ImPlot::BeginPlot("Frequency Response", ImVec2(-1, -1),
                                   ImPlotFlags_NoTitle | ImPlotFlags_NoLegend)) {
               ImPlot::SetupAxes("Frequency (Hz)", "Gain (dB)",
                                 ImPlotAxisFlags_AutoFit,
                                 ImPlotAxisFlags_AutoFit);
+              ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
 
-              float plot_max_x = std::min(cutoff * 2.5f, nyquist);
+              float highest_cutoff = filter_proc->getCutoff();
+              if (filter_proc->getFilterType() == FilterType::Bandpass || filter_proc->getFilterType() == FilterType::Bandstop) {
+                  highest_cutoff = std::max(highest_cutoff, filter_proc->getCutoff2());
+              }
+              float plot_max_x = std::min(highest_cutoff * 2.5f, nyquist);
               plot_max_x = std::max(plot_max_x, 100.0f);
 
-              ImPlot::SetupAxisLimits(ImAxis_X1, 0, plot_max_x,
+              // Avoid 0 in log scale
+              ImPlot::SetupAxisLimits(ImAxis_X1, 1.0f, plot_max_x,
                                       ImPlotCond_Always);
               ImPlot::SetupAxisLimits(ImAxis_Y1, -60, 10, ImPlotCond_Always);
 
               ImPlot::PlotLine("##Resp", mag_resp.data(),
                                static_cast<int>(mag_resp.size()),
                                nyquist / mag_resp.size());
+
+              double cutoffs[2] = { static_cast<double>(filter_proc->getCutoff()), 
+                                    static_cast<double>(filter_proc->getCutoff2()) };
+              
+              if (filter_proc->getFilterType() == FilterType::Bandpass || filter_proc->getFilterType() == FilterType::Bandstop) {
+                  ImPlot::PlotInfLines("Cutoff Frequencies", cutoffs, 2);
+                  ImPlot::TagX(cutoffs[0], ImVec4(0.2f, 0.6f, 1.0f, 1.0f), "w1", cutoffs[0]);
+                  ImPlot::TagX(cutoffs[1], ImVec4(0.2f, 0.6f, 1.0f, 1.0f), "w2", cutoffs[1]);
+              } else {
+                  ImPlot::PlotInfLines("Cutoff Frequency", cutoffs, 1);
+                  ImPlot::TagX(cutoffs[0], ImVec4(0.2f, 0.6f, 1.0f, 1.0f), "w", cutoffs[0]);
+              }
+
               ImPlot::EndPlot();
             }
           }

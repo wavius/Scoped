@@ -11,8 +11,8 @@
 
 ## Filter
 
-- Add support for high-pass and band-pass filters
 - Fix beginning of filter array
+- Add higher order filters
 
 ## Math
 
@@ -32,7 +32,7 @@
   - Serial pattern match triggering
 - **Digital Phosphor / Intensity Grading**: Visual persistence mapping where frequently hit pixels are brighter or color-coded, revealing jitter and rare glitches.
 - **X-Y Mode (Lissajous Curves)**: Plotting Channel 1 against Channel 2 to show phase differences and component signatures.
-- ~~**Digital Filtering**: Selectable low-pass, high-pass, and band-pass filters per channel with adjustable cutoffs to clean up noisy inputs.~~
 - **Mask / Limit Testing**: Define tolerance bands around a template waveform and trigger actions (stop, save screenshot) on violations.
 - **Bode Plotting / FRA (Frequency Response Analysis)**: Sweeping a built-in generator frequency to plot gain and phase response over frequency.
+- Acquisition mode: average, high res, normal
 

@@ -23,8 +23,6 @@ private:
   float m_x1 = 0.0f, m_x2 = 0.0f;
   float m_y1 = 0.0f, m_y2 = 0.0f;
 
-  std::vector<float> m_magnitude_array;
-
   // Config
   float m_cutoff = 0.0f;
   float m_center_frequency = 0.0f;
@@ -139,37 +137,13 @@ public:
     m_b2 = a2 * a0_inv;
   }
 
-  const std::vector<float> &getMagnitudeResponse() const {
-    return m_magnitude_array;
-  }
-
-  void calculateMagnitudeResponse(size_t points = 512) {
-    if (m_sample_rate <= 0.0f)
-      return;
-
-    if (m_magnitude_array.size() != points) {
-      m_magnitude_array.resize(points);
-    }
-
-    // Evaluate from 0 to Nyquist
-    for (size_t i = 0; i < points; i++) {
-      float f = (Constants::ADC_SAMPLE_RATE_HZ / 2.0f) *
-                (static_cast<float>(i) / static_cast<float>(points - 1));
-      float w = 2.0f * M_PI * f / Constants::ADC_SAMPLE_RATE_HZ;
-
-      std::complex<float> z_inv(std::cos(w), -std::sin(w));
-      std::complex<float> z_inv2 = z_inv * z_inv;
-
-      std::complex<float> num = m_a0 + m_a1 * z_inv + m_a2 * z_inv2;
-      std::complex<float> den = 1.0f + m_b1 * z_inv + m_b2 * z_inv2;
-
-      float mag = std::abs(num) / (std::abs(den) + 1e-8f);
-
-      // Calculate dB
-      // Clamping to a floor to avoid -infinity
-      float mag_db = 20.0f * std::log10(std::max(mag, 1e-5f));
-      m_magnitude_array[i] = mag_db;
-    }
+  std::complex<float> getResponse(float w) const {
+    std::complex<float> z_inv(std::cos(w), -std::sin(w));
+    std::complex<float> z_inv2 = z_inv * z_inv;
+    std::complex<float> num = m_a0 + m_a1 * z_inv + m_a2 * z_inv2;
+    std::complex<float> den = 1.0f + m_b1 * z_inv + m_b2 * z_inv2;
+    std::complex<float> eps(1e-8f, 0.0f);
+    return num / (den + eps);
   }
 };
 
@@ -184,10 +158,13 @@ private:
   FilterResponse m_response = FilterResponse::Basic;
 
   float m_cutoff = 0.0f;
+  float m_cutoff2 = 0.0f;
 
   bool m_dirty = true;
 
-  Biquad m_biquad;
+  Biquad m_biquad1;
+  Biquad m_biquad2;
+  std::vector<float> m_magnitude_array;
 
   float m_vertical_scale = Constants::DEFAULT_VERTICAL_SCALE;
   float m_vertical_offset = Constants::DEFAULT_VERTICAL_OFFSET;
@@ -195,16 +172,64 @@ private:
   size_t m_horizontal_offset = Constants::DEFAULT_HORIZONTAL_OFFSET;
   Color m_color = {1.0f, 1.0f, 1.0f, 1.0f};
 
+  void calculateMagnitudeResponse(size_t points = 512) {
+    m_magnitude_array.resize(points);
+    for (size_t i = 0; i < points; i++) {
+      float f = (Constants::ADC_SAMPLE_RATE_HZ / 2.0f) *
+                (static_cast<float>(i) / static_cast<float>(points - 1));
+      float w = 2.0f * M_PI * f / Constants::ADC_SAMPLE_RATE_HZ;
+
+      std::complex<float> h1 = m_biquad1.getResponse(w);
+      float mag = 0.0f;
+      if (m_filter_type == FilterType::Bandpass) {
+        std::complex<float> h2 = m_biquad2.getResponse(w);
+        mag = std::abs(h1 * h2);
+      } else if (m_filter_type == FilterType::Bandstop) {
+        std::complex<float> h2 = m_biquad2.getResponse(w);
+        mag = std::abs(h1 + h2);
+      } else {
+        mag = std::abs(h1);
+      }
+
+      float mag_db = 20.0f * std::log10(std::max(mag, 1e-5f));
+      m_magnitude_array[i] = mag_db;
+    }
+  }
+
   void updateCoefficients() {
     if (!m_dirty)
       return;
 
     float max_cutoff = Constants::ADC_SAMPLE_RATE_HZ / 2.0f;
     m_cutoff = std::clamp(m_cutoff, 1.0f, max_cutoff - 0.1f);
+    m_cutoff2 = std::clamp(m_cutoff2, 1.0f, max_cutoff - 0.1f);
 
-    m_biquad.setCutoff(m_cutoff);
-    m_biquad.calculateCoefficients(m_filter_type);
-    m_biquad.calculateMagnitudeResponse();
+    if (m_filter_type == FilterType::Bandpass || m_filter_type == FilterType::Bandstop) {
+      if (m_cutoff >= m_cutoff2) {
+        m_cutoff = m_cutoff2 - 1.0f;
+        if (m_cutoff < 1.0f) {
+          m_cutoff = 1.0f;
+          m_cutoff2 = 2.0f;
+        }
+      }
+    }
+
+    if (m_filter_type == FilterType::Bandpass) {
+      m_biquad1.setCutoff(m_cutoff);
+      m_biquad1.calculateCoefficients(FilterType::Highpass);
+      m_biquad2.setCutoff(m_cutoff2);
+      m_biquad2.calculateCoefficients(FilterType::Lowpass);
+    } else if (m_filter_type == FilterType::Bandstop) {
+      m_biquad1.setCutoff(m_cutoff);
+      m_biquad1.calculateCoefficients(FilterType::Lowpass);
+      m_biquad2.setCutoff(m_cutoff2);
+      m_biquad2.calculateCoefficients(FilterType::Highpass);
+    } else {
+      m_biquad1.setCutoff(m_cutoff);
+      m_biquad1.calculateCoefficients(m_filter_type);
+    }
+
+    calculateMagnitudeResponse();
 
     m_dirty = false;
   }
@@ -231,6 +256,7 @@ public:
   FilterType getFilterType() const { return m_filter_type; }
   FilterResponse getFilterResponse() const { return m_response; }
   float getCutoff() const { return m_cutoff; }
+  float getCutoff2() const { return m_cutoff2; }
   std::string getSource1Label() const { return m_source1_label; }
 
   // Setters
@@ -265,7 +291,8 @@ public:
     else if (m_response == FilterResponse::Chebyshev)
       q = 1.0f;
 
-    m_biquad.setQualityFactor(q);
+    m_biquad1.setQualityFactor(q);
+    m_biquad2.setQualityFactor(q);
 
     m_dirty = true;
   }
@@ -273,10 +300,14 @@ public:
     m_cutoff = cutoff;
     m_dirty = true;
   }
+  void setCutoff2(float cutoff) {
+    m_cutoff2 = cutoff;
+    m_dirty = true;
+  }
 
-  Biquad& getBiquad() { 
+  const std::vector<float>& getMagnitudeResponse() { 
     updateCoefficients();
-    return m_biquad; 
+    return m_magnitude_array; 
   }
 
   // Pipeline
@@ -301,13 +332,23 @@ public:
 
     // Reset the biquad's internal state memory so frame discontinuities don't
     // explode the math
-    m_biquad.reset();
+    m_biquad1.reset();
+    m_biquad2.reset();
 
     std::vector<float> filtered_frame;
     filtered_frame.reserve(raw_frame.size());
 
     for (float sample : raw_frame) {
-      filtered_frame.push_back(m_biquad.processSample(sample));
+      if (m_filter_type == FilterType::Bandpass) {
+        float temp = m_biquad1.processSample(sample);
+        filtered_frame.push_back(m_biquad2.processSample(temp));
+      } else if (m_filter_type == FilterType::Bandstop) {
+        float temp1 = m_biquad1.processSample(sample);
+        float temp2 = m_biquad2.processSample(sample);
+        filtered_frame.push_back(temp1 + temp2);
+      } else {
+        filtered_frame.push_back(m_biquad1.processSample(sample));
+      }
     }
 
     Trace filter_trace;

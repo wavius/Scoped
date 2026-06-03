@@ -2,24 +2,21 @@
 
 ## UI
 
-- Add reset settings button for each tab
 - Add a proper scale to signal and fft plots; this requires choosing an ADC so its on hold
-
-## FFT
-
-- Add vertical scale and offset
 
 ## Hardware
 
 - Add support for multiple concurrent hardware channels
 - Change FPGA USB to stream multiple channels and edit `OscilloscopeUI::drawHardwareStatus`
 
-## Trigger
+## Filter
+
+- Fix beginning of filter array
+- Add higher order filters
 
 ## Math
 
 - Fix integration visual stretching
-- Add scaling for integration and differentiation
 
 ## Measurements
 
@@ -35,7 +32,7 @@
   - Serial pattern match triggering
 - **Digital Phosphor / Intensity Grading**: Visual persistence mapping where frequently hit pixels are brighter or color-coded, revealing jitter and rare glitches.
 - **X-Y Mode (Lissajous Curves)**: Plotting Channel 1 against Channel 2 to show phase differences and component signatures.
-- **Digital Filtering**: Selectable low-pass, high-pass, and band-pass filters per channel with adjustable cutoffs to clean up noisy inputs.
 - **Mask / Limit Testing**: Define tolerance bands around a template waveform and trigger actions (stop, save screenshot) on violations.
 - **Bode Plotting / FRA (Frequency Response Analysis)**: Sweeping a built-in generator frequency to plot gain and phase response over frequency.
+- Acquisition mode: average, high res, normal
 

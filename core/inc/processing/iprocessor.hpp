@@ -1,6 +1,5 @@
 #pragma once
 
-#include <array>
 #include <common/trace.hpp>
 #include <string>
 #include <vector>
@@ -48,19 +47,18 @@ public:
 
   // Pipeline
   virtual void process(const std::vector<IChannel *> &sources,
-                       std::vector<Trace> &traces,
-                       size_t trigger_in_frame) = 0;
+                       std::vector<Trace> &traces, size_t trigger_in_frame) = 0;
 };
 
 // Base class for signal processing stages.
-template <typename HardwareT> class IProcessor : public IProcessorControl {
+class IProcessor : public IProcessorControl {
 public:
   // Lifecycle
   virtual ~IProcessor() = default;
 
   // Pipeline
   // Applies the processing operation and generates/mutates traces.
-  virtual void process(const std::vector<HardwareT> &raw_frame,
+  virtual void process(const std::vector<float> &raw_frame,
                        std::vector<Trace> &traces) = 0;
 };
 

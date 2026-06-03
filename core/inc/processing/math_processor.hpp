@@ -38,10 +38,10 @@ private:
   Scoped::Window m_window;
 
   // Plotting vars
-  float m_vertical_scale = 1.0f;
-  float m_vertical_offset = 0.0f;
-  size_t m_horizontal_scale = 1024;
-  size_t m_horizontal_offset = 0;
+  float m_vertical_scale = Constants::DEFAULT_VERTICAL_SCALE;
+  float m_vertical_offset = Constants::DEFAULT_VERTICAL_OFFSET;
+  size_t m_horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE;
+  size_t m_horizontal_offset = Constants::DEFAULT_HORIZONTAL_OFFSET;
   Color m_color = {1.0f, 1.0f, 1.0f, 1.0f};
 
   // Differentiate pre-smoothing: half-width of the box filter (samples)
@@ -172,7 +172,8 @@ private:
 
     // Multiply each bin by jω
     // Apply low-pass window (raised-cosine) to suppress high-freq noise
-    // We map m_diff_smooth_radius to a cutoff bin: larger radius -> lower cutoff
+    // We map m_diff_smooth_radius to a cutoff bin: larger radius -> lower
+    // cutoff
     std::complex<float> w =
         2.0f * I_COMPLEX * PI * sample_rate / static_cast<float>(frame_size);
     m_window.setSize(frame_size);
@@ -182,7 +183,8 @@ private:
 
     size_t cutoff_bin = num_bins;
     if (m_diff_smooth_radius > 0) {
-      cutoff_bin = std::max(size_t(1), frame_size / (2 * m_diff_smooth_radius + 1));
+      cutoff_bin =
+          std::max(size_t(1), frame_size / (2 * m_diff_smooth_radius + 1));
       cutoff_bin = std::min(cutoff_bin, num_bins);
     }
 
@@ -190,7 +192,8 @@ private:
       float lp = 0.0f;
       if (k <= cutoff_bin) {
         // Smoothly rolls off to 0.0 at cutoff_bin
-        float phase = PI * static_cast<float>(k) / static_cast<float>(cutoff_bin);
+        float phase =
+            PI * static_cast<float>(k) / static_cast<float>(cutoff_bin);
         lp = 0.5f * (1.0f + std::cos(phase));
       }
       fft_output[k] *= (w * static_cast<float>(k)) * lp;
@@ -219,7 +222,7 @@ private:
 public:
   // Lifecycle
   explicit MathProcessor(const std::string &name,
-                         size_t horizontal_scale = 1024)
+                         size_t horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE)
       : m_name(name), m_horizontal_scale(horizontal_scale) {}
 
   // Accessors
@@ -321,19 +324,6 @@ public:
       break;
     }
 
-    size_t half_vis = m_horizontal_scale / 2;
-    int offset_val = static_cast<int>(m_horizontal_offset);
-
-    long long center_idx =
-        static_cast<long long>(trigger_in_frame) + offset_val;
-    long long start_idx = center_idx - half_vis;
-
-    size_t time_start = (start_idx < 0) ? 0 : static_cast<size_t>(start_idx);
-    if (time_start >= size)
-      time_start = size - 1;
-
-    size_t time_width = std::min(m_horizontal_scale, size - time_start);
-
     Trace math_trace;
     math_trace.name =
         m_name + " (" + source1->getLabel() +
@@ -350,12 +340,11 @@ public:
     math_trace.domain = Domain::Time;
     math_trace.vertical_scale = m_vertical_scale;
     math_trace.vertical_offset = m_vertical_offset;
+    math_trace.horizontal_scale = m_horizontal_scale;
+    math_trace.horizontal_offset = static_cast<int>(m_horizontal_offset);
     math_trace.color = m_color;
 
-    math_trace.data.resize(time_width);
-    for (size_t i = 0; i < time_width; ++i) {
-      math_trace.data[i] = m_math_output[time_start + i];
-    }
+    math_trace.data = m_math_output;
 
     traces.push_back(std::move(math_trace));
   }

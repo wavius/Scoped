@@ -2,6 +2,7 @@
 
 #include <../../extern/pocketfft/pocketfft_hdronly.h>
 #include <cmath>
+#include <common/constants.hpp>
 #include <complex>
 #include <limits>
 #include <processing/iprocessor.hpp>
@@ -11,8 +12,7 @@
 namespace Scoped {
 
 // Class to apply FFT to channel
-template <typename HardwareT>
-class FFTProcessor : public IProcessor<HardwareT> {
+class FFTProcessor : public IProcessor {
 private:
   bool m_enabled = false;
   std::string m_name = "FFT";
@@ -36,16 +36,16 @@ private:
   std::vector<float> m_smoothed_data; // Smooothed FFT data
   size_t m_fft_size;                  // Window size for FFT
 
-  float m_vertical_scale = 1.0f;  // Scale factor applied to FFT output
-  float m_vertical_offset = 0.0f; // Vertical offset
-  size_t m_horizontal_scale = 0;  // 0 means auto/full
-  size_t m_horizontal_offset = 0;
+  float m_vertical_scale = Constants::DEFAULT_VERTICAL_SCALE;
+  float m_vertical_offset = Constants::DEFAULT_VERTICAL_OFFSET;
+  size_t m_horizontal_scale = 0; // 0 = auto/full
+  size_t m_horizontal_offset = Constants::DEFAULT_HORIZONTAL_OFFSET;
   Color m_color = {1.0f, 1.0f, 1.0f, 1.0f};
 
 public:
   // Lifecycle
   FFTProcessor(const std::string &name, size_t display_height,
-               size_t initial_fft_size)
+               size_t initial_fft_size = Constants::BUFFER_SIZE / 4)
       : m_name(name), m_window(initial_fft_size, WindowType::HANN),
         m_fft_size(initial_fft_size) {
     m_max_height = display_height;
@@ -83,7 +83,7 @@ public:
   void setColor(const Color &color) override { m_color = color; }
 
   // Pipeline
-  void process(const std::vector<HardwareT> &raw_frame,
+  void process(const std::vector<float> &raw_frame,
                std::vector<Trace> &traces) override {
 
     size_t frame_size = std::min(m_fft_size, raw_frame.size());
@@ -99,8 +99,7 @@ public:
     centered_frame.resize(frame_size);
     float mean = calculateMean(raw_frame);
     for (size_t i = 0; i < frame_size; i++) {
-      centered_frame[i] =
-          (static_cast<float>(raw_frame[i]) - mean) * window_func[i];
+      centered_frame[i] = (raw_frame[i] - mean) * window_func[i];
     }
 
     // Real to complex Fourier Transform
@@ -151,8 +150,7 @@ public:
 
       val = m_smoothed_data[i];
 
-      // Calculate min/max over the entire FFT so scrolling doesn't change the
-      // scale
+      // Calculate min/max over the entire FFT
       max = val > max ? val : max;
       min = val < min ? val : min;
 
@@ -165,7 +163,12 @@ public:
     float range =
         (max - min) > 0.001f ? max - min : 1.0f; // Prevent division by 0
     fft_trace.vertical_scale = (1.0f / range) * m_vertical_scale;
-    fft_trace.vertical_offset = min * fft_trace.vertical_scale;
+
+    fft_trace.vertical_offset =
+        (min * fft_trace.vertical_scale) - (m_vertical_offset / 256.0f);
+
+    fft_trace.horizontal_scale = m_horizontal_scale;
+    fft_trace.horizontal_offset = static_cast<int>(m_horizontal_offset);
 
     traces.push_back(std::move(fft_trace));
   }
@@ -215,7 +218,7 @@ public:
     }
   }
 
-  float calculateMean(const std::vector<HardwareT> &frame) {
+  float calculateMean(const std::vector<float> &frame) {
     double sum = 0;
     for (auto i : frame) {
       sum += i;

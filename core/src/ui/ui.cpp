@@ -10,10 +10,14 @@
 #include <string>
 #include <vector>
 
-#include <processing/fft_processor.hpp>
-#include <processing/math_processor.hpp>
 #include <common/constants.hpp>
+#include <processing/fft_processor.hpp>
+#include <processing/filter_processor.hpp>
+#include <processing/math_processor.hpp>
+#include <ui/ui_helpers.hpp>
 #include <ui/ui.hpp>
+
+// Helpers moved to ui_helpers.hpp
 
 namespace Scoped {
 
@@ -42,6 +46,77 @@ void setupChannelColormap(ImVec4 color) {
   ImPlot::AddColormap("ChannelMap", gradient, 2);
 
   initialized = true;
+}
+
+bool OscilloscopeUI::drawSliderFloatWithInput(const char *label, float *v,
+                                              float v_min, float v_max,
+                                              const char *format,
+                                              bool add_spacing) {
+  bool changed = false;
+  if (add_spacing) {
+    ImGui::Spacing();
+  }
+  ImGui::Text("%s", label);
+  ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
+
+  std::string slider_id = std::string("##Slider_") + label;
+  if (ImGui::SliderFloat(slider_id.c_str(), v, v_min, v_max, format)) {
+    changed = true;
+  }
+
+  ImGui::SameLine();
+  ImGui::SetNextItemWidth(-FLT_MIN);
+
+  std::string input_id = std::string("##Input_") + label;
+  if (ImGui::InputFloat(input_id.c_str(), v, 0.0f, 0.0f, format)) {
+    *v = std::clamp(*v, v_min, v_max);
+    changed = true;
+  }
+  return changed;
+}
+
+bool OscilloscopeUI::drawSliderIntWithInput(const char *label, int *v,
+                                            int v_min, int v_max,
+                                            const char *format,
+                                            bool add_spacing) {
+  bool changed = false;
+  if (add_spacing) {
+    ImGui::Spacing();
+  }
+  ImGui::Text("%s", label);
+  ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
+
+  std::string slider_id = std::string("##Slider_") + label;
+  if (ImGui::SliderInt(slider_id.c_str(), v, v_min, v_max, format)) {
+    changed = true;
+  }
+
+  ImGui::SameLine();
+  ImGui::SetNextItemWidth(-FLT_MIN);
+
+  std::string input_id = std::string("##Input_") + label;
+  if (ImGui::InputInt(input_id.c_str(), v, 0, 0)) {
+    *v = std::clamp(*v, v_min, v_max);
+    changed = true;
+  }
+  return changed;
+}
+
+bool OscilloscopeUI::drawCombo(const char *label, int *current_item,
+                               const char *const items[], int items_count,
+                               bool add_spacing) {
+  bool changed = false;
+  if (add_spacing) {
+    ImGui::Spacing();
+  }
+  ImGui::Text("%s", label);
+  ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+
+  std::string combo_id = std::string("##Combo_") + label;
+  if (ImGui::Combo(combo_id.c_str(), current_item, items, items_count)) {
+    changed = true;
+  }
+  return changed;
 }
 
 OscilloscopeUI::OscilloscopeUI(size_t display_width, size_t display_height)
@@ -136,9 +211,6 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
 
     for (size_t i = 0; i < hw_channels.size(); ++i) {
       processChannelTraces(*hw_channels[i], i, false);
-    }
-    for (size_t i = 0; i < vc_channels.size(); ++i) {
-      processChannelTraces(*vc_channels[i], i, true);
     }
   }
 }
@@ -288,9 +360,100 @@ void OscilloscopeUI::drawFrequencyTraces(Oscilloscope &osc) {
   }
 }
 
+void OscilloscopeUI::drawVirtualTimeTraces(Oscilloscope &osc) {
+  const double w = static_cast<double>(m_display_width);
+  const double h = static_cast<double>(m_display_height);
+  for (const auto &channel : osc.getVirtualChannels()) {
+    if (!channel->isEnabled())
+      continue;
+
+    for (const auto &trace : channel->getTraces()) {
+      if (trace.domain == Domain::Time) {
+        size_t count = trace.data.size();
+        if (count < 2)
+          continue;
+
+        m_normalized_time.resize(count);
+        for (size_t i = 0; i < count; ++i) {
+          m_normalized_time[i] = trace.normalizeToIntensity(trace.data[i]) * h;
+        }
+
+        ImVec4 trace_color = toImVec4(trace.color);
+        double h_scale = static_cast<double>(trace.horizontal_scale);
+        double h_offset = static_cast<double>(trace.horizontal_offset);
+
+        double xscale = w / h_scale;
+        double trigger_frac = 0.5 - (h_offset / h_scale);
+        double trigger_x = w * trigger_frac;
+        double x0 =
+            trigger_x - (static_cast<double>(trace.trigger_index) * xscale);
+
+        ImPlot::PlotLine(
+            trace.name.c_str(), m_normalized_time.data(),
+            static_cast<int>(m_normalized_time.size()), xscale, x0,
+            {ImPlotProp_LineColor, trace_color, ImPlotProp_LineWeight, 2.0f});
+      }
+    }
+  }
+}
+
 void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
   const double w = static_cast<double>(m_display_width);
   const double h = static_cast<double>(m_display_height);
+
+  // Add a tab bar for active channel selection
+  ImGui::BeginChild("ActiveChannelSelector", ImVec2(-1, 30), false,
+                    ImGuiWindowFlags_NoScrollbar |
+                        ImGuiWindowFlags_NoScrollWithMouse);
+  if (ImGui::BeginTabBar("##ActiveChannelTabs",
+                         ImGuiTabBarFlags_FittingPolicyScroll)) {
+
+    // 1. Hardware Channels first
+    for (auto &ch : osc.getHardwareChannels()) {
+      if (ch->isEnabled()) {
+        ImVec4 color = toImVec4(ch->getColor());
+        ImGui::PushStyleColor(ImGuiCol_Text, color);
+        if (ImGui::BeginTabItem(ch->getLabel().c_str())) {
+          m_active_channel = ch.get();
+          m_active_processor = nullptr;
+          ImGui::EndTabItem();
+        }
+        ImGui::PopStyleColor();
+      }
+    }
+
+    // 2. Processors grouped by type
+    auto draw_processors_of_type = [&](ProcessorType type) {
+      auto process_channel = [&](IChannel *channel) {
+        for (auto *proc : channel->getProcessors()) {
+          if (!proc->isEnabled() || proc->getType() != type)
+            continue;
+          ImVec4 color = toImVec4(proc->getColor());
+          ImGui::PushStyleColor(ImGuiCol_Text, color);
+          std::string label =
+              proc->getName() + "###" + channel->getLabel() + proc->getName();
+          if (ImGui::BeginTabItem(label.c_str())) {
+            m_active_channel = nullptr;
+            m_active_processor = proc;
+            ImGui::EndTabItem();
+          }
+          ImGui::PopStyleColor();
+        }
+      };
+      for (auto &ch : osc.getHardwareChannels())
+        process_channel(ch.get());
+      for (auto &vc : osc.getVirtualChannels())
+        process_channel(vc.get());
+    };
+
+    draw_processors_of_type(ProcessorType::Math);
+    draw_processors_of_type(ProcessorType::Filter);
+    draw_processors_of_type(ProcessorType::FFT);
+    draw_processors_of_type(ProcessorType::Unknown);
+
+    ImGui::EndTabBar();
+  }
+  ImGui::EndChild();
 
   ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(0, 0));
   ImPlot::PushStyleVar(ImPlotStyleVar_PlotBorderSize, 0.0f);
@@ -318,10 +481,155 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
     }
 
     drawFrequencyTraces(osc);
+    drawVirtualTimeTraces(osc);
     drawGridLines(w, h);
 
     if (m_show_trigger_line) {
       drawTriggerLine(osc);
+    }
+
+    // Handle Dragging and Zooming on the active channel
+    if (ImPlot::IsPlotHovered() &&
+        (m_active_channel != nullptr || m_active_processor != nullptr)) {
+      ImVec2 delta =
+          ImGui::IsMouseDragging(0) ? ImGui::GetIO().MouseDelta : ImVec2(0, 0);
+      float scroll = ImGui::GetIO().MouseWheel;
+
+      bool changed = false;
+      static double h_remainder = 0.0;
+
+      auto apply_interaction = [&](auto *target, double max_buf, bool is_fft,
+                                   bool is_channel) {
+        double h_scale = static_cast<double>(target->getHorizontalScale());
+        if (h_scale == 0.0)
+          h_scale = max_buf;
+
+        if (delta.x != 0.0f) {
+          double samples_delta = (delta.x / w) * h_scale;
+          h_remainder -= samples_delta;
+          int int_delta = static_cast<int>(h_remainder);
+
+          if (int_delta != 0) {
+            double current_offset = static_cast<double>(
+                static_cast<int>(target->getHorizontalOffset()));
+            double new_offset = current_offset + static_cast<double>(int_delta);
+
+            double min_off, max_off;
+            if (is_fft) {
+              min_off = 0.0;
+              max_off = std::max(0.0, max_buf - h_scale);
+            } else {
+              double limit = std::max(0.0, max_buf / 2.0 - 0.5 * h_scale);
+              min_off = -limit;
+              max_off = limit;
+            }
+
+            new_offset = std::max(min_off, std::min(max_off, new_offset));
+            int actual_delta = static_cast<int>(new_offset - current_offset);
+            if (actual_delta != 0) {
+              target->setHorizontalOffset(static_cast<int>(new_offset));
+              changed = true;
+            }
+            h_remainder -= int_delta;
+          }
+        }
+        if (delta.y != 0.0f) {
+          double doffset =
+              (delta.y / h) * static_cast<double>(Constants::ADC_LEVELS);
+          double current_offset = target->getVerticalOffset();
+          double new_offset = current_offset - doffset;
+          new_offset = std::max(-128.0, std::min(128.0, new_offset));
+          target->setVerticalOffset(static_cast<float>(new_offset));
+          changed = true;
+        }
+        if (scroll != 0.0f) {
+          ImPlotPoint mouse_pt = ImPlot::GetPlotMousePos();
+          double mouse_x = mouse_pt.x;
+          double mouse_y = mouse_pt.y;
+
+          if (ImGui::GetIO().KeyShift) {
+            double current_v_scale =
+                static_cast<double>(target->getVerticalScale());
+            double current_v_offset =
+                static_cast<double>(target->getVerticalOffset());
+
+            double factor = std::pow(1.1, static_cast<double>(scroll));
+            double new_v_scale = current_v_scale * factor;
+
+            double y_val =
+                (mouse_y / h * static_cast<double>(Constants::ADC_LEVELS)) -
+                static_cast<double>(Constants::ADC_MIDPOINT);
+            double centered = (y_val - current_v_offset) / current_v_scale;
+            double new_v_offset =
+                current_v_offset + centered * (current_v_scale - new_v_scale);
+
+            target->setVerticalScale(
+                static_cast<float>(std::max(0.01, new_v_scale)));
+            target->setVerticalOffset(static_cast<float>(new_v_offset));
+          } else {
+            double current_h_offset = static_cast<double>(
+                static_cast<int>(target->getHorizontalOffset()));
+
+            double factor = std::pow(0.9, static_cast<double>(scroll));
+            double new_h_scale =
+                std::max(2.0, std::min(max_buf, h_scale * factor));
+
+            double x_frac = mouse_x / w;
+            double new_h_offset;
+            if (is_fft) {
+              new_h_offset =
+                  current_h_offset + (h_scale - new_h_scale) * x_frac;
+            } else {
+              new_h_offset =
+                  current_h_offset + (new_h_scale - h_scale) * (0.5 - x_frac);
+            }
+
+            double min_off, max_off;
+            if (is_fft) {
+              min_off = 0.0;
+              max_off = std::max(0.0, max_buf - new_h_scale);
+            } else {
+              double limit = std::max(0.0, max_buf / 2.0 - 0.5 * new_h_scale);
+              min_off = -limit;
+              max_off = limit;
+            }
+
+            new_h_offset = std::max(min_off, std::min(max_off, new_h_offset));
+
+            target->setHorizontalScale(
+                static_cast<size_t>(std::round(new_h_scale)));
+            target->setHorizontalOffset(
+                static_cast<int>(std::round(new_h_offset)));
+          }
+          changed = true;
+        }
+      };
+
+      if (m_active_channel) {
+        apply_interaction(m_active_channel, 16384.0, false, true);
+      } else if (m_active_processor) {
+        bool is_fft =
+            dynamic_cast<FFTProcessor *>(m_active_processor) != nullptr;
+        double max_buf = 16384.0;
+        if (is_fft) {
+          max_buf = static_cast<double>(
+              static_cast<FFTProcessor *>(m_active_processor)->getWindowSize() /
+              2);
+        } else {
+          for (auto &vc : osc.getVirtualChannels()) {
+            for (auto *proc : vc->getProcessors()) {
+              if (proc == m_active_processor && !vc->getTraces().empty()) {
+                max_buf =
+                    static_cast<double>(vc->getTraces().front().data.size());
+              }
+            }
+          }
+        }
+        apply_interaction(m_active_processor, max_buf, is_fft, false);
+      }
+
+      if (changed)
+        osc.forceReprocess();
     }
 
     // Draw horizontal trigger position indicator badge at the top of the grid
@@ -391,431 +699,15 @@ void OscilloscopeUI::drawModeCombo(Oscilloscope &osc) {
   }
 }
 
-// Control Helpers
-// Controls how many samples are visible horizontally.
-// TODO: Change this to time division instead of samples
-void OscilloscopeUI::drawHorizontalControls(IChannel &channel,
-                                            Oscilloscope &osc) {
-  int samples = static_cast<int>(channel.getHorizontalScale());
-
-  ImGui::Text("Horizontal Scale");
-  ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-  if (ImGui::SliderInt("##Horizontal Scale", &samples, 256, 16384,
-                       "%d samples")) {
-    channel.setHorizontalScale(static_cast<size_t>(samples));
-    osc.forceReprocess();
-  }
-  ImGui::SameLine();
-  ImGui::SetNextItemWidth(-FLT_MIN);
-  if (ImGui::InputInt("##HScaleInput", &samples, 0, 0)) {
-    channel.setHorizontalScale(
-        static_cast<size_t>(std::clamp(samples, 256, 16384)));
-    osc.forceReprocess();
-  }
-
-  ImGui::Spacing();
-  ImGui::Text("Horizontal Offset");
-  int h_offset = channel.getHorizontalOffset();
-
-  // Dynamic limits: how far can we pan before the window edge hits the buffer
-  // edge?
-  int capture_width = static_cast<int>(osc.getMaxCaptureWidth());
-  int visible_width = static_cast<int>(channel.getHorizontalScale());
-  int max_offset = std::max(0, (capture_width - visible_width) / 2);
-
-  ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-  if (ImGui::SliderInt("##Horizontal Offset", &h_offset, -max_offset,
-                       max_offset, "%d samples")) {
-    channel.setHorizontalOffset(h_offset);
-    osc.forceReprocess();
-  }
-  ImGui::SameLine();
-  ImGui::SetNextItemWidth(-FLT_MIN);
-  if (ImGui::InputInt("##HOffsetInput", &h_offset, 0, 0)) {
-    channel.setHorizontalOffset(std::clamp(h_offset, -max_offset, max_offset));
-    osc.forceReprocess();
-  }
-}
-
-// TODO: Change this to voltage division instead of Scale
-void OscilloscopeUI::drawVerticalControls(IChannel &channel,
-                                          Oscilloscope &osc) {
-  ImGui::Text("Vertical Scale");
-  float scale = channel.getVerticalScale();
-  ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-  if (ImGui::SliderFloat("##Vertical Scale", &scale, 0.01f, 10.0f, "%.2f")) {
-    channel.setVerticalScale(scale);
-    osc.forceReprocess();
-  }
-  ImGui::SameLine();
-  ImGui::SetNextItemWidth(-FLT_MIN);
-  if (ImGui::InputFloat("##VScaleInput", &scale, 0, 0, "%.1f")) {
-    channel.setVerticalScale(std::clamp(scale, 0.01f, 10.0f));
-    osc.forceReprocess();
-  }
-
-  ImGui::Spacing();
-  ImGui::Text("Vertical Offset");
-  float offset = channel.getVerticalOffset();
-  ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-  if (ImGui::SliderFloat("##Vertical Offset", &offset, -255.0f, 255.0f,
-                         "%.1f")) {
-    channel.setVerticalOffset(offset);
-    osc.forceReprocess();
-  }
-  ImGui::SameLine();
-  ImGui::SetNextItemWidth(-FLT_MIN);
-  if (ImGui::InputFloat("##VOffsetInput", &offset, 0, 0, "%.1f")) {
-    channel.setVerticalOffset(std::clamp(offset, -255.0f, 255.0f));
-    osc.forceReprocess();
-  }
-}
+// Channel controls moved to ui_channel.cpp
 
 // Control pannels
 
-void OscilloscopeUI::drawFFTControls(Oscilloscope &osc) {
-  bool found_fft = false;
+// FFT controls moved to ui_fft.cpp
 
-  for (auto &channel : osc.getHardwareChannels()) {
-    ImGui::PushID(channel->getLabel().c_str());
+// Math controls moved to ui_math.cpp
 
-    for (auto &processor : channel->getProcessors()) {
-      if (processor->getType() != ProcessorType::FFT) {
-        continue;
-      }
-
-      found_fft = true;
-
-      // Color coded label matching Trace
-      ImVec4 label_color = toImVec4(processor->getColor());
-
-      bool enabled = processor->isEnabled();
-      ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
-      if (ImGui::Checkbox("##Enabled", &enabled)) {
-        processor->setEnabled(enabled);
-      }
-      ImGui::PopStyleVar();
-      ImGui::SameLine();
-
-      ImGui::TextColored(label_color, "%s", processor->getName().c_str());
-      ImGui::Spacing();
-
-      float scale = processor->getVerticalScale();
-      ImGui::Text("Vertical Scale");
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderFloat("##Scale", &scale, 0.01f, 10.00f, "%.2f")) {
-        processor->setVerticalScale(scale);
-        osc.forceReprocess();
-      }
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputFloat("##ScaleInput", &scale, 0, 0, "%.2f")) {
-        processor->setVerticalScale(std::clamp(scale, 0.01f, 10.0f));
-        osc.forceReprocess();
-      }
-
-      float offset = processor->getVerticalOffset();
-      ImGui::Text("Vertical Offset");
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderFloat("##Offset", &offset, -500.0f, 500.0f, "%.1f")) {
-        processor->setVerticalOffset(offset);
-        osc.forceReprocess();
-      }
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputFloat("##OffsetInput", &offset, 0, 0, "%.1f")) {
-        processor->setVerticalOffset(std::clamp(offset, -500.0f, 500.0f));
-        osc.forceReprocess();
-      }
-
-      auto *fft_proc = dynamic_cast<FFTProcessor<unsigned char> *>(processor);
-      if (fft_proc) {
-        ImGui::Text("Representation");
-        int selected_mode = fft_proc->getIsModeLinear() ? 0 : 1;
-        const char *modes[] = {"Linear", "Decibel"};
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::Combo("##Representation", &selected_mode, modes, 2)) {
-          fft_proc->setIsModeLinear(selected_mode == 0);
-          osc.forceReprocess();
-        }
-
-        // Window Type Selection
-        ImGui::Text("Window Function");
-        const char *window_types[] = {"Rectangular", "Hann", "Hamming",
-                                      "Blackman-Harris", "Flat Top"};
-        int current_type = 0;
-        std::string current_name = fft_proc->getWindowTypeName();
-        for (int i = 0; i < 5; i++) {
-          if (current_name == window_types[i]) {
-            current_type = i;
-            break;
-          }
-        }
-
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::Combo("##WindowType", &current_type, window_types, 5)) {
-          fft_proc->setWindowType(current_type);
-          osc.forceReprocess();
-        }
-
-        float smoothing_factor = fft_proc->getSmoothingFactor();
-        ImGui::Text("Smoothing");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-        if (ImGui::SliderFloat("##Smoothing", &smoothing_factor, 0.0f, 1.00f,
-                               "%.2f")) {
-          fft_proc->setSmoothingFactor(smoothing_factor);
-          osc.forceReprocess();
-        }
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::InputFloat("##SmoothingInput", &smoothing_factor, 0, 0,
-                              "%.2f")) {
-          fft_proc->setSmoothingFactor(
-              std::clamp(smoothing_factor, 0.0f, 1.0f));
-          osc.forceReprocess();
-        }
-
-        int fft_size = static_cast<int>(fft_proc->getWindowSize());
-        ImGui::Text("Resolution");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-        if (ImGui::SliderInt("##SampleCount", &fft_size, 256, 16384,
-                             "%d samples")) {
-          fft_proc->setWindowSize(static_cast<size_t>(fft_size));
-          osc.forceReprocess();
-        }
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::InputInt("##ResolutionInput", &fft_size, 0, 0)) {
-          fft_proc->setWindowSize(
-              static_cast<size_t>(std::clamp(fft_size, 256, 16384)));
-          osc.forceReprocess();
-        }
-
-        int num_bins = fft_size / 2;
-        int h_scale = static_cast<int>(processor->getHorizontalScale());
-        if (h_scale == 0 || h_scale > num_bins)
-          h_scale = num_bins;
-        ImGui::Text("Horizontal Scale");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-        if (ImGui::SliderInt("##FFTHorizontalScale", &h_scale, 2, num_bins,
-                             "%d bins")) {
-          processor->setHorizontalScale(static_cast<size_t>(h_scale));
-          osc.forceReprocess();
-        }
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::InputInt("##FFTHScaleInput", &h_scale, 0, 0)) {
-          processor->setHorizontalScale(
-              static_cast<size_t>(std::clamp(h_scale, 2, num_bins)));
-          osc.forceReprocess();
-        }
-
-        int h_offset = static_cast<int>(processor->getHorizontalOffset());
-        int max_offset = std::max(1, num_bins - h_scale);
-        if (h_offset > max_offset) {
-          h_offset = max_offset;
-          processor->setHorizontalOffset(static_cast<size_t>(h_offset));
-        }
-        ImGui::Text("Horizontal Offset");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-        if (ImGui::SliderInt("##FFTHorizontalOffset", &h_offset, 0, max_offset,
-                             "%d bins")) {
-          processor->setHorizontalOffset(static_cast<size_t>(h_offset));
-          osc.forceReprocess();
-        }
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::InputInt("##FFTHOffsetInput", &h_offset, 0, 0)) {
-          processor->setHorizontalOffset(
-              static_cast<size_t>(std::clamp(h_offset, 0, max_offset)));
-          osc.forceReprocess();
-        }
-      }
-
-      ImGui::Spacing();
-      ImGui::Separator();
-      ImGui::Spacing();
-    }
-
-    ImGui::PopID();
-  }
-
-  if (!found_fft) {
-    ImGui::TextDisabled("No FFT processor found.");
-  }
-}
-
-void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
-  bool found_math = false;
-
-  for (auto &channel : osc.getVirtualChannels()) {
-    ImGui::PushID(channel->getLabel().c_str());
-
-    for (auto &processor : channel->getProcessors()) {
-      if (processor->getType() != ProcessorType::Math) {
-        continue;
-      }
-
-      found_math = true;
-
-      // Color coded label matching Trace
-      ImVec4 label_color = toImVec4(processor->getColor());
-
-      bool enabled = processor->isEnabled();
-      ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
-      if (ImGui::Checkbox("##Enabled", &enabled)) {
-        processor->setEnabled(enabled);
-      }
-      ImGui::PopStyleVar();
-      ImGui::SameLine();
-
-      ImGui::TextColored(label_color, "%s", processor->getName().c_str());
-      ImGui::Spacing();
-
-      float scale = processor->getVerticalScale();
-      ImGui::Text("Vertical Scale");
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderFloat("##Scale", &scale, 0.01f, 10.00f, "%.2f")) {
-        processor->setVerticalScale(scale);
-        osc.forceReprocess();
-      }
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputFloat("##ScaleInput", &scale, 0, 0, "%.2f")) {
-        processor->setVerticalScale(std::clamp(scale, 0.01f, 10.0f));
-        osc.forceReprocess();
-      }
-
-      float offset = processor->getVerticalOffset();
-      ImGui::Text("Vertical Offset");
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderFloat("##Offset", &offset, -500.0f, 500.0f, "%.1f")) {
-        processor->setVerticalOffset(offset);
-        osc.forceReprocess();
-      }
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputFloat("##OffsetInput", &offset, 0, 0, "%.1f")) {
-        processor->setVerticalOffset(std::clamp(offset, -500.0f, 500.0f));
-        osc.forceReprocess();
-      }
-
-      int h_scale = static_cast<int>(processor->getHorizontalScale());
-      ImGui::Text("Horizontal Scale");
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderInt("##Horizontal Scale", &h_scale, 256, 16384,
-                           "%d samples")) {
-        processor->setHorizontalScale(static_cast<size_t>(h_scale));
-        osc.forceReprocess();
-      }
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputInt("##HScaleInput", &h_scale, 0, 0)) {
-        processor->setHorizontalScale(
-            static_cast<size_t>(std::clamp(h_scale, 256, 16384)));
-        osc.forceReprocess();
-      }
-
-      int h_offset = static_cast<int>(processor->getHorizontalOffset());
-      int capture_width = static_cast<int>(osc.getMaxCaptureWidth());
-      int max_offset = std::max(0, (capture_width - h_scale) / 2);
-
-      ImGui::Spacing();
-      ImGui::Text("Horizontal Offset");
-      ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderInt("##Horizontal Offset", &h_offset, -max_offset,
-                           max_offset, "%d samples")) {
-        processor->setHorizontalOffset(static_cast<size_t>(h_offset));
-        osc.forceReprocess();
-      }
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputInt("##HOffsetInput", &h_offset, 0, 0)) {
-        processor->setHorizontalOffset(
-            static_cast<size_t>(std::clamp(h_offset, -max_offset, max_offset)));
-        osc.forceReprocess();
-      }
-
-      ImGui::Spacing();
-
-      auto *math_proc = dynamic_cast<MathProcessor *>(processor);
-      if (math_proc) {
-        // Operation Selection
-        const char *op_names[] = {"Add",    "Subtract",  "Multiply",
-                                  "Invert", "Integrate", "Differentiate"};
-        int current_op = static_cast<int>(math_proc->getOperation());
-        ImGui::Text("Operation");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::Combo("##Operation", &current_op, op_names, 6)) {
-          math_proc->setOperation(static_cast<MathOperation>(current_op));
-          osc.forceReprocess();
-        }
-
-        // Channels vector for dropdowns (Hardware channels only)
-        std::vector<std::string> channel_labels;
-        std::vector<const char *> channel_labels_cstr;
-        size_t num_channels = osc.getHardwareChannels().size();
-        channel_labels.resize(num_channels);
-        channel_labels_cstr.resize(num_channels);
-        int src1_idx = 0;
-        int src2_idx = 0;
-        for (size_t i = 0; i < num_channels; i++) {
-          channel_labels[i] = osc.getHardwareChannels()[i]->getLabel();
-          channel_labels_cstr[i] = channel_labels[i].c_str();
-          if (channel_labels[i] == math_proc->getSource1Label()) {
-            src1_idx = static_cast<int>(i);
-          }
-          if (channel_labels[i] == math_proc->getSource2Label()) {
-            src2_idx = static_cast<int>(i);
-          }
-        }
-
-        // Source 1 Selection
-        ImGui::Text("Source 1");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::Combo("##Source1", &src1_idx, channel_labels_cstr.data(),
-                         static_cast<int>(num_channels))) {
-          math_proc->setSource1Label(channel_labels[src1_idx]);
-          osc.forceReprocess();
-        }
-
-        // Source 2 Selection (hidden for single-source operations)
-        if (math_proc->getOperation() != MathOperation::INVERT &&
-            math_proc->getOperation() != MathOperation::INTEGRATE &&
-            math_proc->getOperation() != MathOperation::DIFFERENTIATE) {
-          ImGui::Text("Source 2");
-          ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-          if (ImGui::Combo("##Source2", &src2_idx, channel_labels_cstr.data(),
-                           static_cast<int>(num_channels))) {
-            math_proc->setSource2Label(channel_labels[src2_idx]);
-            osc.forceReprocess();
-          }
-        }
-
-        // Smoothing control for differentiation
-        if (math_proc->getOperation() == MathOperation::DIFFERENTIATE) {
-          int radius = static_cast<int>(math_proc->getDiffSmoothRadius());
-          ImGui::Text("Smoothing Radius");
-          ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-          if (ImGui::SliderInt("##SmoothRadius", &radius, 0, 128, "%d samples")) {
-            math_proc->setDiffSmoothRadius(static_cast<size_t>(radius));
-            osc.forceReprocess();
-          }
-        }
-      }
-
-      ImGui::Spacing();
-      ImGui::Separator();
-      ImGui::Spacing();
-    }
-
-    ImGui::PopID();
-  }
-
-  if (!found_math) {
-    ImGui::TextDisabled("No Math processor found.");
-  }
-}
+// Filter controls moved to ui_filter.cpp
 
 void OscilloscopeUI::buildDefaultDockLayout(ImGuiID dockspace_id,
                                             const ImVec2 &dockspace_size) {
@@ -842,6 +734,7 @@ void OscilloscopeUI::buildDefaultDockLayout(ImGuiID dockspace_id,
 
   ImGui::DockBuilderDockWindow("FFT", right_id);
   ImGui::DockBuilderDockWindow("Math", right_id);
+  ImGui::DockBuilderDockWindow("Filter", right_id);
   ImGui::DockBuilderDockWindow("Hardware", right_id);
 
   ImGui::DockBuilderDockWindow("Debug", bottom_id);
@@ -1008,64 +901,13 @@ void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
 }
 
 // FFT controls window.
-void OscilloscopeUI::drawFFTWindow(Oscilloscope &osc) {
-  ImGui::Begin("FFT");
-  ImGui::SetWindowFontScale(1.15f);
+// FFT window moved to ui_fft.cpp
 
-  drawFFTControls(osc);
+// Math window moved to ui_math.cpp
 
-  ImGui::End();
-}
+// drawFilterWindow moved to ui_filter.cpp
 
-void OscilloscopeUI::drawMathWindow(Oscilloscope &osc) {
-  ImGui::Begin("Math");
-  ImGui::SetWindowFontScale(1.15f);
-
-  drawMathControls(osc);
-
-  ImGui::End();
-}
-
-// Channel controls window.
-void OscilloscopeUI::drawChannelWindow(Oscilloscope &osc) {
-  ImGui::Begin("Channels");
-  ImGui::SetWindowFontScale(1.15f);
-
-  if (osc.getHardwareChannels().empty()) {
-    ImGui::TextDisabled("No channels available.");
-    ImGui::End();
-    return;
-  }
-
-  // Per-Channel Controls
-  for (auto &channel : osc.getHardwareChannels()) {
-    ImGui::PushID(channel->getLabel().c_str());
-
-    ImVec4 label_color = toImVec4(channel->getColor());
-
-    bool enabled = channel->isEnabled();
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
-    if (ImGui::Checkbox("##Enabled", &enabled)) {
-      channel->setEnabled(enabled);
-    }
-    ImGui::PopStyleVar();
-    ImGui::SameLine();
-
-    ImGui::TextColored(label_color, "%s", channel->getLabel().c_str());
-    ImGui::Spacing();
-
-    drawHorizontalControls(*channel, osc);
-    drawVerticalControls(*channel, osc);
-
-    ImGui::Spacing();
-    ImGui::Separator();
-    ImGui::Spacing();
-
-    ImGui::PopID();
-  }
-
-  ImGui::End();
-}
+// Channel window moved to ui_channel.cpp
 
 // USB connection window.
 void OscilloscopeUI::drawHardwareWindow(Oscilloscope &osc) {
@@ -1143,6 +985,7 @@ void OscilloscopeUI::render(Oscilloscope &osc) {
   drawTriggerWindow(osc);
   drawFFTWindow(osc);
   drawMathWindow(osc);
+  drawFilterWindow(osc);
   drawHardwareWindow(osc);
   drawDebugWindow(osc);
 }

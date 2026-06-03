@@ -70,12 +70,12 @@ private:
   bool m_has_new_frame = false;
 
   // Vertical plot settings
-  float m_vertical_scale = 1.0f;
-  float m_vertical_offset = 0.0f;
+  float m_vertical_scale = Constants::DEFAULT_VERTICAL_SCALE;
+  float m_vertical_offset = Constants::DEFAULT_VERTICAL_OFFSET;
 
   // Horizontal plot settings
   size_t m_horizontal_scale;
-  int m_horizontal_offset = 0;
+  int m_horizontal_offset = Constants::DEFAULT_HORIZONTAL_OFFSET;
   size_t m_last_trigger_in_frame = 0;
 
   // Display color
@@ -83,7 +83,7 @@ private:
 
 public:
   // Lifecycle
-  VirtualChannel(const std::string &label, size_t horizontal_scale)
+  VirtualChannel(const std::string &label, size_t horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE)
       : m_label(label), m_horizontal_scale(horizontal_scale) {}
 
   // Accessors
@@ -145,6 +145,9 @@ public:
         proc->process(m_sources, m_traces, m_last_trigger_in_frame);
       }
     }
+    for (auto &trace : m_traces) {
+      trace.trigger_index = m_last_trigger_in_frame;
+    }
     m_has_new_frame = true;
   }
   void reprocessLastFrame() override {
@@ -153,6 +156,9 @@ public:
       if (proc->isEnabled()) {
         proc->process(m_sources, m_traces, m_last_trigger_in_frame);
       }
+    }
+    for (auto &trace : m_traces) {
+      trace.trigger_index = m_last_trigger_in_frame;
     }
     m_has_new_frame = true;
   }
@@ -180,15 +186,15 @@ template <typename HardwareT> class Channel : public IChannel {
 private:
   std::string m_label;
   CircularBuffer<HardwareT> m_buffer;
-  std::vector<std::unique_ptr<IProcessor<HardwareT>>> m_processors;
+  std::vector<std::unique_ptr<IProcessor>> m_processors;
 
   // Vertical (voltage)
-  float m_vertical_scale = 1.0f;
-  float m_vertical_offset = 0.0f;
+  float m_vertical_scale = Constants::DEFAULT_VERTICAL_SCALE;
+  float m_vertical_offset = Constants::DEFAULT_VERTICAL_OFFSET;
 
   // Horizontal (time)
   size_t m_horizontal_scale;
-  int m_horizontal_offset = 0;
+  int m_horizontal_offset = Constants::DEFAULT_HORIZONTAL_OFFSET;
 
   std::vector<HardwareT> m_raw_frame;
   std::vector<float> m_float_frame;
@@ -202,7 +208,7 @@ private:
 
 public:
   // Lifecycle
-  Channel(const std::string &label, size_t buffer_size, size_t horizontal_scale)
+  Channel(const std::string &label, size_t buffer_size = Constants::BUFFER_SIZE, size_t horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE)
       : m_label(label), m_buffer(buffer_size),
         m_horizontal_scale(horizontal_scale) {}
 
@@ -243,7 +249,7 @@ public:
   void setColor(const Color &color) override { m_color = color; }
 
   // Configuration
-  void addProcessor(std::unique_ptr<IProcessor<HardwareT>> proc) {
+  void addProcessor(std::unique_ptr<IProcessor> proc) {
     m_processors.push_back(std::move(proc));
   }
   void clearProcessors() { m_processors.clear(); }
@@ -299,6 +305,8 @@ public:
     base_trace.domain = Domain::Time;
     base_trace.vertical_scale = m_vertical_scale;
     base_trace.vertical_offset = m_vertical_offset;
+    base_trace.horizontal_scale = m_horizontal_scale;
+    base_trace.horizontal_offset = m_horizontal_offset;
     base_trace.color = m_color;
 
     // Trigger point relative to the extracted frame
@@ -326,8 +334,11 @@ public:
     // 4. Run processors on the full raw frame
     for (auto &proc : m_processors) {
       if (proc->isEnabled()) {
-        proc->process(m_raw_frame, m_traces);
+        proc->process(m_float_frame, m_traces);
       }
+    }
+    for (auto &trace : m_traces) {
+      trace.trigger_index = trigger_in_frame;
     }
 
     m_has_new_frame = true;
@@ -344,6 +355,9 @@ public:
     base_trace.domain = Domain::Time;
     base_trace.vertical_scale = m_vertical_scale;
     base_trace.vertical_offset = m_vertical_offset;
+    base_trace.horizontal_scale = m_horizontal_scale;
+    base_trace.horizontal_offset = m_horizontal_offset;
+    base_trace.color = m_color;
 
     size_t trigger_in_frame = m_last_trigger_in_frame;
     size_t half_vis = m_horizontal_scale / 2;
@@ -364,10 +378,19 @@ public:
 
     m_traces.push_back(std::move(base_trace));
 
+    // Ensure m_float_frame is correct size and populated
+    m_float_frame.resize(actual_width);
+    for (size_t i = 0; i < actual_width; ++i) {
+      m_float_frame[i] = static_cast<float>(m_raw_frame[i]);
+    }
+
     for (auto &proc : m_processors) {
       if (proc->isEnabled()) {
-        proc->process(m_raw_frame, m_traces);
+        proc->process(m_float_frame, m_traces);
       }
+    }
+    for (auto &trace : m_traces) {
+      trace.trigger_index = trigger_in_frame;
     }
 
     m_has_new_frame = true;

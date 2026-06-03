@@ -18,6 +18,9 @@ struct Trace {
   std::vector<float> data;
   float vertical_scale = 1.0f;
   float vertical_offset = 0.0f;
+  size_t horizontal_scale = 1024;
+  int horizontal_offset = 0;
+  size_t trigger_index = 0;
   Color color = {1.0f, 1.0f, 1.0f, 1.0f};
 
   // Pipeline

@@ -86,6 +86,93 @@ public:
 
     // TODO: Implement measurement logic here (Vpp, Vrms, etc.)
   }
+
+  void calculateVpp(const std::vector<float> &frame) {
+    if (frame.empty()) {
+      m_v_pp = 0.0f;
+      return;
+    }
+
+    float min_val = frame[0];
+    float max_val = frame[0];
+
+    for (size_t i = 1; i < frame.size(); ++i) {
+      if (frame[i] < min_val)
+        min_val = frame[i];
+      if (frame[i] > max_val)
+        max_val = frame[i];
+    }
+
+    m_v_pp = max_val - min_val;
+  }
+
+  void calculateVRMS(const std::vector<float> &frame) {
+    if (frame.empty()) {
+      m_v_rms = 0.0f;
+      return;
+    }
+
+    float sum_sq = 0.0f;
+    for (size_t i = 0; i < frame.size(); ++i) {
+      sum_sq += frame[i] * frame[i];
+    }
+
+    m_v_rms = std::sqrt(sum_sq / frame.size());
+  }
+
+  void calculateVavg(const std::vector<float> &frame) {
+    if (frame.empty()) {
+      m_v_avg = 0.0f;
+      return;
+    }
+
+    float sum = 0.0f;
+    for (size_t i = 0; i < frame.size(); ++i) {
+      sum += frame[i];
+    }
+
+    m_v_avg = sum / frame.size();
+  }
+
+  void calculateVmin(const std::vector<float> &frame) {
+    if (frame.empty()) {
+      m_v_min = 0.0f;
+      return;
+    }
+
+    float min_val = frame[0];
+    for (size_t i = 1; i < frame.size(); ++i) {
+      if (frame[i] < min_val)
+        min_val = frame[i];
+    }
+
+    m_v_min = min_val;
+  }
+
+  void calculateVmax(const std::vector<float> &frame) {
+    if (frame.empty()) {
+      m_v_max = 0.0f;
+      return;
+    }
+
+    float max_val = frame[0];
+    for (size_t i = 1; i < frame.size(); ++i) {
+      if (frame[i] > max_val)
+        max_val = frame[i];
+    }
+
+    m_v_max = max_val;
+  }
+
+  // TODO: FFT implementation
+  void calculateFreqAndPeriod(const std::vector<float> &frame) {
+    if (frame.empty()) {
+      m_freq = 0.0f;
+      m_period = 0.0f;
+      return;
+    }
+
+  }
 };
 
 } // namespace Scoped

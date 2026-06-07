@@ -12,6 +12,7 @@ enum class ProcessorType {
   FFT,
   Math,
   Filter,
+  Measurement,
   Unknown,
 };
 

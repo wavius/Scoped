@@ -662,7 +662,7 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
       double v_offset = 0.0;
       ImVec4 v_badge_color = toImVec4(vc->getColor());
       for (auto &proc : vc->getProcessors()) {
-        if (proc->isEnabled()) {
+        if (proc->isEnabled() && proc->getType() != ProcessorType::Measurement) {
           has_enabled_processor = true;
           v_scale = static_cast<double>(proc->getHorizontalScale());
           v_offset = static_cast<double>(
@@ -735,6 +735,7 @@ void OscilloscopeUI::buildDefaultDockLayout(ImGuiID dockspace_id,
   ImGui::DockBuilderDockWindow("FFT", right_id);
   ImGui::DockBuilderDockWindow("Math", right_id);
   ImGui::DockBuilderDockWindow("Filter", right_id);
+  ImGui::DockBuilderDockWindow("Measurements", right_id);
   ImGui::DockBuilderDockWindow("Hardware", right_id);
 
   ImGui::DockBuilderDockWindow("Debug", bottom_id);
@@ -986,6 +987,7 @@ void OscilloscopeUI::render(Oscilloscope &osc) {
   drawFFTWindow(osc);
   drawMathWindow(osc);
   drawFilterWindow(osc);
+  drawMeasurementWindow(osc);
   drawHardwareWindow(osc);
   drawDebugWindow(osc);
 }

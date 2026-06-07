@@ -43,6 +43,7 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/core/src/ui/ui_fft.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/core/src/ui/ui_math.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/core/src/ui/ui_filter.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/src/ui/ui_measurement.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/core/src/hardware/usb.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/imgui.cpp

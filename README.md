@@ -39,8 +39,11 @@ make -j$(nproc)
 
 The software side is mostly complete and fully functional with simulated inputs. The current focus is on building the FPGA-based hardware frontend.
 
+<<<<<<< HEAD
 Future software features are described in docs/TODO.md.
 
+=======
+>>>>>>> 40b365c9b12b0c3ede46e7a06aa16127a3065bda
 ## Hardware Features
 
 - ADC: TBD

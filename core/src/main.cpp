@@ -14,6 +14,7 @@
 #include <processing/fft_processor.hpp>
 #include <processing/filter_processor.hpp>
 #include <processing/math_processor.hpp>
+#include <processing/measurement_processor.hpp>
 #include <processing/trigger.hpp>
 #include <ui/ui.hpp>
 
@@ -142,6 +143,13 @@ int main(int, char **) {
       Scoped::Color{Scoped::Colors::MATH2.x, Scoped::Colors::MATH2.y,
                     Scoped::Colors::MATH2.z, Scoped::Colors::MATH2.w});
   vc2->addProcessor(std::move(math_p2));
+
+  // Measurement processors
+  auto meas_p1 = std::make_unique<Scoped::MeasurementProcessor>("MEAS1");
+  vc1->addProcessor(std::move(meas_p1));
+
+  auto meas_p2 = std::make_unique<Scoped::MeasurementProcessor>("MEAS2");
+  vc2->addProcessor(std::move(meas_p2));
 
   // Channel colors
   ch1->setColor(Scoped::Color{Scoped::Colors::CH1.x, Scoped::Colors::CH1.y,

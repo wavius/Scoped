@@ -70,6 +70,7 @@ private:
   void drawFFTWindow(Oscilloscope &osc);
   void drawMathWindow(Oscilloscope &osc);
   void drawFilterWindow(Oscilloscope &osc);
+  void drawMeasurementWindow(Oscilloscope &osc);
   void drawChannelWindow(Oscilloscope &osc);
   void drawHardwareWindow(Oscilloscope &osc);
   void drawDebugWindow(Oscilloscope &osc);

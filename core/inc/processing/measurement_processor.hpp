@@ -22,6 +22,7 @@ private:
   size_t m_horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE;
   size_t m_horizontal_offset = Constants::DEFAULT_HORIZONTAL_OFFSET;
   Color m_color = {1.0f, 1.0f, 1.0f, 1.0f};
+  bool m_show_in_popup = false;
 
   // Measured values
   float m_v_pp = 0.0f;
@@ -57,8 +58,10 @@ public:
   void setColor(const Color &color) override { m_color = color; }
 
   void setSourceLabel(const std::string &label) { m_source_label = label; }
+  void setShowInPopup(bool show) { m_show_in_popup = show; }
 
   // Accessors for measured values
+  bool getShowInPopup() const { return m_show_in_popup; }
   float getVpp() const { return m_v_pp; }
   float getVrms() const { return m_v_rms; }
   float getVavg() const { return m_v_avg; }
@@ -93,8 +96,16 @@ public:
       }
     }
 
-    if (!raw_frame_ptr || raw_frame_ptr->empty())
+    if (!raw_frame_ptr || raw_frame_ptr->empty()) {
+      m_v_pp = 0.0f;
+      m_v_rms = 0.0f;
+      m_v_avg = 0.0f;
+      m_v_min = 0.0f;
+      m_v_max = 0.0f;
+      m_freq = 0.0f;
+      m_period = 0.0f;
       return;
+    }
 
     const auto &raw_frame = *raw_frame_ptr;
 

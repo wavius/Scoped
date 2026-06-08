@@ -18,12 +18,17 @@
 
 - Measurement visualizers and cursors
 
+## FFT
+
+- "None" window option
+
 ## Trigger
 
-- Pulse Width / Glitch trigger (pulses narrower/wider than a threshold)
-- Runt trigger (pulses crossing one threshold but failing to cross the second)
+- Pulse Width
+- Runt trigger
 - Rise/Fall time triggers
 - Serial pattern match triggering
+- Delay/holdoff
 
 ## Other
 

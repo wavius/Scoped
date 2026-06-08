@@ -6,14 +6,35 @@ Scoped is a computer-based digital oscilloscope software built in C++.
 
 ## Features
 
-Digital phosphor display, modular UI with dockable tabs. 
+Scoped is designed with a modern, modular user interface featuring fully dockable tabs.
 
-- **Trigger Engine:** Rising and falling edge triggering. Other types to be implemented.
-- **FFT Processing:** Real-time FFT using `pocketfft`.
-- **Math Operations:** Addition, subtraction, multiplication, inversion, integration, and FFT-based differentiation.
-- **Digital Filters:** Lowpass, Highpass, Bandpass, and Bandstop filter responses. Butterworth, Bessel, Chebyshev filter types.
-- **Measurements:** Vpp, Vrms, Vavg, Vmin, Vmax, Frequency, and Period.
-- **Hardware:** Connect to FPGA frontend over USB.
+- **Display:**
+  - Hardware-accelerated digital phosphor rendering.
+  - Controls for vertical/horizontal scale and offset for each trace.
+
+- **Trigger:**
+  - Rising and falling edge triggering.
+  - Source and level selection.
+
+- **FFT:**
+  - Real-time Fast Fourier Transform powered by `pocketfft`.
+  - **Window functions:** Rectangular, Hanning, Hamming, Blackman-Harris, Flat Top.
+  - Linear or Decibel (dB) scale.
+
+- **Math:**
+  - Addition, Subtraction, Multiplication, Inversion, Integration, Differentiation.
+
+- **Filters:**
+  - Cascaded dual-biquad filter architecture.
+  - **Responses:** Lowpass, Highpass, Bandpass, Bandstop.
+  - **Topologies:** Butterworth, Bessel, Chebyshev.
+  - Frequency response graph.
+
+- **Measurements:**
+  - Vpp, Vrms, Vavg, Vmin, Vmax, Frequency, and Period.
+
+- **Hardware Integration:**
+  - Connection to FPGA frontend over USB.
 
 ## Building from Source
 

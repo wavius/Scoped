@@ -1,23 +1,23 @@
 # Scoped
 
-Scoped is a computer-based digital oscilloscope software built in C++ specifically designed for Linux desktops.
+Scoped is a computer-based digital oscilloscope software built in C++.
 
 ![Preview](img/Scoped_preview.png)
 
-## Current Progress & Features
+## Features
 
-- **Signal Rendering:** Real-time intensity-graded time-domain trace rendering.
-- **Trigger Engine:** Customizable edge triggering with UI markers and interactive controls.
-- **Hardware Abstraction:** Simulated sine wave generators for testing, with scaffolding ready for physical FPGA/USB endpoints.
-- **FFT Processing:** Real-time frequency domain analysis powered by `pocketfft`, featuring adjustable windows and resolutions.
-- **Math Operations:** Virtual channels that perform addition, subtraction, multiplication, inversion, integration, and FFT-based differentiation across traces.
-- **Digital Filters:** Dual-biquad cascade architecture supporting Lowpass, Highpass, Bandpass, and Bandstop Butterworth filters. Includes real-time interactive Log-scale Bode plot visualization of the frequency response.
-- **Measurements:** Native computation of Vpp, Vrms, Vavg, Vmin, Vmax, Frequency, and Period. Sources can be intelligently targeted at either raw hardware channels or the outputs of prior Math/Filter processors.
-- **Modular UI:** Cleanly separated UI modules with a dockable workspace (Channels, FFT, Math, Filters, Trigger, Measurements, and Hardware tabs).
+Digital phosphor display, modular UI with dockable tabs. 
+
+- **Trigger Engine:** Rising and falling edge triggering. Other types to be implemented.
+- **FFT Processing:** Real-time FFT using `pocketfft`.
+- **Math Operations:** Addition, subtraction, multiplication, inversion, integration, and FFT-based differentiation.
+- **Digital Filters:** Lowpass, Highpass, Bandpass, and Bandstop filter responses. Butterworth, Bessel, Chebyshev filter types.
+- **Measurements:** Vpp, Vrms, Vavg, Vmin, Vmax, Frequency, and Period.
+- **Hardware:** Connect to FPGA frontend over USB.
 
 ## Building from Source
 
-Scoped requires CMake (>= 3.15) and a modern C++20 compiler.
+CMake (>= 3.15) and C++20 compiler.
 
 ### Dependencies
 - SDL2 (`libsdl2-dev`)
@@ -28,20 +28,18 @@ Scoped requires CMake (>= 3.15) and a modern C++20 compiler.
 ### Compilation
 
 ```bash
-mkdir build
-cd build
-cmake ..
-make -j$(nproc)
-./Scoped
+make setup
+make all
+make run
 ```
 
 ## Next Steps
 
-The software side is mostly complete and fully functional with simulated inputs. The current focus is on building the FPGA-based hardware frontend.
+The software side is mostly complete and fully functional with simulated inputs. The FPGA-based hardware frontend needs to be designed built.
 
 Future software features are described in docs/TODO.md.
 
-## Hardware Features
+## Hardware Specs
 
 - ADC: TBD
 - FPGA: Muse LAB iCESugar-Pro v1.3 

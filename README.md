@@ -1,6 +1,6 @@
 # Scoped
 
-Scoped is a computer-based digital oscilloscope software built in C++.
+Scoped is a computer-based digital oscilloscope with an FPGA frontend and software built in C++.
 
 ![Preview](img/Scoped_preview.png)
 

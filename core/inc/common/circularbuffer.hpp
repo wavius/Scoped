@@ -116,8 +116,7 @@ public:
     ensureSineLUT();
     
     // Direct Digital Synthesis (DDS) setup
-    // We map 0.0-1.0 to the full range of a 32-bit unsigned integer.
-    // This gives us automatic, free phase wrapping (integer overflow) and extreme speed.
+    // 0.0-1.0 is mapped to the full range of a 32-bit unsigned integer
     double local_phase_double = std::fmod(s_fundamental_phase * static_cast<double>(frequency), 1.0);
     uint32_t phase = static_cast<uint32_t>(local_phase_double * 4294967296.0);
     uint32_t step = static_cast<uint32_t>(((1.0 / static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ)) * static_cast<double>(frequency)) * 4294967296.0);

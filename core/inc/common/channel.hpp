@@ -15,7 +15,7 @@
 
 namespace Scoped {
 class ITrigger;
-// Interface for oscilloscope channels.
+// Interface for oscilloscope channels
 class IChannel {
 public:
   // Lifecycle
@@ -59,7 +59,7 @@ public:
   virtual void updateTriggerPoint(size_t idx) = 0;
 };
 
-// Encapsulates a channel that pulls data from other channels' traces.
+// Channel that pulls data from other channels' traces
 class VirtualChannel : public IChannel {
 private:
   std::string m_label;
@@ -180,8 +180,7 @@ public:
   }
 };
 
-// Encapsulates the acquisition and processing pipeline for a single hardware
-// channel.
+// Aacquisition and processing pipeline for a single hardware channel
 template <typename HardwareT> class Channel : public IChannel {
 private:
   std::string m_label;
@@ -263,18 +262,17 @@ public:
 
   void extractAndProcessFrame(size_t trigger_idx,
                               size_t max_width) override {
-    // 1. Calculate the buffer window to extract (centered on trigger_idx)
+    // Calculate the buffer window to extract
     size_t unread = m_buffer.getUnreadCount();
     size_t half_max = max_width / 2;
     size_t start = (trigger_idx >= half_max) ? trigger_idx - half_max : 0;
     
-    // Clamp extraction window to available data
     if (start + max_width > unread) {
         start = (unread > max_width) ? unread - max_width : 0;
     }
     size_t actual_width = std::min(max_width, unread - start);
 
-    // 2. Extract raw frame for processors
+    // Extract raw frame for processors
     m_raw_frame.resize(actual_width);
     size_t capacity = m_buffer.getCapacity();
     size_t buffer_start = (m_buffer.getReadIdx() + start) % capacity;
@@ -299,7 +297,7 @@ public:
 
     m_traces.clear();
 
-    // 3. Populate Time trace (centered subset of raw frame)
+    // Fill time trace
     Trace base_trace;
     base_trace.name = m_label + " Time";
     base_trace.domain = Domain::Time;
@@ -311,7 +309,7 @@ public:
 
     // Trigger point relative to the extracted frame
     size_t trigger_in_frame = trigger_idx - start;
-    m_last_trigger_in_frame = trigger_in_frame; // Store for reprocessing
+    m_last_trigger_in_frame = trigger_in_frame; 
 
     size_t half_vis = m_horizontal_scale / 2;
     int offset_val = m_horizontal_offset; 
@@ -331,7 +329,7 @@ public:
 
     m_traces.push_back(std::move(base_trace));
 
-    // 4. Run processors on the full raw frame
+    // Run processors on the full raw frame
     for (auto &proc : m_processors) {
       if (proc->isEnabled()) {
         proc->process(m_float_frame, m_traces);
@@ -378,7 +376,6 @@ public:
 
     m_traces.push_back(std::move(base_trace));
 
-    // Ensure m_float_frame is correct size and populated
     m_float_frame.resize(actual_width);
     for (size_t i = 0; i < actual_width; ++i) {
       m_float_frame[i] = static_cast<float>(m_raw_frame[i]);

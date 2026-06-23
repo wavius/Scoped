@@ -6,8 +6,7 @@
 
 namespace Scoped {
 
-// The central hub of the application. Owns all channels, hardware links, and
-// the global trigger engine.
+// Owns all channels, hardware links, and global trigger engine
 class Oscilloscope {
 private:
   std::vector<std::shared_ptr<IChannel>> m_hardware_channels;
@@ -97,7 +96,7 @@ public:
       return;
     }
 
-    // Always capture the absolute maximum window to allow full resizing while stopped.
+    // Always capture max window to allow resizing when trigger is paused
     const size_t max_req = m_max_capture_width; 
 
     if (m_trigger) {
@@ -108,7 +107,6 @@ public:
         m_trigger_source_idx < m_hardware_channels.size() ? m_trigger_source_idx : 0;
     auto &source_channel = m_hardware_channels[src_idx];
 
-    // trigger_offset is the raw crossing index in the buffer
     size_t trigger_idx = 0;
     if (m_trigger &&
         m_trigger->processStream(source_channel.get(), trigger_idx)) {

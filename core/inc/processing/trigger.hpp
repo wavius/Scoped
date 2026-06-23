@@ -20,7 +20,7 @@ struct TriggerParameter {
 
 enum class TriggerMode { AUTO, NORMAL };
 
-// Base class for all trigger strategies.
+// Base trigger class
 class ITrigger {
 protected:
   using Clock = std::chrono::steady_clock;
@@ -57,7 +57,7 @@ public:
   virtual void clear() = 0;
 
   // Pipeline
-  // Scans the buffer and determines if a trigger has occurred.
+  // Scans the buffer and determines if a trigger has occurred
   bool processStream(IChannel *channel, size_t &out_trigger_offset) {
     if (!channel)
       return false;
@@ -74,7 +74,7 @@ public:
     if (m_mode == TriggerMode::AUTO) {
       auto elapsed = Clock::now() - m_last_trigger_time;
       if (elapsed > AUTO_TIMEOUT) {
-        // Place the "crossing" in the middle of available data
+        // Place the crossing in the middle of available data
         out_trigger_offset = unread / 2;
         m_last_trigger_time = Clock::now();
         onTriggerFired();
@@ -85,16 +85,16 @@ public:
     return false;
   }
 
-  // Scans a raw float buffer for a trigger crossing.
+  // Scans a raw float buffer for a trigger crossing
   virtual bool scanRawBuffer(const std::vector<float> &buffer,
                              size_t &out_offset) = 0;
 
-  // Checks if stale data should be discarded.
+  // Checks if stale data should be discarded
   bool shouldDiscardStale(IChannel *channel, size_t &discard_amount) {
     if (!channel)
       return false;
     size_t unread = channel->getUnreadSampleCount();
-    // Keep enough data for pre-trigger centering (2x frame width)
+    // Keep enough data for pre-trigger centering
     size_t keep = m_frame_width * 2;
     if (unread > keep) {
       discard_amount = unread - keep;
@@ -104,7 +104,7 @@ public:
   }
 };
 
-// Simple edge trigger.
+// Edge trigger
 class EdgeTrigger : public ITrigger {
 public:
   enum class EdgeDirection { RISING, FALLING };

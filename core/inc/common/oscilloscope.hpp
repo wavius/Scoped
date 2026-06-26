@@ -1,8 +1,8 @@
 #pragma once
 
 #include <common/channel.hpp>
-#include <processing/trigger.hpp>
 #include <hardware/usb.hpp>
+#include <processing/trigger.hpp>
 
 namespace Scoped {
 
@@ -31,7 +31,8 @@ public:
   std::vector<std::shared_ptr<IChannel>> &getHardwareChannels() {
     return m_hardware_channels;
   }
-  const std::vector<std::shared_ptr<VirtualChannel>> &getVirtualChannels() const {
+  const std::vector<std::shared_ptr<VirtualChannel>> &
+  getVirtualChannels() const {
     return m_virtual_channels;
   }
   std::vector<std::shared_ptr<VirtualChannel>> &getVirtualChannels() {
@@ -47,9 +48,7 @@ public:
   void setTriggerSource(size_t channel_index) {
     m_trigger_source_idx = channel_index;
   }
-  void setMaxCaptureWidth(size_t width) {
-    m_max_capture_width = width;
-  }
+  void setMaxCaptureWidth(size_t width) { m_max_capture_width = width; }
 
   // Configuration
   void addHardwareChannel(std::shared_ptr<IChannel> channel) {
@@ -97,14 +96,15 @@ public:
     }
 
     // Always capture max window to allow resizing when trigger is paused
-    const size_t max_req = m_max_capture_width; 
+    const size_t max_req = m_max_capture_width;
 
     if (m_trigger) {
       m_trigger->setFrameWidth(max_req);
     }
 
-    size_t src_idx =
-        m_trigger_source_idx < m_hardware_channels.size() ? m_trigger_source_idx : 0;
+    size_t src_idx = m_trigger_source_idx < m_hardware_channels.size()
+                         ? m_trigger_source_idx
+                         : 0;
     auto &source_channel = m_hardware_channels[src_idx];
 
     size_t trigger_idx = 0;
@@ -112,17 +112,19 @@ public:
         m_trigger->processStream(source_channel.get(), trigger_idx)) {
       m_last_trigger_offset = trigger_idx;
 
-      // Calculate a common consume amount for all hardware channels to stay phase-locked.
-      size_t step = 1024; 
+      // Calculate a common consume amount for all hardware channels to stay
+      // phase-locked.
+      size_t step = 1024;
       size_t common_consume = trigger_idx + step;
 
       // Pass 1: Extract hardware frames
       for (auto &ch : m_hardware_channels) {
         size_t unread = ch->getUnreadSampleCount();
-        
+
         bool any_proc_enabled = false;
-        for (auto* proc : ch->getProcessors()) {
-          if (proc->isEnabled()) any_proc_enabled = true;
+        for (auto *proc : ch->getProcessors()) {
+          if (proc->isEnabled())
+            any_proc_enabled = true;
         }
 
         if (ch->isEnabled() || any_proc_enabled) {
@@ -138,8 +140,9 @@ public:
       // Pass 2: Extract virtual frames
       for (auto &ch : m_virtual_channels) {
         bool any_proc_enabled = false;
-        for (auto* proc : ch->getProcessors()) {
-          if (proc->isEnabled()) any_proc_enabled = true;
+        for (auto *proc : ch->getProcessors()) {
+          if (proc->isEnabled())
+            any_proc_enabled = true;
         }
         if (ch->isEnabled() || any_proc_enabled) {
           ch->extractAndProcessFrame(trigger_idx, max_req);

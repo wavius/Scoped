@@ -2,9 +2,9 @@
 
 #include <../../extern/pocketfft/pocketfft_hdronly.h>
 #include <cmath>
-#include <complex>
 #include <common/channel.hpp>
 #include <common/constants.hpp>
+#include <complex>
 #include <processing/iprocessor.hpp>
 #include <string>
 #include <vector>
@@ -34,8 +34,7 @@ private:
   float m_period = 0.0f;
 
 public:
-  explicit MeasurementProcessor(const std::string &name)
-      : m_name(name) {}
+  explicit MeasurementProcessor(const std::string &name) : m_name(name) {}
 
   // Accessors
   std::string getName() const override { return m_name; }
@@ -54,7 +53,9 @@ public:
   void setVerticalScale(float scale) override { m_vertical_scale = scale; }
   void setVerticalOffset(float offset) override { m_vertical_offset = offset; }
   void setHorizontalScale(size_t scale) override { m_horizontal_scale = scale; }
-  void setHorizontalOffset(size_t offset) override { m_horizontal_offset = offset; }
+  void setHorizontalOffset(size_t offset) override {
+    m_horizontal_offset = offset;
+  }
   void setColor(const Color &color) override { m_color = color; }
 
   void setSourceLabel(const std::string &label) { m_source_label = label; }
@@ -206,7 +207,8 @@ public:
 
     // Center the frame to remove DC offset
     float sum = 0.0f;
-    for (float v : frame) sum += v;
+    for (float v : frame)
+      sum += v;
     float mean = sum / frame_size;
 
     std::vector<float> centered_frame(frame_size);
@@ -242,7 +244,8 @@ public:
     }
 
     if (max_bin > 0 && max_mag > 0.01f) {
-      m_freq = static_cast<float>(max_bin) * Constants::ADC_SAMPLE_RATE_HZ / static_cast<float>(frame_size);
+      m_freq = static_cast<float>(max_bin) * Constants::ADC_SAMPLE_RATE_HZ /
+               static_cast<float>(frame_size);
       m_period = 1.0f / m_freq;
     } else {
       m_freq = 0.0f;

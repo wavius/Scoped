@@ -47,12 +47,12 @@ private:
   void drawFFTControls(Oscilloscope &osc);
   void drawMathControls(Oscilloscope &osc);
   void drawFilterControls(Oscilloscope &osc);
-  void drawFilterPreviewGraph(FilterProcessor* filter_proc);
+  void drawFilterPreviewGraph(FilterProcessor *filter_proc);
 
-      // Common UI Control Helpers
-      bool drawSliderFloatWithInput(const char *label, float *v, float v_min,
-                                    float v_max, const char *format = "%.2f",
-                                    bool add_spacing = true);
+  // Common UI Control Helpers
+  bool drawSliderFloatWithInput(const char *label, float *v, float v_min,
+                                float v_max, const char *format = "%.2f",
+                                bool add_spacing = true);
   bool drawSliderIntWithInput(const char *label, int *v, int v_min, int v_max,
                               const char *format = "%d",
                               bool add_spacing = true);

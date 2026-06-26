@@ -1,12 +1,12 @@
 #pragma once
 
 #include <common/constants.hpp>
-#include <processing/fft_processor.hpp>
-#include <ui/ui.hpp>
-#include <ui/colors.hpp>
 #include <imgui.h>
+#include <processing/fft_processor.hpp>
 #include <string>
 #include <type_traits>
+#include <ui/colors.hpp>
+#include <ui/ui.hpp>
 
 namespace Scoped {
 namespace UI {
@@ -46,8 +46,9 @@ inline void drawComponentHeader(
 }
 
 template <typename T, typename DrawSliderFunc>
-inline void drawVerticalControlsT(T *target, Scoped::Oscilloscope &osc, float v_min,
-                                  float v_max, const char *format_offset,
+inline void drawVerticalControlsT(T *target, Scoped::Oscilloscope &osc,
+                                  float v_min, float v_max,
+                                  const char *format_offset,
                                   DrawSliderFunc drawSlider) {
   float scale = target->getVerticalScale();
   if (drawSlider("Vertical Scale", &scale, 0.01f, 10.0f, "%.2f", false)) {

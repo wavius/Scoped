@@ -1,7 +1,7 @@
 #pragma once
 
-#include <common/channel.hpp>
 #include <atomic>
+#include <common/channel.hpp>
 #include <libusb-1.0/libusb.h>
 #include <thread>
 

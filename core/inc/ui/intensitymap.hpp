@@ -7,7 +7,8 @@
 namespace Scoped {
 
 // 2D accumulation grid for digital phosphor display
-// Accepts normalized waveform data [0.0, 1.0] and rasterizes it into a hit-count grid using Bresenham lines, then uploads to an OpenGL texture
+// Accepts normalized waveform data [0.0, 1.0] and rasterizes it into a
+// hit-count grid using Bresenham lines, then uploads to an OpenGL texture
 class IntensityMap {
 public:
   struct Pixel {
@@ -49,7 +50,8 @@ public:
 
   // Rasterizes normalized waveform data into the intensity grid
   // Values in [0.0, 1.0] map to [bottom, top] of the display
-  void processFrame(const float *normalized, size_t count, float r, float g, float b);
+  void processFrame(const float *normalized, size_t count, float r, float g,
+                    float b);
 
   void updateTexture();
 };

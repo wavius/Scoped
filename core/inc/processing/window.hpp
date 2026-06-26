@@ -6,13 +6,7 @@
 
 namespace Scoped {
 
-enum class WindowType {
-  RECTANGULAR,
-  HANN,
-  HAMMING,
-  BLACKMAN_HARRIS,
-  FLAT_TOP
-};
+enum class WindowType { RECTANGULAR, HANN, HAMMING, BLACKMAN_HARRIS, FLAT_TOP };
 
 class Window {
 private:
@@ -50,7 +44,7 @@ public:
     }
   }
 
-  // Setters 
+  // Setters
   void setSize(size_t size) {
     if (m_size == size)
       return;

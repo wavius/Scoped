@@ -2,11 +2,11 @@
 
 #include <atomic>
 #include <cmath>
+#include <common/constants.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
 #include <vector>
-#include <common/constants.hpp>
 
 namespace Scoped {
 
@@ -81,10 +81,11 @@ public:
   // Test Signal Generators
   void fillTestSquareWave(float frequency = 4.0f) {
     size_t count = 1024;
-    
+
     // Scale fundamental phase to local frequency phase
     double phase = s_fundamental_phase * static_cast<double>(frequency);
-    double step = (1.0 / static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ)) * static_cast<double>(frequency);
+    double step = (1.0 / static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ)) *
+                  static_cast<double>(frequency);
     size_t write_idx = m_write_idx.load(std::memory_order_relaxed);
 
     for (size_t i = 0; i < count; i++) {
@@ -103,31 +104,39 @@ public:
     }
 
     m_write_idx.store(write_idx, std::memory_order_release);
-    
+
     // Update master clock
-    s_fundamental_phase += (1.0 / static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ));
-    if (s_fundamental_phase >= static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ)) {
-      s_fundamental_phase = std::fmod(s_fundamental_phase, static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ));
+    s_fundamental_phase +=
+        (1.0 / static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ));
+    if (s_fundamental_phase >=
+        static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ)) {
+      s_fundamental_phase =
+          std::fmod(s_fundamental_phase,
+                    static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ));
     }
   }
 
   void fillTestSineWave(float frequency = 5.00f) {
     constexpr size_t chunk_size = 1024;
     ensureSineLUT();
-    
+
     // Direct Digital Synthesis (DDS) setup
     // 0.0-1.0 is mapped to the full range of a 32-bit unsigned integer
-    double local_phase_double = std::fmod(s_fundamental_phase * static_cast<double>(frequency), 1.0);
+    double local_phase_double =
+        std::fmod(s_fundamental_phase * static_cast<double>(frequency), 1.0);
     uint32_t phase = static_cast<uint32_t>(local_phase_double * 4294967296.0);
-    uint32_t step = static_cast<uint32_t>(((1.0 / static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ)) * static_cast<double>(frequency)) * 4294967296.0);
-    
+    uint32_t step = static_cast<uint32_t>(
+        ((1.0 / static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ)) *
+         static_cast<double>(frequency)) *
+        4294967296.0);
+
     size_t write_idx = m_write_idx.load(std::memory_order_relaxed);
 
     for (size_t i = 0; i < chunk_size; ++i) {
       // Top 12 bits give us an index from 0 to 4095
       size_t lut_idx = phase >> 20;
       float val = s_sine_lut[lut_idx];
-      
+
       T sample;
       if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
         sample = static_cast<T>(val);
@@ -138,7 +147,7 @@ public:
 
       m_buffer[write_idx] = sample;
       write_idx = (write_idx + 1) % m_capacity;
-      
+
       // Integer addition (automatic wrap-around)
       phase += step;
     }
@@ -146,9 +155,13 @@ public:
     m_write_idx.store(write_idx, std::memory_order_release);
 
     // Update master clock
-    s_fundamental_phase += (1.0 / static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ));
-    if (s_fundamental_phase >= static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ)) {
-      s_fundamental_phase = std::fmod(s_fundamental_phase, static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ));
+    s_fundamental_phase +=
+        (1.0 / static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ));
+    if (s_fundamental_phase >=
+        static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ)) {
+      s_fundamental_phase =
+          std::fmod(s_fundamental_phase,
+                    static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ));
     }
   }
 };

@@ -137,9 +137,9 @@ protected:
     // Initialize edge detector from the first sample of the safe search range
     m_prev_sample = channel->getNormalizedSample(0);
 
-    // To ensure the crossing is centered and we have enough data to fill the frame
-    // without distortion, we only search in a range that allows for 'half' samples
-    // of padding on both sides.
+    // To ensure the crossing is centered and we have enough data to fill the
+    // frame without distortion, we only search in a range that allows for
+    // 'half' samples of padding on both sides.
     size_t search_start = 1;
     size_t search_end = (unread > half) ? unread - half : 0;
 
@@ -168,9 +168,11 @@ protected:
       float current = buffer[i];
       bool fired = false;
       if (m_direction == EdgeDirection::RISING) {
-        fired = prev < (m_threshold - m_hysteresis_margin) && current >= m_threshold;
+        fired = prev < (m_threshold - m_hysteresis_margin) &&
+                current >= m_threshold;
       } else {
-        fired = prev > (m_threshold + m_hysteresis_margin) && current <= m_threshold;
+        fired = prev > (m_threshold + m_hysteresis_margin) &&
+                current <= m_threshold;
       }
 
       if (fired) {
@@ -184,7 +186,8 @@ protected:
 
 public:
   // Lifecycle
-  explicit EdgeTrigger(size_t width = 1024, float level = Constants::ADC_MIDPOINT)
+  explicit EdgeTrigger(size_t width = 1024,
+                       float level = Constants::ADC_MIDPOINT)
       : ITrigger(width), m_threshold(level), m_direction(EdgeDirection::RISING),
         m_prev_sample(0) {
     m_hysteresis_margin = 2.0f;
@@ -197,8 +200,11 @@ public:
   std::vector<TriggerParameter> getUIParameters() override {
     std::vector<TriggerParameter> params;
 
-    params.push_back(
-        {"Level", -static_cast<int>(Constants::ADC_MIDPOINT), static_cast<int>(Constants::ADC_MIDPOINT), static_cast<int>(m_threshold - Constants::ADC_MIDPOINT), {}});
+    params.push_back({"Level",
+                      -static_cast<int>(Constants::ADC_MIDPOINT),
+                      static_cast<int>(Constants::ADC_MIDPOINT),
+                      static_cast<int>(m_threshold - Constants::ADC_MIDPOINT),
+                      {}});
 
     std::vector<std::string> dirs = {"Rising", "Falling"};
     int dir_idx = (m_direction == EdgeDirection::RISING) ? 0 : 1;

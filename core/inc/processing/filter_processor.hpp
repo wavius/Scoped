@@ -204,7 +204,8 @@ private:
     m_cutoff = std::clamp(m_cutoff, 1.0f, max_cutoff - 0.1f);
     m_cutoff2 = std::clamp(m_cutoff2, 1.0f, max_cutoff - 0.1f);
 
-    if (m_filter_type == FilterType::Bandpass || m_filter_type == FilterType::Bandstop) {
+    if (m_filter_type == FilterType::Bandpass ||
+        m_filter_type == FilterType::Bandstop) {
       if (m_cutoff >= m_cutoff2) {
         m_cutoff = m_cutoff2 - 1.0f;
         if (m_cutoff < 1.0f) {
@@ -305,9 +306,9 @@ public:
     m_dirty = true;
   }
 
-  const std::vector<float>& getMagnitudeResponse() { 
+  const std::vector<float> &getMagnitudeResponse() {
     updateCoefficients();
-    return m_magnitude_array; 
+    return m_magnitude_array;
   }
 
   // Pipeline

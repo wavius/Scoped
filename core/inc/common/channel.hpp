@@ -48,8 +48,7 @@ public:
 
   // Pipeline
   virtual float getNormalizedSample(size_t index_offset) const = 0;
-  virtual void extractAndProcessFrame(size_t trigger_idx,
-                                      size_t max_width) = 0;
+  virtual void extractAndProcessFrame(size_t trigger_idx, size_t max_width) = 0;
   virtual void reprocessLastFrame() = 0;
   virtual void consumeBuffer(size_t amount) = 0;
   virtual void pushRawBytes(const uint8_t *data, size_t size) = 0;
@@ -83,7 +82,8 @@ private:
 
 public:
   // Lifecycle
-  VirtualChannel(const std::string &label, size_t horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE)
+  VirtualChannel(const std::string &label,
+                 size_t horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE)
       : m_label(label), m_horizontal_scale(horizontal_scale) {}
 
   // Accessors
@@ -97,7 +97,9 @@ public:
   int getHorizontalOffset() const override { return m_horizontal_offset; }
   size_t getUnreadSampleCount() const override { return 0; }
   bool isHardwareChannel() const override { return false; }
-  size_t getLastTriggerInFrame() const override { return m_last_trigger_in_frame; }
+  size_t getLastTriggerInFrame() const override {
+    return m_last_trigger_in_frame;
+  }
   Color getColor() const override { return m_color; }
   float getSampleRate() const override {
     return m_sources.empty() ? Constants::ADC_SAMPLE_RATE_HZ
@@ -133,8 +135,7 @@ public:
   float getNormalizedSample(size_t /*index_offset*/) const override {
     return 0.0f;
   }
-  void extractAndProcessFrame(size_t trigger_idx,
-                              size_t max_width) override {
+  void extractAndProcessFrame(size_t trigger_idx, size_t max_width) override {
     size_t half_max = max_width / 2;
     size_t start = (trigger_idx >= half_max) ? trigger_idx - half_max : 0;
     m_last_trigger_in_frame = trigger_idx - start;
@@ -169,9 +170,9 @@ public:
     m_traces.clear();
     m_has_new_frame = true;
   }
-  const std::vector<float> &getRawFrame() const override { 
-      static std::vector<float> empty; 
-      return empty; 
+  const std::vector<float> &getRawFrame() const override {
+    static std::vector<float> empty;
+    return empty;
   }
   void updateTriggerPoint(size_t idx) override {
     size_t half_max = 16384 / 2;
@@ -207,7 +208,8 @@ private:
 
 public:
   // Lifecycle
-  Channel(const std::string &label, size_t buffer_size = Constants::BUFFER_SIZE, size_t horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE)
+  Channel(const std::string &label, size_t buffer_size = Constants::BUFFER_SIZE,
+          size_t horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE)
       : m_label(label), m_buffer(buffer_size),
         m_horizontal_scale(horizontal_scale) {}
 
@@ -224,7 +226,9 @@ public:
     return m_buffer.getUnreadCount();
   }
   bool isHardwareChannel() const override { return true; }
-  size_t getLastTriggerInFrame() const override { return m_last_trigger_in_frame; }
+  size_t getLastTriggerInFrame() const override {
+    return m_last_trigger_in_frame;
+  }
   Color getColor() const override { return m_color; }
   float getSampleRate() const override { return Constants::ADC_SAMPLE_RATE_HZ; }
 
@@ -260,15 +264,14 @@ public:
     return static_cast<float>(m_buffer.peekAhead(index_offset));
   }
 
-  void extractAndProcessFrame(size_t trigger_idx,
-                              size_t max_width) override {
+  void extractAndProcessFrame(size_t trigger_idx, size_t max_width) override {
     // Calculate the buffer window to extract
     size_t unread = m_buffer.getUnreadCount();
     size_t half_max = max_width / 2;
     size_t start = (trigger_idx >= half_max) ? trigger_idx - half_max : 0;
-    
+
     if (start + max_width > unread) {
-        start = (unread > max_width) ? unread - max_width : 0;
+      start = (unread > max_width) ? unread - max_width : 0;
     }
     size_t actual_width = std::min(max_width, unread - start);
 
@@ -285,7 +288,8 @@ public:
       size_t first_len = capacity - buffer_start;
       size_t second_len = actual_width - first_len;
       std::copy(m_buffer.getRawData() + buffer_start,
-                m_buffer.getRawData() + buffer_start + first_len, m_raw_frame.begin());
+                m_buffer.getRawData() + buffer_start + first_len,
+                m_raw_frame.begin());
       std::copy(m_buffer.getRawData(), m_buffer.getRawData() + second_len,
                 m_raw_frame.begin() + first_len);
     }
@@ -309,17 +313,19 @@ public:
 
     // Trigger point relative to the extracted frame
     size_t trigger_in_frame = trigger_idx - start;
-    m_last_trigger_in_frame = trigger_in_frame; 
+    m_last_trigger_in_frame = trigger_in_frame;
 
     size_t half_vis = m_horizontal_scale / 2;
-    int offset_val = m_horizontal_offset; 
-    
-    long long center_idx = static_cast<long long>(trigger_in_frame) + offset_val;
+    int offset_val = m_horizontal_offset;
+
+    long long center_idx =
+        static_cast<long long>(trigger_in_frame) + offset_val;
     long long start_idx = center_idx - half_vis;
-    
+
     size_t time_start = (start_idx < 0) ? 0 : static_cast<size_t>(start_idx);
-    if (time_start >= actual_width) time_start = actual_width - 1;
-    
+    if (time_start >= actual_width)
+      time_start = actual_width - 1;
+
     size_t time_width = std::min(m_horizontal_scale, actual_width - time_start);
 
     base_trace.data.resize(time_width);
@@ -343,11 +349,12 @@ public:
   }
 
   void reprocessLastFrame() override {
-    if (m_raw_frame.empty()) return;
+    if (m_raw_frame.empty())
+      return;
 
     size_t actual_width = m_raw_frame.size();
     m_traces.clear();
-    
+
     Trace base_trace;
     base_trace.name = m_label + " Time";
     base_trace.domain = Domain::Time;
@@ -361,11 +368,13 @@ public:
     size_t half_vis = m_horizontal_scale / 2;
     int offset_val = m_horizontal_offset;
 
-    long long center_idx = static_cast<long long>(trigger_in_frame) + offset_val;
+    long long center_idx =
+        static_cast<long long>(trigger_in_frame) + offset_val;
     long long start_idx = center_idx - half_vis;
 
     size_t time_start = (start_idx < 0) ? 0 : static_cast<size_t>(start_idx);
-    if (time_start >= actual_width) time_start = actual_width - 1;
+    if (time_start >= actual_width)
+      time_start = actual_width - 1;
 
     size_t time_width = std::min(m_horizontal_scale, actual_width - time_start);
 

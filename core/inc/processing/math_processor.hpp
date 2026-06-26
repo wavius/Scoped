@@ -221,8 +221,9 @@ private:
 
 public:
   // Lifecycle
-  explicit MathProcessor(const std::string &name,
-                         size_t horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE)
+  explicit MathProcessor(
+      const std::string &name,
+      size_t horizontal_scale = Constants::DEFAULT_HORIZONTAL_SCALE)
       : m_name(name), m_horizontal_scale(horizontal_scale) {}
 
   // Accessors

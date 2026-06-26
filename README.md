@@ -63,4 +63,4 @@ Future software features are described in docs/TODO.md.
 ## Hardware Specs
 
 - ADC: TBD
-- FPGA: Muse LAB iCESugar-Pro v1.3 
+- FPGA: Muse LAB iCESugar-Pro v1.3

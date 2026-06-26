@@ -56,7 +56,7 @@ make run
 
 ## Next Steps
 
-The software side is mostly complete and fully functional with simulated inputs. The FPGA-based hardware frontend needs to be designed built.
+The software side is mostly complete and fully functional with simulated inputs. The FPGA-based hardware frontend needs to be designed and built.
 
 Future software features are described in docs/TODO.md.
 

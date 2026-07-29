@@ -8,3 +8,9 @@
 [submodule "extern/pocketfft"]
 	path = extern/pocketfft
 	url = https://github.com/mreineck/pocketfft.git
+[submodule "extern/core_usb_cdc"]
+	path = extern/core_usb_cdc
+	url = https://github.com/ultraembedded/core_usb_cdc.git
+[submodule "extern/core_ulpi_wrapper"]
+	path = extern/core_ulpi_wrapper
+	url = https://github.com/ultraembedded/core_ulpi_wrapper.git

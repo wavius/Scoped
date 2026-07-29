@@ -18,3 +18,10 @@ NOTES.md
 .markdownlint.json
 Notes/
 .obsidian/
+
+# FPGA build artifacts
+fpga/*.bit
+fpga/*.json
+fpga/*.svf
+fpga/*.config
+fpga/*_out.config

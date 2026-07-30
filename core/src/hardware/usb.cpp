@@ -15,23 +15,53 @@ USBDevice::~USBDevice() {
 
 // Connection
 bool USBDevice::connect() {
-  m_handle = libusb_open_device_with_vid_pid(m_context, VENDOR_ID, PRODUCT_ID);
-  if (!m_handle)
-    return false;
+  std::cout << "[USB] Attempting connection to VID: 0x" << std::hex << VENDOR_ID
+            << " PID: 0x" << PRODUCT_ID << std::dec << "...\n";
 
-  for (int iface : {CTRL_INTERFACE, DATA_INTERFACE}) {
-    if (libusb_kernel_driver_active(m_handle, iface))
-      libusb_detach_kernel_driver(m_handle, iface);
-    libusb_claim_interface(m_handle, iface);
+  m_handle = libusb_open_device_with_vid_pid(m_context, VENDOR_ID, PRODUCT_ID);
+  if (!m_handle) {
+    std::cerr << "[USB] Failed to open device 0x" << std::hex << VENDOR_ID
+              << ":0x" << PRODUCT_ID << std::dec << "\n";
+    return false;
   }
 
-  // CDC line encoding: 115200 baud, 8N1
+#if defined(LIBUSB_API_VERSION) && LIBUSB_API_VERSION >= 0x01000103
+  libusb_set_auto_detach_kernel_driver(m_handle, 1);
+#endif
+
+  for (int iface : {CTRL_INTERFACE, DATA_INTERFACE}) {
+    if (libusb_kernel_driver_active(m_handle, iface) == 1) {
+      int ret = libusb_detach_kernel_driver(m_handle, iface);
+      std::cout << "[USB] Detached kernel driver on interface " << iface
+                << " (result: " << ret << ")\n";
+    }
+  }
+
+  // Claim Data interface (essential for streaming)
+  int res_data = libusb_claim_interface(m_handle, DATA_INTERFACE);
+  if (res_data != 0) {
+    std::cerr << "[USB] Error claiming DATA_INTERFACE (" << DATA_INTERFACE
+              << "): " << libusb_error_name(res_data) << "\n";
+    libusb_close(m_handle);
+    m_handle = nullptr;
+    return false;
+  }
+
+  // Claim Control interface
+  int res_ctrl = libusb_claim_interface(m_handle, CTRL_INTERFACE);
+  if (res_ctrl != 0) {
+    std::cout << "[USB] Notice: CTRL_INTERFACE (" << CTRL_INTERFACE
+              << ") claim result: " << libusb_error_name(res_ctrl) << "\n";
+  }
+
+  // CDC line encoding (optional, set 115200 8N1)
   uint8_t encoding[] = {0x00, 0xC2, 0x01, 0x00, 0x00, 0x00, 0x08};
   libusb_control_transfer(m_handle, 0x21, 0x20, 0, CTRL_INTERFACE, encoding,
-                          sizeof(encoding), 1000);
+                          sizeof(encoding), 100);
   libusb_control_transfer(m_handle, 0x21, 0x22, 0x03, CTRL_INTERFACE, nullptr,
-                          0, 1000);
+                          0, 100);
 
+  std::cout << "[USB] Successfully connected to Scoped.\n";
   return true;
 }
 
@@ -49,8 +79,12 @@ void USBDevice::disconnect() {
 
 // Streaming
 void USBDevice::startStreaming(IChannel *channel) {
-  if (!m_handle || m_is_streaming || !channel)
+  if (!m_handle || !channel)
     return;
+
+  if (m_is_streaming) {
+    stopStreaming();
+  }
 
   std::cout << "[USB] Starting stream on EP 0x" << std::hex
             << static_cast<int>(ENDPOINT_IN) << std::dec << "...\n";
@@ -59,25 +93,26 @@ void USBDevice::startStreaming(IChannel *channel) {
 }
 
 void USBDevice::stopStreaming() {
-  if (m_is_streaming) {
-    m_is_streaming = false;
-    if (m_stream_thread.joinable()) {
-      m_stream_thread.join();
-    }
+  m_is_streaming = false;
+  if (m_stream_thread.joinable()) {
+    m_stream_thread.join();
   }
 }
 
 void USBDevice::streamLoop(IChannel *channel) {
-  uint8_t temp[4096];
+  uint8_t temp[16384];
   size_t total_received = 0;
   auto last_log = std::chrono::steady_clock::now();
+
+  int consecutive_errors = 0;
 
   while (m_is_streaming) {
     int transferred = 0;
     int result = libusb_bulk_transfer(m_handle, ENDPOINT_IN, temp, sizeof(temp),
-                                      &transferred, 100);
+                                      &transferred, 200);
 
     if (result == 0 && transferred > 0) {
+      consecutive_errors = 0;
       channel->pushRawBytes(temp, transferred);
       total_received += transferred;
 
@@ -88,12 +123,20 @@ void USBDevice::streamLoop(IChannel *channel) {
         std::cout << "[USB] Received: " << (total_received / 1024) << " KB\n";
         last_log = now;
       }
-    } else if (result == LIBUSB_ERROR_TIMEOUT) {
+    } else if (result == LIBUSB_ERROR_TIMEOUT || result == LIBUSB_ERROR_INTERRUPTED) {
+      continue;
+    } else if (result == LIBUSB_ERROR_IO || result == LIBUSB_ERROR_OVERFLOW) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
       continue;
     } else if (result != 0) {
-      std::cerr << "[USB] Transfer error: " << libusb_error_name(result)
-                << "\n";
-      break;
+      consecutive_errors++;
+      std::cerr << "[USB] Transfer warning: " << libusb_error_name(result)
+                << " (error count: " << consecutive_errors << ")\n";
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      if (consecutive_errors > 50) {
+        std::cerr << "[USB] Too many consecutive transfer errors, stopping stream.\n";
+        break;
+      }
     }
   }
 

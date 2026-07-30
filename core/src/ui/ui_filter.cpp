@@ -37,7 +37,8 @@ void OscilloscopeUI::drawFilterControls(Oscilloscope &osc) {
                             drawSlider);
 
       int h_scale = static_cast<int>(filter_proc->getHorizontalScale());
-      if (drawSliderIntWithInput("Horizontal Scale", &h_scale, 256, 16384,
+      int max_h_scale = static_cast<int>(osc.getMaxCaptureWidth());
+      if (drawSliderIntWithInput("Horizontal Scale", &h_scale, 256, max_h_scale,
                                  "%d samples", false)) {
         filter_proc->setHorizontalScale(static_cast<size_t>(h_scale));
         osc.forceReprocess();

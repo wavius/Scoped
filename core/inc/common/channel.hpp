@@ -265,17 +265,12 @@ public:
   }
 
   void extractAndProcessFrame(size_t trigger_idx, size_t max_width) override {
-    // Calculate the buffer window to extract
     size_t unread = m_buffer.getUnreadCount();
-    size_t half_max = max_width / 2;
-    size_t start = (trigger_idx >= half_max) ? trigger_idx - half_max : 0;
+    size_t half_record = max_width / 2;
 
-    if (start + max_width > unread) {
-      start = (unread > max_width) ? unread - max_width : 0;
-    }
-    size_t actual_width = std::min(max_width, unread - start);
+    size_t start = (trigger_idx >= half_record) ? (trigger_idx - half_record) : 0;
+    size_t actual_width = std::min(max_width, unread > start ? unread - start : 0);
 
-    // Extract raw frame for processors
     m_raw_frame.resize(actual_width);
     size_t capacity = m_buffer.getCapacity();
     size_t buffer_start = (m_buffer.getReadIdx() + start) % capacity;
@@ -301,7 +296,6 @@ public:
 
     m_traces.clear();
 
-    // Fill time trace
     Trace base_trace;
     base_trace.name = m_label + " Time";
     base_trace.domain = Domain::Time;
@@ -311,15 +305,12 @@ public:
     base_trace.horizontal_offset = m_horizontal_offset;
     base_trace.color = m_color;
 
-    // Trigger point relative to the extracted frame
-    size_t trigger_in_frame = trigger_idx - start;
+    size_t trigger_in_frame = (trigger_idx >= start) ? (trigger_idx - start) : 0;
     m_last_trigger_in_frame = trigger_in_frame;
 
     size_t half_vis = m_horizontal_scale / 2;
     int offset_val = m_horizontal_offset;
-
-    long long center_idx =
-        static_cast<long long>(trigger_in_frame) + offset_val;
+    long long center_idx = static_cast<long long>(trigger_in_frame) + offset_val;
     long long start_idx = center_idx - half_vis;
 
     size_t time_start = (start_idx < 0) ? 0 : static_cast<size_t>(start_idx);
@@ -327,7 +318,6 @@ public:
       time_start = actual_width - 1;
 
     size_t time_width = std::min(m_horizontal_scale, actual_width - time_start);
-
     base_trace.data.resize(time_width);
     for (size_t i = 0; i < time_width; ++i) {
       base_trace.data[i] = static_cast<float>(m_raw_frame[time_start + i]);
@@ -335,12 +325,12 @@ public:
 
     m_traces.push_back(std::move(base_trace));
 
-    // Run processors on the full raw frame
     for (auto &proc : m_processors) {
       if (proc->isEnabled()) {
         proc->process(m_float_frame, m_traces);
       }
     }
+
     for (auto &trace : m_traces) {
       trace.trigger_index = trigger_in_frame;
     }

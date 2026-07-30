@@ -890,6 +890,7 @@ void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
       if (ImGui::Combo("##Value", &value, combo_items.data(),
                        static_cast<int>(combo_items.size()))) {
         trigger->setUIParameter(param.name, value);
+        osc.forceReprocess();
       }
     }
 

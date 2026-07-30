@@ -1,0 +1,5 @@
+# udev rules for Scoped FPGA USB CDC ACM device (1d50:6149)
+# Grants read/write permissions to all users for libusb access and creates /dev/scoped symlink.
+
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1d50", ATTRS{idProduct}=="6149", MODE="0666"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1d50", ATTRS{idProduct}=="6149", MODE="0666", SYMLINK+="scoped"

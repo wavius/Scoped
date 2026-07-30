@@ -93,56 +93,35 @@ int main(int, char **) {
 
   // Channels
   auto ch1 = std::make_shared<Scoped::Channel<uint8_t>>("CH1");
-  auto ch2 = std::make_shared<Scoped::Channel<uint8_t>>("CH2");
+  // auto ch2 = std::make_shared<Scoped::Channel<uint8_t>>("CH2");
 
   // Virtual Channels
   auto vc1 = std::make_shared<Scoped::VirtualChannel>("VC1");
   vc1->addSource(ch1.get());
-  vc1->addSource(ch2.get());
 
-  auto vc2 = std::make_shared<Scoped::VirtualChannel>("VC2");
-  vc2->addSource(ch1.get());
-  vc2->addSource(ch2.get());
+  // auto vc2 = std::make_shared<Scoped::VirtualChannel>("VC2");
+  // vc2->addSource(ch1.get());
 
   // FFT processors
   auto fft_p1 = std::make_unique<Scoped::FFTProcessor>(
       "FFT1", ui.getDisplayHeight());
-  auto fft_p2 = std::make_unique<Scoped::FFTProcessor>(
-      "FFT2", ui.getDisplayHeight());
   fft_p1->setColor(Scoped::Color{Scoped::Colors::FFT1.x, Scoped::Colors::FFT1.y,
                                  Scoped::Colors::FFT1.z,
                                  Scoped::Colors::FFT1.w});
-  fft_p2->setColor(Scoped::Color{Scoped::Colors::FFT2.x, Scoped::Colors::FFT2.y,
-                                 Scoped::Colors::FFT2.z,
-                                 Scoped::Colors::FFT2.w});
-
   ch1->addProcessor(std::move(fft_p1));
-  ch2->addProcessor(std::move(fft_p2));
 
   // Filter processors
   auto filter_p1 = std::make_unique<Scoped::FilterProcessor>("FILTER1");
-  auto filter_p2 = std::make_unique<Scoped::FilterProcessor>("FILTER2");
   filter_p1->setColor(Scoped::Color{Scoped::Colors::FILTER1.x, Scoped::Colors::FILTER1.y,
                                     Scoped::Colors::FILTER1.z, Scoped::Colors::FILTER1.w});
-  filter_p2->setColor(Scoped::Color{Scoped::Colors::FILTER2.x, Scoped::Colors::FILTER2.y,
-                                    Scoped::Colors::FILTER2.z, Scoped::Colors::FILTER2.w});
-  
   vc1->addProcessor(std::move(filter_p1));
-  vc2->addProcessor(std::move(filter_p2));
 
   // Math processors
-  // 1 VirtualChannel per math processor
   auto math_p1 = std::make_unique<Scoped::MathProcessor>("MATH1");
   math_p1->setColor(
       Scoped::Color{Scoped::Colors::MATH1.x, Scoped::Colors::MATH1.y,
                     Scoped::Colors::MATH1.z, Scoped::Colors::MATH1.w});
   vc1->addProcessor(std::move(math_p1));
-
-  auto math_p2 = std::make_unique<Scoped::MathProcessor>("MATH2");
-  math_p2->setColor(
-      Scoped::Color{Scoped::Colors::MATH2.x, Scoped::Colors::MATH2.y,
-                    Scoped::Colors::MATH2.z, Scoped::Colors::MATH2.w});
-  vc2->addProcessor(std::move(math_p2));
 
   // Measurement processors
   auto meas_p1 = std::make_unique<Scoped::MeasurementProcessor>("MEAS1");
@@ -151,36 +130,20 @@ int main(int, char **) {
                     Scoped::Colors::MEAS1.z, Scoped::Colors::MEAS1.w});
   vc1->addProcessor(std::move(meas_p1));
 
-  auto meas_p2 = std::make_unique<Scoped::MeasurementProcessor>("MEAS2");
-  meas_p2->setSourceLabel("CH2");
-  meas_p2->setColor(
-      Scoped::Color{Scoped::Colors::MEAS2.x, Scoped::Colors::MEAS2.y,
-                    Scoped::Colors::MEAS2.z, Scoped::Colors::MEAS2.w});
-  vc2->addProcessor(std::move(meas_p2));
-
   // Channel colors
   ch1->setColor(Scoped::Color{Scoped::Colors::CH1.x, Scoped::Colors::CH1.y,
                               Scoped::Colors::CH1.z, Scoped::Colors::CH1.w});
-  ch2->setColor(Scoped::Color{Scoped::Colors::CH2.x, Scoped::Colors::CH2.y,
-                              Scoped::Colors::CH2.z, Scoped::Colors::CH2.w});
-  // Virtual channel colors not used for anything currently
-  /*
-  vc1->setColor(Scoped::Color{Scoped::Colors::VC1.x, Scoped::Colors::VC1.y,
-                              Scoped::Colors::VC1.z, Scoped::Colors::VC1.w});
-  vc2->setColor(Scoped::Color{Scoped::Colors::VC2.x, Scoped::Colors::VC2.y,
-                              Scoped::Colors::VC2.z, Scoped::Colors::VC2.w});
-  */
 
   osc.addHardwareChannel(ch1);
-  osc.addHardwareChannel(ch2);
+  // osc.addHardwareChannel(ch2);
   osc.addVirtualChannel(vc1);
-  osc.addVirtualChannel(vc2);
+  // osc.addVirtualChannel(vc2);
 
   auto trigger = std::make_unique<Scoped::EdgeTrigger>(
-      16384, Scoped::Constants::ADC_MIDPOINT);
+      1024, Scoped::Constants::ADC_MIDPOINT);
   osc.setTrigger(std::move(trigger));
   osc.setTriggerSource(0);
-  osc.setMaxCaptureWidth(16384);
+  osc.setMaxCaptureWidth(8192);
 
   ImGuiIO &io = ImGui::GetIO();
 
@@ -199,9 +162,8 @@ int main(int, char **) {
 
     if (!osc.getUSB().isConnected()) {
       constexpr float base_freq = 4.0f;
-      for (int i = 0; i < 16; ++i) {
+      for (int i = 0; i < 2; ++i) {
         ch1->getBuffer().fillTestSineWave(base_freq);
-        ch2->getBuffer().fillTestSineWave(base_freq * 2.0f);
       }
     }
 

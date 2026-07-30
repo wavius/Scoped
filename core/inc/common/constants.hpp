@@ -22,7 +22,7 @@ constexpr size_t DEFAULT_HORIZONTAL_SCALE = 2048;
 constexpr int DEFAULT_HORIZONTAL_OFFSET = 0;
 
 // Processing Settings
-constexpr size_t BUFFER_SIZE = 16384 * 4;
+constexpr size_t BUFFER_SIZE = 1048576; // 1M samples (1 MB buffer per channel)
 
 } // namespace Constants
 } // namespace Scoped

@@ -3,25 +3,30 @@ BUILD_DIR = build
 TARGET = Scoped
 CMAKE_FLAGS = -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-# Default target to run the build
-all: $(BUILD_DIR)
+.PHONY: all build setup rebuild clean run
+
+# Default target
+all: setup
 	cmake --build $(BUILD_DIR)
 
-# Target to create the directory and configure CMake
+# Alias for make build
+build: all
+
+# Configure CMake if build directory does not exist
 setup:
-	mkdir -p $(BUILD_DIR)
-	cmake -S . -B $(BUILD_DIR) $(CMAKE_FLAGS)
-	ln -sf $(BUILD_DIR)/compile_commands.json .
+	@if [ ! -d "$(BUILD_DIR)" ]; then \
+		mkdir -p $(BUILD_DIR); \
+		cmake -S . -B $(BUILD_DIR) $(CMAKE_FLAGS); \
+		ln -sf $(BUILD_DIR)/compile_commands.json .; \
+	fi
 
 # Force a complete rebuild
-rebuild: clean setup all
+rebuild: clean all
 
 # Clean up build artifacts
 clean:
 	rm -rf $(BUILD_DIR)
 	rm -f compile_commands.json
 
-run:
+run: all
 	./$(BUILD_DIR)/$(TARGET)
-
-.PHONY: all setup rebuild clean

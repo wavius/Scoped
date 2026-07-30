@@ -259,6 +259,8 @@ public:
   // Pipeline
   void process(const std::vector<IChannel *> &sources,
                std::vector<Trace> &traces, size_t trigger_in_frame) override {
+    if (!m_enabled)
+      return;
 
     IChannel *source1 = nullptr;
     IChannel *source2 = nullptr;

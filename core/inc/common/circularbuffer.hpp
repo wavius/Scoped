@@ -45,9 +45,15 @@ public:
 
   void pushBlock(const T *data, size_t length) {
     size_t write_idx = m_write_idx.load(std::memory_order_relaxed);
+
     for (size_t i = 0; i < length; ++i) {
       m_buffer[write_idx] = data[i];
-      write_idx = (write_idx + 1) % m_capacity;
+      size_t next_write = (write_idx + 1) % m_capacity;
+      size_t read_idx = m_read_idx.load(std::memory_order_relaxed);
+      if (next_write == read_idx) {
+        m_read_idx.store((read_idx + 1) % m_capacity, std::memory_order_release);
+      }
+      write_idx = next_write;
     }
     m_write_idx.store(write_idx, std::memory_order_release);
   }

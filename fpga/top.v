@@ -117,62 +117,21 @@ module top (
     );
 
     // ========================================================
-    // 6. Loopback Stream Logic (128-byte Synchronous FIFO)
+    // 6. Signal Generator & USB Stream Source (logic/sine_gen.v)
     // ========================================================
-    wire [7:0] rx_data;
-    wire       rx_valid;
-    wire       rx_ready;
-
     wire [7:0] tx_data;
     wire       tx_valid;
     wire       tx_ready;
 
-    reg [7:0] fifo_mem [0:127];
-    reg [6:0] fifo_waddr;
-    reg [6:0] fifo_raddr;
-    reg [7:0] fifo_count;
-
-    wire fifo_full  = (fifo_count == 8'd128);
-    wire fifo_empty = (fifo_count == 8'd0);
-
-    // Write logic (from RX)
-    always @(posedge ulpi_clk60 or posedge cdc_rst) begin
-        if (cdc_rst) begin
-            fifo_waddr <= 7'd0;
-        end else if (!ready_for_leds) begin
-            fifo_waddr <= 7'd0;
-        end else if (rx_valid && !fifo_full) begin
-            fifo_mem[fifo_waddr] <= rx_data;
-            fifo_waddr <= fifo_waddr + 1'b1;
-        end
-    end
-
-    // Read logic (to TX) and Count management
-    always @(posedge ulpi_clk60 or posedge cdc_rst) begin
-        if (cdc_rst) begin
-            fifo_raddr <= 7'd0;
-            fifo_count <= 8'd0;
-        end else if (!ready_for_leds) begin
-            fifo_raddr <= 7'd0;
-            fifo_count <= 8'd0;
-        end else begin
-            case ({ (rx_valid && !fifo_full), (tx_valid && tx_ready) })
-                2'b10: fifo_count <= fifo_count + 1'b1;
-                2'b01: begin
-                    fifo_count <= fifo_count - 1'b1;
-                    fifo_raddr <= fifo_raddr + 1'b1;
-                end
-                2'b11: begin
-                    fifo_raddr <= fifo_raddr + 1'b1;
-                end
-                default: ;
-            endcase
-        end
-    end
-
-    assign rx_ready = !fifo_full && ready_for_leds;
-    assign tx_data  = fifo_mem[fifo_raddr];
-    assign tx_valid = !fifo_empty && ready_for_leds;
+    // Instantiate test sine wave generator
+    sine_gen u_sine_gen (
+        .clk          (ulpi_clk60),
+        .rst          (cdc_rst),
+        .enable       (ready_for_leds),
+        .tx_ready     (tx_ready),
+        .sample_data  (tx_data),
+        .sample_valid (tx_valid)
+    );
 
     // ========================================================
     // 7. USB CDC Core Instantiation
@@ -194,9 +153,9 @@ module top (
         .inport_data_i      (tx_data),
         .inport_accept_o    (tx_ready),
 
-        .outport_accept_i   (rx_ready),
-        .outport_valid_o    (rx_valid),
-        .outport_data_o     (rx_data),
+        .outport_accept_i   (1'b1),
+        .outport_valid_o    (),
+        .outport_data_o     (),
 
         .utmi_data_out_o    (utmi_data_out_wrapper),
         .utmi_txvalid_o     (utmi_txvalid_core),
@@ -210,20 +169,17 @@ module top (
     // ========================================================
     // 8. LED Indicators (Active-HIGH: 1 = ON, 0 = OFF)
     // ========================================================
-    reg rx_seen = 1'b0;
     reg tx_seen = 1'b0;
 
     always @(posedge ulpi_clk60 or posedge cdc_rst) begin
         if (cdc_rst) begin
-            rx_seen <= 1'b0;
             tx_seen <= 1'b0;
         end else if (ready_for_leds) begin
-            if (rx_valid && rx_ready) rx_seen <= 1'b1;
             if (tx_valid && tx_ready) tx_seen <= 1'b1;
         end
     end
 
-    assign led_r = rx_seen;   // Red ON (1) when valid RX data seen post-boot
-    assign led_g = tx_seen;   // Green ON (1) when valid TX data seen post-boot
+    assign led_r = 1'b0;      // Red OFF
+    assign led_g = tx_seen;   // Green ON (1) when sine wave TX data is streaming over USB
     assign led_b = !cdc_rst;  // Blue ON (1) when USB stack is active & out of reset
 endmodule

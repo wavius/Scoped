@@ -16,7 +16,7 @@ private:
   size_t m_trigger_source_idx = 0;
   size_t m_last_trigger_offset = 0;
   size_t m_last_frame_width = 1024;
-  size_t m_max_capture_width = 16384;
+  size_t m_max_capture_width = 8192;
 
 public:
   // Lifecycle
@@ -85,7 +85,6 @@ public:
       return;
 
     if (m_trigger && !m_trigger->isEnabled()) {
-      // Re-process last frame using current UI settings
       for (auto &ch : m_hardware_channels) {
         ch->reprocessLastFrame();
       }
@@ -95,7 +94,6 @@ public:
       return;
     }
 
-    // Always capture max window to allow resizing when trigger is paused
     const size_t max_req = m_max_capture_width;
 
     if (m_trigger) {
@@ -106,21 +104,30 @@ public:
                          ? m_trigger_source_idx
                          : 0;
     auto &source_channel = m_hardware_channels[src_idx];
+    if (!source_channel)
+      return;
+
+    size_t unread = source_channel->getUnreadSampleCount();
+    if (unread < max_req)
+      return;
+
+    // Keep only the most recent buffer window to prevent backlog accumulation and buffer wrap-around
+    if (unread > max_req * 2) {
+      size_t discard = unread - (max_req * 2);
+      for (auto &ch : m_hardware_channels) {
+        size_t ch_unread = ch->getUnreadSampleCount();
+        ch->consumeBuffer(std::min(ch_unread, discard));
+      }
+    }
 
     size_t trigger_idx = 0;
-    if (m_trigger &&
-        m_trigger->processStream(source_channel.get(), trigger_idx)) {
+    bool triggered = m_trigger &&
+                     m_trigger->processStream(source_channel.get(), trigger_idx);
+
+    if (triggered) {
       m_last_trigger_offset = trigger_idx;
 
-      // Calculate a common consume amount for all hardware channels to stay
-      // phase-locked.
-      size_t step = 1024;
-      size_t common_consume = trigger_idx + step;
-
-      // Pass 1: Extract hardware frames
       for (auto &ch : m_hardware_channels) {
-        size_t unread = ch->getUnreadSampleCount();
-
         bool any_proc_enabled = false;
         for (auto *proc : ch->getProcessors()) {
           if (proc->isEnabled())
@@ -133,11 +140,10 @@ public:
           ch->clearTraces();
         }
 
-        // Apply uniform consumption
-        ch->consumeBuffer(std::min(unread, common_consume));
+        // Drain unread samples so buffer never backs up or overwrites
+        ch->consumeBuffer(ch->getUnreadSampleCount());
       }
 
-      // Pass 2: Extract virtual frames
       for (auto &ch : m_virtual_channels) {
         bool any_proc_enabled = false;
         for (auto *proc : ch->getProcessors()) {
@@ -148,13 +154,6 @@ public:
           ch->extractAndProcessFrame(trigger_idx, max_req);
         } else {
           ch->clearTraces();
-        }
-      }
-    } else if (m_trigger) {
-      size_t discard_amount = 0;
-      if (m_trigger->shouldDiscardStale(source_channel.get(), discard_amount)) {
-        for (auto &ch : m_hardware_channels) {
-          ch->consumeBuffer(discard_amount);
         }
       }
     }

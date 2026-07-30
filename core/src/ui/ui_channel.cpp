@@ -10,7 +10,8 @@ namespace Scoped {
 void OscilloscopeUI::drawHorizontalControls(IChannel &channel,
                                             Oscilloscope &osc) {
   int samples = static_cast<int>(channel.getHorizontalScale());
-  if (drawSliderIntWithInput("Horizontal Scale", &samples, 256, 16384,
+  int max_samples = static_cast<int>(osc.getMaxCaptureWidth());
+  if (drawSliderIntWithInput("Horizontal Scale", &samples, 256, max_samples,
                              "%d samples", false)) {
     channel.setHorizontalScale(static_cast<size_t>(samples));
     osc.forceReprocess();

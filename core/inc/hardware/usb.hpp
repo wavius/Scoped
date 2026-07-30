@@ -11,10 +11,10 @@ namespace Scoped {
 class USBDevice {
 private:
   static constexpr uint16_t VENDOR_ID = 0x1d50;
-  static constexpr uint16_t PRODUCT_ID = 0x602b;
-  static constexpr uint8_t ENDPOINT_IN = 0x84;
-  static constexpr int CTRL_INTERFACE = 1;
-  static constexpr int DATA_INTERFACE = 2;
+  static constexpr uint16_t PRODUCT_ID = 0x6149;
+  static constexpr uint8_t ENDPOINT_IN = 0x82;
+  static constexpr int CTRL_INTERFACE = 0;
+  static constexpr int DATA_INTERFACE = 1;
 
   libusb_context *m_context = nullptr;
   libusb_device_handle *m_handle = nullptr;

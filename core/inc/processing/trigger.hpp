@@ -29,7 +29,7 @@ protected:
   bool m_enabled;
   size_t m_frame_width;
   Clock::time_point m_last_trigger_time;
-  static constexpr std::chrono::milliseconds AUTO_TIMEOUT{100};
+  static constexpr std::chrono::milliseconds AUTO_TIMEOUT{50};
 
   virtual bool scanForTrigger(IChannel *channel, size_t &trigger_offset) = 0;
   virtual void onTriggerFired() {}
@@ -74,7 +74,6 @@ public:
     if (m_mode == TriggerMode::AUTO) {
       auto elapsed = Clock::now() - m_last_trigger_time;
       if (elapsed > AUTO_TIMEOUT) {
-        // Place the crossing in the middle of available data
         out_trigger_offset = unread / 2;
         m_last_trigger_time = Clock::now();
         onTriggerFired();
@@ -94,7 +93,6 @@ public:
     if (!channel)
       return false;
     size_t unread = channel->getUnreadSampleCount();
-    // Keep enough data for pre-trigger centering
     size_t keep = m_frame_width * 2;
     if (unread > keep) {
       discard_amount = unread - keep;
@@ -114,43 +112,42 @@ private:
   EdgeDirection m_direction;
   float m_prev_sample;
   float m_hysteresis_margin;
+  mutable bool m_armed = false;
 
   bool checkEdge(float current) const {
     if (m_direction == EdgeDirection::RISING) {
-      return m_prev_sample < (m_threshold - m_hysteresis_margin) &&
-             current >= m_threshold;
+      if (current < (m_threshold - m_hysteresis_margin)) {
+        m_armed = true;
+      } else if (m_armed && current >= m_threshold) {
+        m_armed = false;
+        return true;
+      }
+    } else {
+      if (current > (m_threshold + m_hysteresis_margin)) {
+        m_armed = true;
+      } else if (m_armed && current <= m_threshold) {
+        m_armed = false;
+        return true;
+      }
     }
-    return m_prev_sample > (m_threshold + m_hysteresis_margin) &&
-           current <= m_threshold;
+    return false;
   }
 
 protected:
   bool scanForTrigger(IChannel *channel, size_t &trigger_offset) override {
     size_t unread = channel->getUnreadSampleCount();
     size_t half = m_frame_width / 2;
-
-    // We need at least m_frame_width samples to guarantee we can extract
-    // a centered frame of that size.
     if (unread < m_frame_width)
       return false;
 
-    // Initialize edge detector from the first sample of the safe search range
-    m_prev_sample = channel->getNormalizedSample(0);
+    m_armed = false;
+    m_prev_sample = channel->getNormalizedSample(half > 0 ? half - 1 : 0);
 
-    // To ensure the crossing is centered and we have enough data to fill the
-    // frame without distortion, we only search in a range that allows for
-    // 'half' samples of padding on both sides.
-    size_t search_start = 1;
     size_t search_end = (unread > half) ? unread - half : 0;
-
-    if (search_start >= search_end)
-      return false;
-
-    for (size_t i = search_start; i < search_end; ++i) {
+    for (size_t i = half; i < search_end; ++i) {
       float current = channel->getNormalizedSample(i);
       if (checkEdge(current)) {
-        trigger_offset = i; // Raw crossing index
-        m_prev_sample = current;
+        trigger_offset = i;
         return true;
       }
       m_prev_sample = current;
@@ -163,23 +160,15 @@ protected:
     if (buffer.size() < 2)
       return false;
 
-    float prev = buffer[0];
+    m_armed = false;
+    m_prev_sample = buffer[0];
     for (size_t i = 1; i < buffer.size(); ++i) {
       float current = buffer[i];
-      bool fired = false;
-      if (m_direction == EdgeDirection::RISING) {
-        fired = prev < (m_threshold - m_hysteresis_margin) &&
-                current >= m_threshold;
-      } else {
-        fired = prev > (m_threshold + m_hysteresis_margin) &&
-                current <= m_threshold;
-      }
-
-      if (fired) {
+      if (checkEdge(current)) {
         out_offset = i;
         return true;
       }
-      prev = current;
+      m_prev_sample = current;
     }
     return false;
   }

@@ -2,6 +2,7 @@ TARGET=top
 TOP=top
 
 VSRCS = top.v \
+	logic/sine_gen.v \
 	usb/ulpi_wrapper.v \
 	usb/usb_cdc_core.v \
 	usb/usb_desc_rom.v \

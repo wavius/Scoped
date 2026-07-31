@@ -41,6 +41,7 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 CMake (>= 3.15) and C++20 compiler.
 
 ### Dependencies
+
 - SDL2 (`libsdl2-dev`)
 - OpenGL (`libgl1-mesa-dev`)
 - libusb-1.0 (`libusb-1.0-0-dev`)

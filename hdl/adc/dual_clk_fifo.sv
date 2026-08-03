@@ -34,8 +34,8 @@ module dual_clk_fifo #(
   // - Async-assert, sync-deassert
   always_ff @(posedge wr_clk or posedge a_rst) begin
     if (a_rst) begin
-      wr_a_rst_ms <= 1'b0;
-      wr_a_rst    <= 1'b0;
+      wr_a_rst_ms <= 1'b1;
+      wr_a_rst    <= 1'b1;
     end
     else begin
       wr_a_rst_ms <= 1'b0;

@@ -59,18 +59,18 @@ module top (
   end
   wire cdc_rst = rst_sync; // Active-High internal logic reset
 
-  // Ignore startup transient glitches for ~100ms after reset
+  // Wait for USB enumeration and ignore startup transience
   reg [22:0] startup_timer;
-  reg        ready_for_leds;
+  reg        ready; // 
   always @(posedge ulpi_clk60 or posedge cdc_rst) begin
     if (cdc_rst) begin
       startup_timer  <= 23'd0;
-      ready_for_leds <= 1'b0;
-    end else if (!ready_for_leds) begin
+      ready          <= 1'b0;
+    end else if (!ready) begin
       if (startup_timer < 23'd6_000_000) begin // 100ms at 60MHz
         startup_timer <= startup_timer + 1'b1;
       end else begin
-        ready_for_leds <= 1'b1;
+        ready <= 1'b1;
       end
     end
   end
@@ -131,6 +131,7 @@ module top (
 
   adc_wrapper u_adc_wrap (
     .rst          (cdc_rst),
+    .enable       (ready),
 
     .adc_clk      (clk_25m),
     .adc_clk_out  (adc_clk_out),
@@ -180,7 +181,7 @@ module top (
   always @(posedge ulpi_clk60 or posedge cdc_rst) begin
     if (cdc_rst) begin
       tx_seen <= 1'b0;
-    end else if (ready_for_leds) begin
+    end else if (ready) begin
       if (tx_valid && tx_ready) tx_seen <= 1'b1;
     end
   end

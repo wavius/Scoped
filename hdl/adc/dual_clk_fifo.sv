@@ -45,8 +45,8 @@ module dual_clk_fifo #(
 
   always_ff @(posedge rd_clk or posedge a_rst) begin
     if (a_rst) begin
-      rd_a_rst_ms <= 1'b0;
-      rd_a_rst    <= 1'b0;
+      rd_a_rst_ms <= 1'b1;
+      rd_a_rst    <= 1'b1;
     end
     else begin
       rd_a_rst_ms <= 1'b0;

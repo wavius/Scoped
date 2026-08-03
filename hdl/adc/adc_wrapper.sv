@@ -2,6 +2,7 @@ module adc_wrapper #(
   parameter DWIDTH = params_pkg::DWIDTH
 ) (
   input  logic              rst,
+  input  logic              enable,
 
   // ADC interface
   input  logic              adc_clk,
@@ -25,7 +26,7 @@ module adc_wrapper #(
   logic fifo_rd_ena;
 
   assign fifo_rd_ena = tx_ready && !fifo_empty;
-  assign tx_valid = !fifo_empty;
+  assign tx_valid = !fifo_empty && enable;
 
   adc_interface u_adc_int (
     .clk_25m      (adc_clk),

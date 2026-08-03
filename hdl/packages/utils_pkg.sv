@@ -5,25 +5,23 @@
 `default_nettype none
 
 package utils_pkg;
-  import params_pkg::*;
-  
-  function automatic logic [AWIDTH:0] bin2gray (
-    input logic [AWIDTH:0] bin
-  );
-    return bin ^ (bin >> 1);
-  endfunction
-
-  function automatic logic [AWIDTH:0] gray2bin (
-    input logic [AWIDTH:0] gray
-  );
-    localparam int WIDTH = AWIDTH + 1;
-    logic [WIDTH-1:0] bin = gray;
-    
-    for (int i = 1; i < WIDTH; i = i << 1) begin
-      bin = bin ^ (bin >> i);
+  function [params_pkg::AWIDTH:0] bin2gray;
+    input [params_pkg::AWIDTH:0] bin;
+    begin
+      bin2gray = bin ^ (bin >> 1);
     end
-    
-    return bin;
   endfunction
 
+  function [params_pkg::AWIDTH:0] gray2bin;
+    input [params_pkg::AWIDTH:0] gray;
+    integer i;
+    reg [params_pkg::AWIDTH:0] b;
+    begin
+      b = gray;
+      for (i = 1; i <= params_pkg::AWIDTH; i = i << 1) begin
+        b = b ^ (b >> i);
+      end
+      gray2bin = b;
+    end
+  endfunction
 endpackage

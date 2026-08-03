@@ -5,6 +5,6 @@
 `default_nettype none
 
 package params_pkg;
-  parameter int DWIDTH = 12;
-  parameter int AWIDTH = 14;
+  parameter DWIDTH = 12;
+  parameter AWIDTH = 14;
 endpackage

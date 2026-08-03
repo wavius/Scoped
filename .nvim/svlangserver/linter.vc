@@ -1,15 +1,16 @@
 -v /home/wavius/Documents/GitHub/Scoped/hdl/packages/params_pkg.sv
--v /home/wavius/Documents/GitHub/Scoped/hdl/adc/utils_pkg.sv
 -v /home/wavius/Documents/GitHub/Scoped/hdl/packages/utils_pkg.sv
 +incdir+/home/wavius/Documents/GitHub/Scoped/extern/core_ulpi_wrapper/src_v
 +incdir+/home/wavius/Documents/GitHub/Scoped/extern/core_ulpi_wrapper/testbench
 +incdir+/home/wavius/Documents/GitHub/Scoped/extern/core_usb_cdc/src_v
 +incdir+/home/wavius/Documents/GitHub/Scoped/hdl/adc
++incdir+/home/wavius/Documents/GitHub/Scoped/hdl/packages
 +incdir+/home/wavius/Documents/GitHub/Scoped/hdl
 +incdir+/home/wavius/Documents/GitHub/Scoped/hdl/usb
 +incdir+/home/wavius/Documents/GitHub/Scoped/extern/core_ulpi_wrapper/src_v
 +incdir+/home/wavius/Documents/GitHub/Scoped/extern/core_ulpi_wrapper/testbench
 +incdir+/home/wavius/Documents/GitHub/Scoped/extern/core_usb_cdc/src_v
 +incdir+/home/wavius/Documents/GitHub/Scoped/hdl/adc
++incdir+/home/wavius/Documents/GitHub/Scoped/hdl/packages
 +incdir+/home/wavius/Documents/GitHub/Scoped/hdl
 +incdir+/home/wavius/Documents/GitHub/Scoped/hdl/usb

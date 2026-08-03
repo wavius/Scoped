@@ -1,25 +1,24 @@
 //=============================================================================
 // Module: adc_interface
-// Description: Interfaces the AD9226 ADC. Generates a 25MHz clock for the ADC. Collects 12-bit ADC samples
-//              in an asynchronous FIFO.
+// Description: Interface for the AD9226 ADC.
 //=============================================================================
 `default_nettype none
 
-module adc_interface 
-  import params_pkg::*; 
-(
-  input  wire              clk_25m,      // 25 MHz input clock domain
-  input  wire              arst,         // Asynchronous reset
+module adc_interface #(
+  parameter DWIDTH = params_pkg::DWIDTH
+) (
+  input  logic              clk_25m,      // 25 MHz input clock domain
+  input  logic              a_rst,        // Asynchronous reset
   
-  // AD9226 pins
-  input  wire [DWIDTH-1:0] adc_data_raw, // 12-bit data
-  input  wire              adc_otr,      // Out-of-range indicator | UNUSED
-  output wire              adc_clk_out,  // Clock pin output | MAX 65 MHz | CURRENT: 25 MHz
+  // AD9226 interface
+  input  logic [DWIDTH-1:0] adc_data_raw, // 12-bit data
+  input  logic              adc_otr,      // Out-of-range indicator | UNUSED
+  output logic              adc_clk_out,  // Clock pin output | MAX 65 MHz | CURRENT: 25 MHz
 
   // Asynchronous FIFO
-  output reg  [DWIDTH-1:0] sample_data,  // Data to push into FIFO
-  output wire              sample_valid, // Write_enable for FIFO
-  input  wire              fifo_full     // Full flag
+  output logic [DWIDTH-1:0] sample_data,  // Data to push into FIFO
+  output logic              sample_valid, // Write_enable for FIFO
+  input  logic              fifo_full     // Full flag
 );
   
   // AD9226 25 Mhz clock
@@ -32,7 +31,7 @@ module adc_interface
     .D0(1'b1),
     .D1(1'b0),
     .SCLK(clk_25m),
-    .RST(arst),
+    .RST(a_rst),
     .Q(adc_clk_out)
   );
   
@@ -45,8 +44,8 @@ module adc_interface
   // AD9226 valid sample
   assign sample_valid = (adc_ready && !fifo_full);
 
-  always_ff @(posedge clk_25m or posedge arst) begin
-    if (arst) begin
+  always_ff @(posedge clk_25m or posedge a_rst) begin
+    if (a_rst) begin
       latency_counter <= 3'd7;
       sample_data     <= 0;
     end

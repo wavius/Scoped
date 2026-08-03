@@ -4,10 +4,10 @@
 //=============================================================================
 `default_nettype none
 
-module dual_clk_fifo 
-  import params_pkg::*; 
-  import utils_pkg::*; 
-(
+module dual_clk_fifo #(
+  parameter AWIDTH = params_pkg::AWIDTH,
+  parameter DWIDTH = params_pkg::DWIDTH
+) (
   input  logic              a_rst,   // Asynchronous reset
   output logic              full,    // FIFO full
   output logic              empty,   // FIFO empty
@@ -22,6 +22,7 @@ module dual_clk_fifo
   input  logic              rd_ena,  // Read enable
   output logic [DWIDTH-1:0] rd_data  // Read data
 );
+
 
   localparam int PTR_WIDTH = AWIDTH + 1;
 
@@ -86,8 +87,8 @@ module dual_clk_fifo
 
   // Gray pointers
   // - Consecutive values differ by exactly 1 bit
-  assign wr_ptr_gray = bin2gray(wr_ptr);
-  assign rd_ptr_gray = bin2gray(rd_ptr);
+  assign wr_ptr_gray = utils_pkg::bin2gray(wr_ptr);
+  assign rd_ptr_gray = utils_pkg::bin2gray(rd_ptr);
 
   // 2FF synchronizers
   always_ff @(posedge rd_clk) begin
@@ -106,8 +107,8 @@ module dual_clk_fifo
   
 
   // Opposite clock domain binary pointers
-  assign wr_ptr_rd = gray2bin(wr_ptr_gray_rd);
-  assign rd_ptr_wr = gray2bin(rd_ptr_gray_wr);
+  assign wr_ptr_rd = utils_pkg::gray2bin(wr_ptr_gray_rd);
+  assign rd_ptr_wr = utils_pkg::gray2bin(rd_ptr_gray_wr);
 
   // FIFO full and empty (binary)
   // assign empty = (rd_ptr == wr_ptr_rd);
@@ -115,7 +116,7 @@ module dual_clk_fifo
 
 
   // Dual port dual clock RAM
-  dual_port_dual_clock_ram dpdcram (
+  dual_port_dual_clk_ram u_dpdcram (
     .wr_clk  (wr_clk),
     .wr_ena  (wr_ena),
     .wr_addr (wr_ptr[AWIDTH-1:0]),

@@ -4,9 +4,10 @@
 //=============================================================================
 `default_nettype none
 
-module dual_port_dual_clk_ram 
-  import params_pkg::*; 
-(
+module dual_port_dual_clk_ram #(
+  parameter AWIDTH = params_pkg::AWIDTH,
+  parameter DWIDTH = params_pkg::DWIDTH
+) (
   // Write signals
   input  logic              wr_clk,  // Write clock 
   input  logic              wr_ena,  // Write enable

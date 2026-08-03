@@ -1,8 +1,15 @@
 TARGET=top
 TOP=top
 
-VSRCS = top.v \
-	logic/sine_gen.v \
+VSRCS = packages/params_pkg.sv \
+	packages/utils_pkg.sv \
+	adc/ODDRX1F.v \
+	adc/adc_interface.sv \
+	adc/dual_port_dual_clk_ram.sv \
+	adc/dual_clk_fifo.sv \
+	adc/adc_wrapper.sv \
+	adc/sine_gen.v \
+	top.v \
 	usb/ulpi_wrapper.v \
 	usb/usb_cdc_core.v \
 	usb/usb_desc_rom.v \
@@ -14,7 +21,7 @@ VSRCS = top.v \
 all: ${TARGET}.bit
 
 $(TARGET).json: $(VSRCS)
-	yosys -p "read_verilog -I usb $(VSRCS); synth_ecp5 -top top -json $@"
+	yosys -p "read_verilog -sv -I usb -I packages -I adc $(VSRCS); synth_ecp5 -top top -json $@"
 
 $(TARGET)_out.config: $(TARGET).json
 	nextpnr-ecp5 --25k --package CABGA256 --speed 6 --placer heap --json $< --textcfg $@ --lpf pins.lpf

@@ -28,28 +28,20 @@ module top (
     output led_b
 );
 
-  // PHY Hardware Reset Generator (25 MHz Onboard Clock)
-  // - Waveshare USB3300 RESET pin is Active-HIGH
-  // - Hold HIGH for ~10ms at boot, then drive LOW for normal operation
-  reg [19:0] rst_cnt;
-  reg        phy_rst;
+  // Reset generator
+  wire sys_rst;
+  rst_gen u_rst_gen (
+    .clk_i (clk_25m),
+    .rst_i (1'b0),
+    .rst_o (sys_rst)
+  );
 
-  always @(posedge clk_25m) begin
-    if (rst_cnt < 20'd250_000) begin // 10ms at 25MHz
-      rst_cnt <= rst_cnt + 1'b1;
-      phy_rst <= 1'b1; // Hold PHY in reset
-    end else begin
-      phy_rst <= 1'b0; // Release reset (Normal operation)
-      rst_cnt <= 20'd250_000; // Lock counter to prevent rollover
-    end
-  end
+  assign ulpi_reset = sys_rst;
 
-  assign ulpi_reset = phy_rst;
-
-  // Async Assert, Sync Deassert Reset Synchronizer for 60 MHz clock domain
+  // Async assert, sync deassert reset synchronizer for 60 MHz clock domain
   reg rst_sync, rst_sync_ms;
-  always @(posedge ulpi_clk60 or posedge phy_rst) begin
-    if (phy_rst) begin
+  always @(posedge ulpi_clk60 or posedge sys_rst) begin
+    if (sys_rst) begin
       rst_sync_ms <= 1;
       rst_sync    <= 1;
     end else begin
@@ -67,7 +59,7 @@ module top (
       startup_timer  <= 23'd0;
       ready          <= 1'b0;
     end else if (!ready) begin
-      if (startup_timer < 23'd6_000_000) begin // 100ms at 60MHz
+      if (startup_timer < 23'd600_000) begin // 10ms at 60MHz
         startup_timer <= startup_timer + 1'b1;
       end else begin
         ready <= 1'b1;
@@ -96,6 +88,9 @@ module top (
   wire       utmi_dppulldown_core;
   wire       utmi_dmpulldown_core;
 
+  // Software USB Attach: Hold DP pullup OFF for 100ms, then assert to trigger fresh host enumeration
+  wire       utmi_termselect_gated = utmi_termselect_core && ready;
+
   // ULPI wrapper 
   ulpi_wrapper u_ulpi (
     .ulpi_clk60_i       (ulpi_clk60),
@@ -107,7 +102,7 @@ module top (
     .utmi_txvalid_i     (utmi_txvalid_core),
     .utmi_op_mode_i     (utmi_op_mode_core),
     .utmi_xcvrselect_i  (utmi_xcvrselect_core),
-    .utmi_termselect_i  (utmi_termselect_core),
+    .utmi_termselect_i  (utmi_termselect_gated),
     .utmi_dppulldown_i  (utmi_dppulldown_core),
     .utmi_dmpulldown_i  (utmi_dmpulldown_core),
 
@@ -150,7 +145,7 @@ module top (
   ) u_cdc (
     .clk_i              (ulpi_clk60),
     .rst_i              (cdc_rst),
-    .enable_i           (1'b1),
+    .enable_i           (ready),
     .utmi_data_in_i     (utmi_data_in_wrapper),
     .utmi_txready_i     (utmi_txready_wrapper),
     .utmi_rxvalid_i     (utmi_rxvalid_wrapper),
@@ -175,9 +170,8 @@ module top (
     .utmi_dmpulldown_o  (utmi_dmpulldown_core)
   );
 
-  // LED indicators 
+  // Active-LOW LEDs: 0 = ON, 1 = OFF
   reg tx_seen;
-
   always @(posedge ulpi_clk60 or posedge cdc_rst) begin
     if (cdc_rst) begin
       tx_seen <= 1'b0;
@@ -186,7 +180,11 @@ module top (
     end
   end
 
-  assign led_r = 1'b0;     // Red OFF
-  assign led_g = tx_seen;  // Green ON (1) when TX data is streaming over USB
-  assign led_b = !cdc_rst; // Blue ON (1) when USB stack is active & out of reset
+  // Active-HIGH LEDs:
+  // - RED:   ON (1) if stuck in reset / PHY 60MHz clock missing
+  // - BLUE:  ON (1) when PHY 60MHz clock running & USB core out of reset
+  // - GREEN: ON (1) when 100ms startup timer completes & ready for host
+  assign led_r = cdc_rst; 
+  assign led_b = !cdc_rst;
+  assign led_g = tx_seen; // Active-HIGH: Green ON when tx_valid is HIGH (ADC wrapper bursting)
 endmodule

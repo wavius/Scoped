@@ -31,6 +31,7 @@ public:
 
   // Accessors
   bool isConnected() const { return m_handle != nullptr; }
+  bool isStreaming() const { return m_is_streaming.load(); }
 
   // Connection
   bool connect();

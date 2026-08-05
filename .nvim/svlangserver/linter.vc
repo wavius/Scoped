@@ -4,6 +4,7 @@
 +incdir+/home/wavius/Documents/GitHub/Scoped/extern/core_ulpi_wrapper/testbench
 +incdir+/home/wavius/Documents/GitHub/Scoped/extern/core_usb_cdc/src_v
 +incdir+/home/wavius/Documents/GitHub/Scoped/hdl/adc
++incdir+/home/wavius/Documents/GitHub/Scoped/hdl/common
 +incdir+/home/wavius/Documents/GitHub/Scoped/hdl/packages
 +incdir+/home/wavius/Documents/GitHub/Scoped/hdl
 +incdir+/home/wavius/Documents/GitHub/Scoped/hdl/usb
@@ -11,6 +12,7 @@
 +incdir+/home/wavius/Documents/GitHub/Scoped/extern/core_ulpi_wrapper/testbench
 +incdir+/home/wavius/Documents/GitHub/Scoped/extern/core_usb_cdc/src_v
 +incdir+/home/wavius/Documents/GitHub/Scoped/hdl/adc
++incdir+/home/wavius/Documents/GitHub/Scoped/hdl/common
 +incdir+/home/wavius/Documents/GitHub/Scoped/hdl/packages
 +incdir+/home/wavius/Documents/GitHub/Scoped/hdl
 +incdir+/home/wavius/Documents/GitHub/Scoped/hdl/usb

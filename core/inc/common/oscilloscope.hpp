@@ -156,6 +156,14 @@ public:
           ch->clearTraces();
         }
       }
+    } else {
+      // Drain unread samples when untriggered to prevent buffer backlog & USB stream timeout
+      for (auto &ch : m_hardware_channels) {
+        size_t ch_unread = ch->getUnreadSampleCount();
+        if (ch_unread > max_req) {
+          ch->consumeBuffer(ch_unread - max_req);
+        }
+      }
     }
   }
 };

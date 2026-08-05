@@ -110,7 +110,7 @@ begin
     xcvrselect_q    <= 2'b0;
     termselect_q    <= 1'b0;
     opmode_q        <= 2'b11;
-    phy_reset_q     <= 1'b1;
+    phy_reset_q     <= 1'b0;
 end
 else
 begin

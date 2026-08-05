@@ -370,14 +370,14 @@ public:
 
     base_trace.data.resize(time_width);
     for (size_t i = 0; i < time_width; ++i) {
-      base_trace.data[i] = static_cast<float>(m_raw_frame[time_start + i]);
+      base_trace.data[i] = static_cast<float>(m_raw_frame[time_start + i]) - 128.0f;
     }
 
     m_traces.push_back(std::move(base_trace));
 
     m_float_frame.resize(actual_width);
     for (size_t i = 0; i < actual_width; ++i) {
-      m_float_frame[i] = static_cast<float>(m_raw_frame[i]);
+      m_float_frame[i] = static_cast<float>(m_raw_frame[i]) - 128.0f;
     }
 
     for (auto &proc : m_processors) {

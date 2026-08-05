@@ -113,6 +113,7 @@ module usbf_device_core
     ,output          ep3_rx_valid_o
     ,output          ep3_tx_data_accept_o
     ,output          reg_sts_rst_o
+    ,input  [  3:0]  ep_clear_toggle_i
     ,output [ 10:0]  reg_sts_frame_num_o
 );
 
@@ -855,7 +856,7 @@ begin
     ep1_out_data_bit_q <= 1'b0;
     ep1_in_data_bit_q  <= 1'b0;
 end
-else if (usb_rst_w)
+else if (usb_rst_w || ep_clear_toggle_i[1])
 begin
     ep1_out_data_bit_q <= 1'b0;
     ep1_in_data_bit_q  <= 1'b0;
@@ -871,7 +872,7 @@ begin
     ep2_out_data_bit_q <= 1'b0;
     ep2_in_data_bit_q  <= 1'b0;
 end
-else if (usb_rst_w)
+else if (usb_rst_w || ep_clear_toggle_i[2])
 begin
     ep2_out_data_bit_q <= 1'b0;
     ep2_in_data_bit_q  <= 1'b0;
@@ -887,7 +888,7 @@ begin
     ep3_out_data_bit_q <= 1'b0;
     ep3_in_data_bit_q  <= 1'b0;
 end
-else if (usb_rst_w)
+else if (usb_rst_w || ep_clear_toggle_i[3])
 begin
     ep3_out_data_bit_q <= 1'b0;
     ep3_in_data_bit_q  <= 1'b0;

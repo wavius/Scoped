@@ -293,11 +293,11 @@ reg [`USB_RST_W-1:0] usb_rst_time_q;
 reg [7:0]            chirp_count_q;
 reg [1:0]            last_linestate_q;
 
-localparam DETACH_TIME    = 20'd60000;  // 1ms -> T0
-localparam ATTACH_FS_TIME = 20'd180000; // T0 + 3ms = T1
-localparam CHIRPK_TIME    = 20'd246000; // T1 + ~1ms
+localparam DETACH_TIME    = 20'd3000;   // 50us -> T0
+localparam ATTACH_FS_TIME = 20'd30000;  // T0 + 500us = T1 (USB 2.0 spec: T1 < 1.0ms)
+localparam CHIRPK_TIME    = 20'd102000; // T1 + 1.2ms (Chirp K duration = 1.2ms)
 localparam HS_RESET_TIME  = 20'd600000; // T0 + 10ms = T9
-localparam HS_CHIRP_COUNT = 8'd5;
+localparam HS_CHIRP_COUNT = 8'd4;       // 4 linestate toggles confirm host HS capability
 
 reg [  1:0]  utmi_op_mode_r;
 reg [  1:0]  utmi_xcvrselect_r;
@@ -592,8 +592,10 @@ u_core
     .ep3_tx_data_last_i(ep3_tx_data_last_w),
     .ep3_tx_data_accept_o(ep3_tx_data_accept_w),
 
+    .ep_clear_toggle_i(ep_clear_toggle_w),
+
     // Status
-    .reg_sts_rst_clr_i(1'b1),
+    .reg_sts_rst_clr_i(state_q == STATE_WAIT_RST),
     .reg_sts_rst_o(usb_reset_w),
     .reg_sts_frame_num_o()
 );
@@ -701,6 +703,8 @@ reg        set_with_data_q;
 reg        set_with_data_r;
 wire       data_status_zlp_w;
 
+reg [3:0]  ep_clear_toggle_w;
+
 always @ *
 begin
     ctrl_stall_r    = 1'b0;
@@ -712,9 +716,19 @@ begin
     configured_r    = configured_q;
     set_with_data_r = set_with_data_q;
 
+    ep_clear_toggle_w = 4'b0;
+
     if (setup_valid_q)
     begin
         set_with_data_r = 1'b0;
+
+        if ((bmRequestType_w & `USB_REQUEST_TYPE_MASK) == `USB_STANDARD_REQUEST)
+        begin
+            if (bRequest_w == `REQ_CLEAR_FEATURE && setup_set_w && wValue_w == 16'd0)
+            begin
+                ep_clear_toggle_w[wIndex_w[3:0]] = 1'b1;
+            end
+        end
 
         case (bmRequestType_w & `USB_REQUEST_TYPE_MASK)
         `USB_STANDARD_REQUEST:
@@ -1089,8 +1103,9 @@ begin
     inport_data_q  <= inport_data_i;
 end
 
+
 wire [10:0] max_packet_w   = usb_hs_w ? 11'd511 : 11'd63;
-wire        inport_last_w  = !inport_valid_i || (inport_cnt_q == max_packet_w);
+wire        inport_last_w  = !inport_valid_q || (inport_cnt_q == max_packet_w);
 
 always @ (posedge clk_i or posedge rst_i)
 if (rst_i)
@@ -1106,6 +1121,7 @@ assign ep2_tx_ready_w      = ep2_tx_data_valid_w;
 assign ep2_tx_data_strb_w  = ep2_tx_data_valid_w;
 assign ep2_tx_data_last_w  = inport_last_w;
 assign inport_accept_o     = !inport_valid_q | ep2_tx_data_accept_w;
+assign ep2_tx_stall_w      = 1'b0;
 
 assign outport_valid_o  = ep1_rx_valid_w && rx_strb_w;
 assign outport_data_o   = rx_data_w;

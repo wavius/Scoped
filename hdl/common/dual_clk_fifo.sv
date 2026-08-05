@@ -9,21 +9,20 @@ module dual_clk_fifo #(
   parameter DWIDTH = params_pkg::DWIDTH
 ) (
   input  logic              a_rst,   // Asynchronous reset
-  output logic              full,    // FIFO full
-  output logic              empty,   // FIFO empty
 
-  // Write signals
+  // Write domain
   input  logic              wr_clk,  // Write clock
   input  logic              wr_ena,  // Write enable
   input  logic [DWIDTH-1:0] wr_data, // Write data
+  output logic              full,    // FIFO full
 
-  // Read signals
+  // Read domain
   input  logic              rd_clk,  // Read clock
   input  logic              rd_ena,  // Read enable
-  output logic [DWIDTH-1:0] rd_data  // Read data
+  output logic [DWIDTH-1:0] rd_data, // Read data
+  output logic              empty,   // FIFO empty
+  output logic [AWIDTH:0]   count    // Number of samples in FIFO (0 to 2^AWIDTH)
 );
-
-
   localparam int PTR_WIDTH = AWIDTH + 1;
 
   // Reset
@@ -109,6 +108,9 @@ module dual_clk_fifo #(
   // Opposite clock domain binary pointers
   assign wr_ptr_rd = utils_pkg::gray2bin(wr_ptr_gray_rd);
   assign rd_ptr_wr = utils_pkg::gray2bin(rd_ptr_gray_wr);
+  
+  // FIFO count
+  assign count = wr_ptr_rd - rd_ptr;
 
   // FIFO full and empty (binary)
   // assign empty = (rd_ptr == wr_ptr_rd);

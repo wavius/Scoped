@@ -592,10 +592,8 @@ u_core
     .ep3_tx_data_last_i(ep3_tx_data_last_w),
     .ep3_tx_data_accept_o(ep3_tx_data_accept_w),
 
-    .ep_clear_toggle_i(ep_clear_toggle_w),
-
     // Status
-    .reg_sts_rst_clr_i(state_q == STATE_WAIT_RST),
+    .reg_sts_rst_clr_i(1'b1),
     .reg_sts_rst_o(usb_reset_w),
     .reg_sts_frame_num_o()
 );
@@ -703,8 +701,6 @@ reg        set_with_data_q;
 reg        set_with_data_r;
 wire       data_status_zlp_w;
 
-reg [3:0]  ep_clear_toggle_w;
-
 always @ *
 begin
     ctrl_stall_r    = 1'b0;
@@ -716,19 +712,9 @@ begin
     configured_r    = configured_q;
     set_with_data_r = set_with_data_q;
 
-    ep_clear_toggle_w = 4'b0;
-
     if (setup_valid_q)
     begin
         set_with_data_r = 1'b0;
-
-        if ((bmRequestType_w & `USB_REQUEST_TYPE_MASK) == `USB_STANDARD_REQUEST)
-        begin
-            if (bRequest_w == `REQ_CLEAR_FEATURE && setup_set_w && wValue_w == 16'd0)
-            begin
-                ep_clear_toggle_w[wIndex_w[3:0]] = 1'b1;
-            end
-        end
 
         case (bmRequestType_w & `USB_REQUEST_TYPE_MASK)
         `USB_STANDARD_REQUEST:
@@ -1103,9 +1089,8 @@ begin
     inport_data_q  <= inport_data_i;
 end
 
-
 wire [10:0] max_packet_w   = usb_hs_w ? 11'd511 : 11'd63;
-wire        inport_last_w  = !inport_valid_q || (inport_cnt_q == max_packet_w);
+wire        inport_last_w  = !inport_valid_i || (inport_cnt_q == max_packet_w);
 
 always @ (posedge clk_i or posedge rst_i)
 if (rst_i)
@@ -1121,7 +1106,6 @@ assign ep2_tx_ready_w      = ep2_tx_data_valid_w;
 assign ep2_tx_data_strb_w  = ep2_tx_data_valid_w;
 assign ep2_tx_data_last_w  = inport_last_w;
 assign inport_accept_o     = !inport_valid_q | ep2_tx_data_accept_w;
-assign ep2_tx_stall_w      = 1'b0;
 
 assign outport_valid_o  = ep1_rx_valid_w && rx_strb_w;
 assign outport_data_o   = rx_data_w;

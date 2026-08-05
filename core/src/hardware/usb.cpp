@@ -139,11 +139,8 @@ void USBDevice::streamLoop(IChannel *channel) {
         std::cerr << "[USB] Endpoint stalled (LIBUSB_ERROR_PIPE), cleared halt. Count: "
                   << consecutive_errors << "\n" << std::flush;
       } else if (result == LIBUSB_ERROR_IO || result == LIBUSB_ERROR_OVERFLOW) {
-        libusb_clear_halt(m_handle, ENDPOINT_IN);
-        consecutive_errors++;
-        std::cerr << "[USB] Transfer error (" << libusb_error_name(result)
-                  << "). Cleared halt. Count: " << consecutive_errors << "\n" << std::flush;
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        continue;
       } else {
         consecutive_errors++;
         std::cerr << "[USB] Transfer warning: " << libusb_error_name(result)

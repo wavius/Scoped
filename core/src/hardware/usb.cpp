@@ -32,6 +32,13 @@ bool USBDevice::connect() {
   libusb_set_auto_detach_kernel_driver(m_handle, 1);
 #endif
 
+  // Ensure configuration 1 is active
+  int current_config = 0;
+  libusb_get_configuration(m_handle, &current_config);
+  if (current_config != 1) {
+    libusb_set_configuration(m_handle, 1);
+  }
+
 
 
   // Detach kernel drivers if active
@@ -128,8 +135,11 @@ void USBDevice::streamLoop(IChannel *channel) {
         std::cout << "[USB] Streaming Active! Total Received: " << (total_received / 1024) << " KB\n" << std::flush;
         last_log = now;
       }
+      // Short transfer (IO error with data) is normal for CDC — not a real error
+      continue;
     }
 
+    // Only process errors when no data was received
     if (result != 0) {
       if (result == LIBUSB_ERROR_TIMEOUT || result == LIBUSB_ERROR_INTERRUPTED) {
         continue;
@@ -139,8 +149,12 @@ void USBDevice::streamLoop(IChannel *channel) {
         std::cerr << "[USB] Endpoint stalled (LIBUSB_ERROR_PIPE), cleared halt. Count: "
                   << consecutive_errors << "\n" << std::flush;
       } else if (result == LIBUSB_ERROR_IO || result == LIBUSB_ERROR_OVERFLOW) {
+        consecutive_errors++;
+        if (consecutive_errors <= 3 || consecutive_errors % 50 == 0) {
+          std::cerr << "[USB] Transfer error (" << libusb_error_name(result)
+                    << "). Count: " << consecutive_errors << "\n" << std::flush;
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        continue;
       } else {
         consecutive_errors++;
         std::cerr << "[USB] Transfer warning: " << libusb_error_name(result)
@@ -148,7 +162,7 @@ void USBDevice::streamLoop(IChannel *channel) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
       }
 
-      if (consecutive_errors > 50) {
+      if (consecutive_errors > 200) {
         std::cerr << "[USB] Too many consecutive transfer errors ("
                   << libusb_error_name(result) << "), stopping stream.\n" << std::flush;
         break;

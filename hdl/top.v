@@ -20,7 +20,6 @@ module top (
     output led_b
 );
 
-    assign adc_clk_out = clk_25m; // Dummy clock output for ADC pin constraint
 
     // ========================================================
     // 1. PHY Hardware Reset Generator (25 MHz Onboard Clock)
@@ -130,14 +129,27 @@ module top (
     wire       tx_valid;
     wire       tx_ready;
 
-    // Instantiate test sine wave generator
-    sine_gen u_sine_gen (
-        .clk          (ulpi_clk60),
+    // ========================================================
+    // 6. ADC Wrapper Instantiation
+    // ========================================================
+    wire [11:0] tx_data_12b;
+    assign tx_data = tx_data_12b[11:4];
+
+    adc_wrapper u_adc_wrapper (
         .rst          (cdc_rst),
         .enable       (ready_for_leds),
+
+        // Physical ADC pins
+        .adc_clk      (clk_25m),
+        .adc_clk_out  (adc_clk_out),
+        .adc_data_raw (adc_data_raw),
+        .adc_otr      (adc_otr),
+
+        // To USB CDC (FIFO output)
+        .ulpi_clk     (ulpi_clk60),
         .tx_ready     (tx_ready),
-        .sample_data  (tx_data),
-        .sample_valid (tx_valid)
+        .tx_data      (tx_data_12b),
+        .tx_valid     (tx_valid)
     );
 
     // ========================================================

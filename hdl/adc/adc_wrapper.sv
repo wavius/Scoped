@@ -101,7 +101,7 @@ module adc_wrapper #(
             tx_valid <= 0; 
           end 
           else begin
-            tx_valid <= !fifo_empty && enable;
+            tx_valid <= !fifo_empty; // FIFO should never be empty here but just in case
           end
           if (byte_sent)
             burst_count <= burst_count + 10'b1;
@@ -114,7 +114,7 @@ module adc_wrapper #(
     next_state = current_state;
     case (current_state)
       IDLE: begin
-        if (fifo_count >= 15'd511) next_state = BURST;
+        if (enable && (fifo_count >= 15'd511)) next_state = BURST;
       end
       BURST: begin
         if ((burst_count == 10'd511) && byte_sent) next_state = IDLE;

@@ -2,30 +2,18 @@ VERILATOR = verilator
 VERILATOR_FLAGS = --cc --exe --trace -Wall -Wno-fatal \
 	-I../hdl/packages \
 	-I../hdl/common \
-	-I../hdl/adc \
-	-I../hdl/usb
+	-I../hdl/adc
 
 VSRCS = ../hdl/packages/params_pkg.sv \
 	../hdl/packages/utils_pkg.sv \
-	../hdl/common/ODDRX1F.v \
 	../hdl/common/dual_port_dual_clk_ram.sv \
 	../hdl/common/dual_clk_fifo.sv \
 	../hdl/common/fwft_dual_clk_fifo.sv \
-	../hdl/common/sine_gen.v \
-	../hdl/common/rst_gen.v \
 	../hdl/adc/adc_interface.sv \
-	../hdl/adc/adc_wrapper.sv \
-	../hdl/top.v \
-	../hdl/usb/ulpi_wrapper.v \
-	../hdl/usb/usb_cdc_core.v \
-	../hdl/usb/usb_desc_rom.v \
-	../hdl/usb/usbf_crc16.v \
-	../hdl/usb/usbf_device_core.v \
-	../hdl/usb/usbf_sie_rx.v \
-	../hdl/usb/usbf_sie_tx.v
+	../hdl/adc/adc_wrapper.sv
 
-TB_SRC = tb_top.cpp
-TOP_MODULE = top
+TB_SRC = tb_adc_wrapper.cpp
+TOP_MODULE = adc_wrapper
 OBJ_DIR = obj_dir
 
 all: sim

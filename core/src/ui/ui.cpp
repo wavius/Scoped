@@ -17,11 +17,58 @@
 #include <ui/ui_helpers.hpp>
 #include <ui/ui.hpp>
 
-// Helpers moved to ui_helpers.hpp
-
 namespace Scoped {
 
-// colors
+struct AxisFormatterData {
+    Oscilloscope* osc;
+    double w;
+    double h;
+};
+
+static int FormatTimeAxis(double value, char* buff, int size, void* user_data) {
+    auto* data = static_cast<AxisFormatterData*>(user_data);
+    if (!data || !data->osc || data->osc->getHardwareChannels().empty()) {
+        return snprintf(buff, size, "%.0f", value);
+    }
+    
+    auto& ch = data->osc->getHardwareChannels()[0];
+    double h_scale = static_cast<double>(ch->getHorizontalScale());
+    double sample_rate = ch->getSampleRate();
+    
+    double time_s = ((value - data->w / 2.0) / data->w) * (h_scale / sample_rate);
+    
+    double abs_t = std::abs(time_s);
+    if (abs_t < 1e-6 && time_s != 0.0) {
+        return snprintf(buff, size, "%.1f ns", time_s * 1e9);
+    } else if (abs_t < 1e-3 && time_s != 0.0) {
+        return snprintf(buff, size, "%.1f us", time_s * 1e6);
+    } else if (abs_t < 1.0 && time_s != 0.0) {
+        return snprintf(buff, size, "%.1f ms", time_s * 1e3);
+    }
+    return snprintf(buff, size, "%.2f s", time_s);
+}
+
+static int FormatVoltageAxis(double value, char* buff, int size, void* user_data) {
+    auto* data = static_cast<AxisFormatterData*>(user_data);
+    if (!data || !data->osc || data->osc->getHardwareChannels().empty()) {
+        return snprintf(buff, size, "%.0f", value);
+    }
+    
+    auto& ch = data->osc->getHardwareChannels()[0];
+    double v_scale = static_cast<double>(ch->getVerticalScale());
+    
+    double I = value / data->h;
+    
+    double scaled = I * Constants::ADC_LEVELS;
+    double centered = (scaled - Constants::ADC_MIDPOINT) / v_scale;
+    double raw = centered + Constants::ADC_MIDPOINT;
+    
+    double v_range = Constants::ADC_VMAX - Constants::ADC_VMIN;
+    double voltage = Constants::ADC_VMIN + (raw / Constants::ADC_LEVELS) * v_range;
+    
+    return snprintf(buff, size, "%.2f V", voltage);
+}
+
 // Colors are defined in ui.hpp
 
 static void plotLineSegment(const char *label, double x0, double y0, double x1,
@@ -314,15 +361,19 @@ void OscilloscopeUI::drawTriggerLine(Oscilloscope &osc) {
 
   auto &trace = traces[0];
 
-  ImVec4 trigger_color =
-      toImVec4(osc.getHardwareChannels()[src_idx]->getColor());
-  trigger_color.w = 0.5f;
+  ImVec4 trigger_color = ImVec4(1.0f, 0.0f, 0.0f, 0.8f); // Bright red
+
+  double v_scale = static_cast<double>(channel->getVerticalScale());
+  double v_range = Constants::ADC_VMAX - Constants::ADC_VMIN;
 
   for (float level : levels) {
-    float y_normalized = trace.normalizeToIntensity(level);
-    // After flipping PlotImage, y_normalized=1.0 is top (h) and 0.0 is bottom
-    // (0)
-    double y_level = y_normalized * m_display_height;
+    // Map trigger voltage directly to the static Y-axis
+    double raw = ((level - Constants::ADC_VMIN) / v_range) * Constants::ADC_LEVELS;
+    double sample = raw - Constants::ADC_MIDPOINT;
+    double scaled = (sample * v_scale) + Constants::ADC_MIDPOINT;
+    double I = scaled / Constants::ADC_LEVELS;
+    
+    double y_level = I * m_display_height;
 
     plotLineSegment("##TriggerLine", 0.0, y_level,
                     static_cast<double>(m_display_width), y_level,
@@ -466,23 +517,46 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
   ImPlotFlags flags = ImPlotFlags_CanvasOnly | ImPlotFlags_NoLegend;
 
   if (ImPlot::BeginPlot("##OscilloscopeImage", ImVec2(-1, -1), flags)) {
-    ImPlot::SetupAxesLimits(0, w, -12, h + 12, ImGuiCond_Always);
+    ImPlot::SetupAxesLimits(0, w, 0, h, ImGuiCond_Always);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0, w);
-    ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, -12, h + 12);
-    ImPlot::SetupAxis(ImAxis_X1, nullptr, ImPlotAxisFlags_NoDecorations);
-    ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_NoDecorations);
+    ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, h);
+    
+    static AxisFormatterData axis_data;
+    axis_data.osc = &osc;
+    axis_data.w = w;
+    axis_data.h = h;
+    
+    ImPlot::SetupAxisFormat(ImAxis_X1, FormatTimeAxis, &axis_data);
+    ImPlot::SetupAxisFormat(ImAxis_Y1, FormatVoltageAxis, &axis_data);
 
     if (m_display) {
       m_display->updateTexture();
 
       ImPlot::PlotImage("OscilloscopeTrace",
                         (ImTextureID)(intptr_t)m_display->getTextureID(),
-                        ImPlotPoint(0, h), ImPlotPoint(w, 0));
+                        ImPlotPoint(0, 0), ImPlotPoint(w, h));
     }
 
     drawFrequencyTraces(osc);
     drawVirtualTimeTraces(osc);
-    drawGridLines(w, h);
+
+    if (!osc.getHardwareChannels().empty()) {
+      auto& ch = osc.getHardwareChannels()[0];
+      double v_scale = static_cast<double>(ch->getVerticalScale());
+      double v_range = Constants::ADC_VMAX - Constants::ADC_VMIN;
+      double sample = ((0.0 - Constants::ADC_VMIN) / v_range) * Constants::ADC_LEVELS - 128.0;
+      // 0V should be static, so do not include v_offset in this calculation
+      double scaled = (sample * v_scale) + Constants::ADC_MIDPOINT;
+      double I = scaled / Constants::ADC_LEVELS;
+      double y_zero = I * h;
+      
+      double x_line[2] = {0, w};
+      double y_line[2] = {y_zero, y_zero};
+      ImPlot::PlotLine("##0VLine", x_line, y_line, 2, 
+                       {ImPlotProp_LineColor, ImVec4(1.0f, 1.0f, 1.0f, 0.25f), ImPlotProp_LineWeight, 1.0f});
+      
+      ImPlot::TagY(y_zero, ImVec4(0.3f, 0.3f, 0.3f, 1.0f), "0V");
+    }
 
     if (m_show_trigger_line) {
       drawTriggerLine(osc);
@@ -534,11 +608,11 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
           }
         }
         if (delta.y != 0.0f) {
-          double doffset =
-              (delta.y / h) * static_cast<double>(Constants::ADC_LEVELS);
+          double v_range = Constants::ADC_VMAX - Constants::ADC_VMIN;
+          double doffset = (delta.y / h) * v_range;
           double current_offset = target->getVerticalOffset();
-          double new_offset = current_offset - doffset;
-          new_offset = std::max(-128.0, std::min(128.0, new_offset));
+          double new_offset = current_offset + doffset;
+          new_offset = std::max(static_cast<double>(-v_range), std::min(static_cast<double>(v_range), new_offset));
           target->setVerticalOffset(static_cast<float>(new_offset));
           changed = true;
         }
@@ -556,12 +630,10 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
             double factor = std::pow(1.1, static_cast<double>(scroll));
             double new_v_scale = current_v_scale * factor;
 
-            double y_val =
-                (mouse_y / h * static_cast<double>(Constants::ADC_LEVELS)) -
-                static_cast<double>(Constants::ADC_MIDPOINT);
-            double centered = (y_val - current_v_offset) / current_v_scale;
-            double new_v_offset =
-                current_v_offset + centered * (current_v_scale - new_v_scale);
+            double v_range = Constants::ADC_VMAX - Constants::ADC_VMIN;
+            double mouse_v = Constants::ADC_VMIN + (mouse_y / h) * v_range;
+            double centered = (mouse_v - current_v_offset) / current_v_scale;
+            double new_v_offset = current_v_offset - centered * (current_v_scale - new_v_scale);
 
             target->setVerticalScale(
                 static_cast<float>(std::max(0.01, new_v_scale)));
@@ -810,6 +882,8 @@ void OscilloscopeUI::drawScopeWindow(Oscilloscope &osc) {
 void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
   ImGui::Begin("Trigger");
   ImGui::SetWindowFontScale(1.15f);
+  
+  m_show_trigger_line = false;
 
   auto *trigger = osc.getTrigger();
 
@@ -850,9 +924,6 @@ void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
   drawModeCombo(osc);
 
   ImGui::Spacing();
-
-  ImGui::Checkbox("Show trigger line", &m_show_trigger_line);
-
   ImGui::Separator();
 
   // Parameters are set in trigger.hpp
@@ -863,20 +934,26 @@ void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
 
     ImGui::Text("%s", param.name.c_str());
 
-    int value = param.current_val;
+    float value = param.current_val;
 
     if (param.combo_items.empty()) {
       ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
-      if (ImGui::SliderInt("##Value", &value, param.min_val, param.max_val)) {
+      if (ImGui::SliderFloat("##Value", &value, param.min_val, param.max_val)) {
         trigger->setUIParameter(param.name, value);
         osc.forceReprocess();
       }
+      if (ImGui::IsItemHovered() || ImGui::IsItemActive()) {
+        m_show_trigger_line = true;
+      }
       ImGui::SameLine();
       ImGui::SetNextItemWidth(-FLT_MIN);
-      if (ImGui::InputInt("##ValueInput", &value, 0, 0)) {
+      if (ImGui::InputFloat("##ValueInput", &value, 0.0f, 0.0f, "%.2f")) {
         trigger->setUIParameter(
             param.name, std::clamp(value, param.min_val, param.max_val));
         osc.forceReprocess();
+      }
+      if (ImGui::IsItemHovered() || ImGui::IsItemActive()) {
+        m_show_trigger_line = true;
       }
     } else {
       std::vector<const char *> combo_items;
@@ -887,9 +964,10 @@ void OscilloscopeUI::drawTriggerWindow(Oscilloscope &osc) {
 
       ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 
-      if (ImGui::Combo("##Value", &value, combo_items.data(),
+      int combo_val = static_cast<int>(value);
+      if (ImGui::Combo("##Value", &combo_val, combo_items.data(),
                        static_cast<int>(combo_items.size()))) {
-        trigger->setUIParameter(param.name, value);
+        trigger->setUIParameter(param.name, static_cast<float>(combo_val));
         osc.forceReprocess();
       }
     }
@@ -917,20 +995,39 @@ void OscilloscopeUI::drawHardwareWindow(Oscilloscope &osc) {
   ImGui::SetWindowFontScale(1.15f);
 
   auto &usb = osc.getUSB();
+  auto &uart = osc.getUART();
+  auto source = osc.getInputSource();
 
-  if (usb.isConnected()) {
-    ImGui::TextColored(Colors::StatusOk, "USB connected");
+  int current_source = (source == InputSource::USB) ? 0 : 1;
+  const char* sources[] = { "USB", "UART (/dev/ttyACM0)" };
+  if (ImGui::Combo("Input Source", &current_source, sources, 2)) {
+    osc.setInputSource(current_source == 0 ? InputSource::USB : InputSource::UART);
+    source = osc.getInputSource();
+  }
+
+  ImGui::Separator();
+
+  bool is_connected = (source == InputSource::USB) ? usb.isConnected() : uart.isConnected();
+
+  if (is_connected) {
+    ImGui::TextColored(Colors::StatusOk, "Device connected");
 
     if (ImGui::Button("Disconnect")) {
-      usb.stopStreaming();
-      usb.disconnect();
+      if (source == InputSource::USB) {
+        usb.stopStreaming();
+        usb.disconnect();
+      } else {
+        uart.stopStreaming();
+        uart.disconnect();
+      }
     }
   } else {
-    ImGui::TextColored(Colors::StatusError, "USB offline");
+    ImGui::TextColored(Colors::StatusError, "Device offline");
     ImGui::TextDisabled("Using generated test signal.");
 
     if (ImGui::Button("Connect")) {
-      if (usb.connect()) {
+      bool success = (source == InputSource::USB) ? usb.connect() : uart.connect();
+      if (success) {
         for (auto &channel : osc.getHardwareChannels()) {
           channel->clearBuffer();
         }
@@ -940,7 +1037,11 @@ void OscilloscopeUI::drawHardwareWindow(Oscilloscope &osc) {
         }
 
         if (!osc.getHardwareChannels().empty()) {
-          usb.startStreaming(osc.getHardwareChannels()[0].get());
+          if (source == InputSource::USB) {
+            usb.startStreaming(osc.getHardwareChannels()[0].get());
+          } else {
+            uart.startStreaming(osc.getHardwareChannels()[0].get());
+          }
         }
       }
     }

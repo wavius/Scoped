@@ -140,7 +140,7 @@ int main(int, char **) {
   // osc.addVirtualChannel(vc2);
 
   auto trigger = std::make_unique<Scoped::EdgeTrigger>(
-      1024, Scoped::Constants::ADC_MIDPOINT);
+      1024, Scoped::Constants::ADC_MIDPOINT_V);
   osc.setTrigger(std::move(trigger));
   osc.setTriggerSource(0);
   osc.setMaxCaptureWidth(8192);
@@ -160,7 +160,11 @@ int main(int, char **) {
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    if (!osc.getUSB().isConnected()) {
+    bool is_connected = (osc.getInputSource() == Scoped::InputSource::USB) 
+                            ? osc.getUSB().isConnected() 
+                            : osc.getUART().isConnected();
+    
+    if (!is_connected) {
       constexpr float base_freq = 4.0f;
       for (int i = 0; i < 2; ++i) {
         ch1->getBuffer().fillTestSineWave(base_freq);

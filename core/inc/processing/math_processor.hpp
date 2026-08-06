@@ -52,7 +52,7 @@ private:
   void performAdd(const std::vector<float> &frame1,
                   const std::vector<float> &frame2) {
     for (size_t i = 0; i < m_math_output.size(); i++) {
-      m_math_output[i] = frame1[i] + frame2[i] - Constants::ADC_MIDPOINT;
+      m_math_output[i] = frame1[i] + frame2[i];
     }
   }
 
@@ -60,14 +60,14 @@ private:
   void performSubtract(const std::vector<float> &frame1,
                        const std::vector<float> &frame2) {
     for (size_t i = 0; i < m_math_output.size(); i++) {
-      m_math_output[i] = frame1[i] - frame2[i] + Constants::ADC_MIDPOINT;
+      m_math_output[i] = frame1[i] - frame2[i];
     }
   }
 
   // m_math_output = Constants::ADC_LEVELS - frame1
   void performInvert(const std::vector<float> &frame1) {
     for (size_t i = 0; i < m_math_output.size(); i++) {
-      m_math_output[i] = Constants::ADC_LEVELS - frame1[i];
+      m_math_output[i] = -frame1[i];
     }
   }
 
@@ -75,12 +75,7 @@ private:
   void performMultiply(const std::vector<float> &frame1,
                        const std::vector<float> &frame2) {
     for (size_t i = 0; i < m_math_output.size(); i++) {
-      float val1 =
-          (frame1[i] - Constants::ADC_MIDPOINT) / Constants::ADC_MIDPOINT;
-      float val2 =
-          (frame2[i] - Constants::ADC_MIDPOINT) / Constants::ADC_MIDPOINT;
-      m_math_output[i] =
-          (val1 * val2) * Constants::ADC_MIDPOINT + Constants::ADC_MIDPOINT;
+      m_math_output[i] = frame1[i] * frame2[i];
     }
   }
 
@@ -96,10 +91,10 @@ private:
 
     float sum = 0.0f;
     float dt = 1.0f / sample_rate;
-    m_math_output[0] = Constants::ADC_MIDPOINT;
+    m_math_output[0] = Constants::ADC_MIDPOINT_V;
     for (size_t i = 1; i < n; i++) {
       sum += (frame1[i - 1] - mean + frame1[i] - mean) * 0.5f * dt;
-      m_math_output[i] = sum + Constants::ADC_MIDPOINT;
+      m_math_output[i] = sum;
     }
   }
 
@@ -127,8 +122,7 @@ private:
 
     for (size_t i = 1; i < n - 1; i++)
       m_math_output[i] =
-          (smoothed[i + 1] - smoothed[i - 1]) * 0.5f * sample_rate +
-          Constants::ADC_MIDPOINT;
+          (smoothed[i + 1] - smoothed[i - 1]) * 0.5f * sample_rate;
 
     m_math_output[0] = m_math_output[1];
     m_math_output[n - 1] = m_math_output[n - 2];
@@ -204,10 +198,7 @@ private:
                    pocketfft::BACKWARD, fft_output.data(), m_math_output.data(),
                    0.5f);
 
-    // Shift result to be centered around ADC midpoint for display
-    for (size_t i = 0; i < frame_size; i++) {
-      m_math_output[i] += Constants::ADC_MIDPOINT;
-    }
+    // No shift needed since it's already centered around 0V
   }
 
   // taken from fft_processor.hpp
@@ -268,7 +259,8 @@ public:
     for (size_t i = 0; i < sources.size(); i++) {
       if (sources[i]->getLabel() == m_source1_label) {
         source1 = sources[i];
-      } else if (sources[i]->getLabel() == m_source2_label) {
+      }
+      if (sources[i]->getLabel() == m_source2_label) {
         source2 = sources[i];
       }
     }

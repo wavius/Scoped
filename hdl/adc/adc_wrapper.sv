@@ -7,6 +7,7 @@ module adc_wrapper #(
 
   // ADC interface
   input  logic              adc_clk,
+  input  logic              capture_en,
   output logic              adc_clk_out,
   input  logic [DWIDTH-1:0] adc_data_raw,
   input  logic              adc_otr,
@@ -42,6 +43,7 @@ module adc_wrapper #(
   adc_interface u_adc_int (
     .clk_25m      (adc_clk),
     .a_rst        (adc_rst_sync),
+    .capture_en   (capture_en),
 
     .adc_data_raw (adc_data_raw),
     .adc_otr      (adc_otr),

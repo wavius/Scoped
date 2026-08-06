@@ -26,9 +26,12 @@ struct Trace {
   // Pipeline
   float normalizeToIntensity(float sample) const {
     if (domain == Domain::Time) {
-      float centered = sample - Constants::ADC_MIDPOINT;
-      float scaled = (centered * vertical_scale) + vertical_offset +
-                     Constants::ADC_MIDPOINT;
+      // sample and vertical_offset are voltages
+      float v_range = Constants::ADC_VMAX - Constants::ADC_VMIN;
+      float offset_sample = sample - vertical_offset;
+      float raw = ((offset_sample - Constants::ADC_VMIN) / v_range) * Constants::ADC_LEVELS;
+      float centered = raw - Constants::ADC_MIDPOINT;
+      float scaled = (centered * vertical_scale) + Constants::ADC_MIDPOINT;
       return std::clamp(scaled / Constants::ADC_LEVELS, 0.0f, 1.0f);
     } else if (domain == Domain::Frequency) {
       // Frequency domain auto-scaling logic assumes subtraction

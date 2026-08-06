@@ -165,7 +165,7 @@ public:
     fft_trace.vertical_scale = (1.0f / range) * m_vertical_scale;
 
     fft_trace.vertical_offset =
-        (min * fft_trace.vertical_scale) - (m_vertical_offset / 256.0f);
+        (min * fft_trace.vertical_scale) - (m_vertical_offset / 256.0f) - 0.02f;
 
     fft_trace.horizontal_scale = m_horizontal_scale;
     fft_trace.horizontal_offset = static_cast<int>(m_horizontal_offset);

@@ -2,9 +2,12 @@
 
 #include <common/channel.hpp>
 #include <hardware/usb.hpp>
+#include <hardware/uart.hpp>
 #include <processing/trigger.hpp>
 
 namespace Scoped {
+
+enum class InputSource { USB, UART };
 
 // Owns all channels, hardware links, and global trigger engine
 class Oscilloscope {
@@ -12,6 +15,8 @@ private:
   std::vector<std::shared_ptr<IChannel>> m_hardware_channels;
   std::vector<std::shared_ptr<VirtualChannel>> m_virtual_channels;
   USBDevice m_usb;
+  UARTDevice m_uart;
+  InputSource m_input_source = InputSource::USB;
   std::unique_ptr<ITrigger> m_trigger;
   size_t m_trigger_source_idx = 0;
   size_t m_last_trigger_offset = 0;
@@ -24,6 +29,17 @@ public:
 
   // Accessors
   USBDevice &getUSB() { return m_usb; }
+  UARTDevice &getUART() { return m_uart; }
+  InputSource getInputSource() const { return m_input_source; }
+  
+  void setInputSource(InputSource source) {
+    if (m_input_source != source) {
+      if (m_usb.isStreaming()) m_usb.stopStreaming();
+      if (m_uart.isStreaming()) m_uart.stopStreaming();
+      m_input_source = source;
+    }
+  }
+
   ITrigger *getTrigger() { return m_trigger.get(); }
   const std::vector<std::shared_ptr<IChannel>> &getHardwareChannels() const {
     return m_hardware_channels;

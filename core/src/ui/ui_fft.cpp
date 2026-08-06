@@ -39,7 +39,7 @@ void OscilloscopeUI::drawFFTControls(Oscilloscope &osc) {
       int h_scale = static_cast<int>(fft_proc->getHorizontalScale());
       if (h_scale == 0 || h_scale > num_bins)
         h_scale = num_bins;
-      if (drawSliderIntWithInput("Horizontal Scale", &h_scale, 2, num_bins,
+      if (drawSliderIntWithInput("Time Scale", &h_scale, 2, num_bins,
                                  "%d bins", false)) {
         fft_proc->setHorizontalScale(static_cast<size_t>(h_scale));
         osc.forceReprocess();
@@ -51,7 +51,7 @@ void OscilloscopeUI::drawFFTControls(Oscilloscope &osc) {
         h_offset = max_offset;
         fft_proc->setHorizontalOffset(static_cast<size_t>(h_offset));
       }
-      if (drawSliderIntWithInput("Horizontal Offset", &h_offset, 0, max_offset,
+      if (drawSliderIntWithInput("Time Offset", &h_offset, 0, max_offset,
                                  "%d bins", true)) {
         fft_proc->setHorizontalOffset(static_cast<size_t>(h_offset));
         osc.forceReprocess();

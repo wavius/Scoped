@@ -290,8 +290,9 @@ public:
     }
 
     m_float_frame.resize(actual_width);
+    float v_range = Constants::ADC_VMAX - Constants::ADC_VMIN;
     for (size_t i = 0; i < actual_width; ++i) {
-      m_float_frame[i] = static_cast<float>(m_raw_frame[i]);
+      m_float_frame[i] = Constants::ADC_VMIN + (static_cast<float>(m_raw_frame[i]) / Constants::ADC_LEVELS) * v_range;
     }
 
     m_traces.clear();
@@ -320,7 +321,7 @@ public:
     size_t time_width = std::min(m_horizontal_scale, actual_width - time_start);
     base_trace.data.resize(time_width);
     for (size_t i = 0; i < time_width; ++i) {
-      base_trace.data[i] = static_cast<float>(m_raw_frame[time_start + i]);
+      base_trace.data[i] = Constants::ADC_VMIN + (static_cast<float>(m_raw_frame[time_start + i]) / Constants::ADC_LEVELS) * v_range;
     }
 
     m_traces.push_back(std::move(base_trace));
@@ -369,15 +370,16 @@ public:
     size_t time_width = std::min(m_horizontal_scale, actual_width - time_start);
 
     base_trace.data.resize(time_width);
+    float v_range = Constants::ADC_VMAX - Constants::ADC_VMIN;
     for (size_t i = 0; i < time_width; ++i) {
-      base_trace.data[i] = static_cast<float>(m_raw_frame[time_start + i]) - 128.0f;
+      base_trace.data[i] = Constants::ADC_VMIN + (static_cast<float>(m_raw_frame[time_start + i]) / Constants::ADC_LEVELS) * v_range;
     }
 
     m_traces.push_back(std::move(base_trace));
 
     m_float_frame.resize(actual_width);
     for (size_t i = 0; i < actual_width; ++i) {
-      m_float_frame[i] = static_cast<float>(m_raw_frame[i]) - 128.0f;
+      m_float_frame[i] = Constants::ADC_VMIN + (static_cast<float>(m_raw_frame[i]) / Constants::ADC_LEVELS) * v_range;
     }
 
     for (auto &proc : m_processors) {

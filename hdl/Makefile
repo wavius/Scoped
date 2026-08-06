@@ -1,4 +1,4 @@
-TARGET=top
+TARGET=top_uart
 TOP=top
 
 VSRCS = packages/params_pkg.sv \
@@ -11,14 +11,8 @@ VSRCS = packages/params_pkg.sv \
 	common/rst_gen.v \
 	adc/adc_interface.sv \
 	adc/adc_wrapper.sv \
-	top.v \
-	usb/ulpi_wrapper.v \
-	usb/usb_cdc_core.v \
-	usb/usb_desc_rom.v \
-	usb/usbf_crc16.v \
-	usb/usbf_device_core.v \
-	usb/usbf_sie_rx.v \
-	usb/usbf_sie_tx.v
+	top_uart.v \
+	uart/uart_tx.v
 
 all: ${TARGET}.bit
 

@@ -51,13 +51,13 @@ inline void drawVerticalControlsT(T *target, Scoped::Oscilloscope &osc,
                                   const char *format_offset,
                                   DrawSliderFunc drawSlider) {
   float scale = target->getVerticalScale();
-  if (drawSlider("Vertical Scale", &scale, 0.01f, 10.0f, "%.2f", false)) {
+  if (drawSlider("Voltage Scale", &scale, 0.01f, 5.0f, "%.2fx", false)) {
     target->setVerticalScale(scale);
     osc.forceReprocess();
   }
 
   float offset = target->getVerticalOffset();
-  if (drawSlider("Vertical Offset", &offset, v_min, v_max, format_offset,
+  if (drawSlider("Voltage Offset", &offset, v_min, v_max, format_offset,
                  true)) {
     target->setVerticalOffset(offset);
     osc.forceReprocess();

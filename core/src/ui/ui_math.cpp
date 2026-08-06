@@ -31,7 +31,7 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
 
       int h_scale = static_cast<int>(processor->getHorizontalScale());
       int max_h_scale = static_cast<int>(osc.getMaxCaptureWidth());
-      if (drawSliderIntWithInput("Horizontal Scale", &h_scale, 256, max_h_scale,
+      if (drawSliderIntWithInput("Time Scale", &h_scale, 256, max_h_scale,
                                  "%d samples", false)) {
         processor->setHorizontalScale(static_cast<size_t>(h_scale));
         osc.forceReprocess();
@@ -41,7 +41,7 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
       int capture_width = static_cast<int>(osc.getMaxCaptureWidth());
       int max_offset = std::max(0, (capture_width - h_scale) / 2);
 
-      if (drawSliderIntWithInput("Horizontal Offset", &h_offset, -max_offset,
+      if (drawSliderIntWithInput("Time Offset", &h_offset, -max_offset,
                                  max_offset, "%d samples", true)) {
         processor->setHorizontalOffset(static_cast<size_t>(h_offset));
         osc.forceReprocess();
@@ -66,15 +66,29 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
         channel_labels_cstr.resize(num_channels);
         int src1_idx = 0;
         int src2_idx = 0;
+        bool found_src1 = false;
+        bool found_src2 = false;
         for (size_t i = 0; i < num_channels; i++) {
           channel_labels[i] = osc.getHardwareChannels()[i]->getLabel();
           channel_labels_cstr[i] = channel_labels[i].c_str();
           if (channel_labels[i] == math_proc->getSource1Label()) {
             src1_idx = static_cast<int>(i);
+            found_src1 = true;
           }
           if (channel_labels[i] == math_proc->getSource2Label()) {
             src2_idx = static_cast<int>(i);
+            found_src2 = true;
           }
+        }
+
+        // Fix UI desync: if the processor holds a label that doesn't exist, sync it to what the combo box will default to
+        if (!found_src1 && num_channels > 0) {
+          math_proc->setSource1Label(channel_labels[0]);
+          osc.forceReprocess();
+        }
+        if (!found_src2 && num_channels > 0) {
+          math_proc->setSource2Label(channel_labels[0]);
+          osc.forceReprocess();
         }
 
         if (drawCombo("Source 1", &src1_idx, channel_labels_cstr.data(),

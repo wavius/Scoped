@@ -98,6 +98,7 @@ module top (
 
         // Physical ADC pins
         .adc_clk      (clk_25m),
+        .capture_en   (1'b1),
         .adc_clk_out  (adc_clk_out),
         .adc_data_raw (adc_data_raw),
         .adc_otr      (adc_otr),
@@ -140,7 +141,7 @@ module top (
         .utmi_dmpulldown_o  (utmi_dmpulldown_core)
     );
 
-    /* LED indicators (Active-HIGH: 1 = ON, 0 = OFF) */
+    // LED indicators
     reg tx_seen = 1'b0;
 
     always @(posedge ulpi_clk60 or posedge cdc_rst) begin

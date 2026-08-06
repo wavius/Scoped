@@ -22,7 +22,7 @@ const ImVec4 FFTLine = ImVec4(0.7f, 0.5f, 1.0f, 1.0f);   // Light Purple
 // UI Elements
 const ImVec4 Black = ImVec4(0, 0, 0, 1);            // Black
 const ImVec4 Grid = ImVec4(0.3f, 0.3f, 0.3f, 0.4f); // Dark Gray
-const ImVec4 Trigger = ImVec4(1, 0, 0, 0.5f);       // Red (semi-transparent)
+const ImVec4 Trigger = ImVec4(1.0f, 0.65f, 0.0f, 0.8f); // Amber (semi-transparent)
 const ImVec4 StatusOk = ImVec4(0, 1, 0, 1);         // Green
 const ImVec4 StatusError = ImVec4(1, 0, 0, 1);      // Red
 const ImVec4 TopBarBg = ImVec4(0.11f, 0.14f, 0.18f, 1.0f);    // Dark Blue-Gray

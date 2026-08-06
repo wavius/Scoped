@@ -9,6 +9,7 @@ module adc_interface #(
 ) (
   input  logic              clk_25m,      // 25 MHz input clock domain
   input  logic              a_rst,        // Asynchronous reset
+  input  logic              capture_en,   // Decimation enable
   
   // AD9226 interface
   input  logic [DWIDTH-1:0] adc_data_raw, // 12-bit data
@@ -41,8 +42,8 @@ module adc_interface #(
   logic       adc_ready;
   assign adc_ready = (latency_counter == 3'd0);
 
-  // AD9226 valid sample
-  assign sample_valid = (adc_ready && !fifo_full);
+  // AD9226 valid sample (only when ready, not full, and capture is enabled)
+  assign sample_valid = (adc_ready && !fifo_full && capture_en);
 
   always_ff @(posedge clk_25m or posedge a_rst) begin
     if (a_rst) begin

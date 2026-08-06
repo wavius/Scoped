@@ -48,8 +48,8 @@ LOCATE COMP "adc_data_raw[11]" SITE "G2"; IOBUF PORT "adc_data_raw[11]" IO_TYPE=
 
 # Debug output pin
 LOCATE COMP "led_r" SITE "B11";
-LOCATE COMP "led_g" SITE "A12";
-LOCATE COMP "led_b" SITE "A11";
+LOCATE COMP "led_g" SITE "A11";
+LOCATE COMP "led_b" SITE "A12";
 IOBUF PORT "led_r" IO_TYPE=LVCMOS33;
 IOBUF PORT "led_g" IO_TYPE=LVCMOS33;
 IOBUF PORT "led_b" IO_TYPE=LVCMOS33;
@@ -75,3 +75,7 @@ CLOCK_TO_OUT PORT "ulpi_data[4]" 6.0 ns CLKPORT "ulpi_clk60";
 CLOCK_TO_OUT PORT "ulpi_data[5]" 6.0 ns CLKPORT "ulpi_clk60";
 CLOCK_TO_OUT PORT "ulpi_data[6]" 6.0 ns CLKPORT "ulpi_clk60";
 CLOCK_TO_OUT PORT "ulpi_data[7]" 6.0 ns CLKPORT "ulpi_clk60";
+
+# UART TX to iCELink Debugger
+LOCATE COMP "uart_tx" SITE "B9";
+IOBUF PORT "uart_tx" IO_TYPE=LVCMOS33;

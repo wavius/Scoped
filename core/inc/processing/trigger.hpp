@@ -12,9 +12,9 @@ namespace Scoped {
 
 struct TriggerParameter {
   std::string name;
-  int min_val;
-  int max_val;
-  int current_val;
+  float min_val;
+  float max_val;
+  float current_val;
   std::vector<std::string> combo_items;
 };
 
@@ -53,7 +53,7 @@ public:
   void setMode(TriggerMode mode) { m_mode = mode; }
   void setEnabled(bool enabled) { m_enabled = enabled; }
   void setFrameWidth(size_t width) { m_frame_width = width; }
-  virtual void setUIParameter(const std::string &name, int val) = 0;
+  virtual void setUIParameter(const std::string &name, float val) = 0;
   virtual void clear() = 0;
 
   // Pipeline
@@ -141,11 +141,13 @@ protected:
       return false;
 
     m_armed = false;
-    m_prev_sample = channel->getNormalizedSample(half > 0 ? half - 1 : 0);
+    float raw_prev = channel->getNormalizedSample(half > 0 ? half - 1 : 0);
+    m_prev_sample = Constants::ADC_VMIN + (raw_prev / Constants::ADC_LEVELS) * (Constants::ADC_VMAX - Constants::ADC_VMIN);
 
     size_t search_end = (unread > half) ? unread - half : 0;
     for (size_t i = half; i < search_end; ++i) {
-      float current = channel->getNormalizedSample(i);
+      float raw_curr = channel->getNormalizedSample(i);
+      float current = Constants::ADC_VMIN + (raw_curr / Constants::ADC_LEVELS) * (Constants::ADC_VMAX - Constants::ADC_VMIN);
       if (checkEdge(current)) {
         trigger_offset = i;
         return true;
@@ -176,7 +178,7 @@ protected:
 public:
   // Lifecycle
   explicit EdgeTrigger(size_t width = 1024,
-                       float level = Constants::ADC_MIDPOINT)
+                       float level = Constants::ADC_MIDPOINT_V) // default 0.0 V
       : ITrigger(width), m_threshold(level), m_direction(EdgeDirection::RISING),
         m_prev_sample(0) {
     m_hysteresis_margin = 2.0f;
@@ -189,31 +191,31 @@ public:
   std::vector<TriggerParameter> getUIParameters() override {
     std::vector<TriggerParameter> params;
 
-    params.push_back({"Level",
-                      -static_cast<int>(Constants::ADC_MIDPOINT),
-                      static_cast<int>(Constants::ADC_MIDPOINT),
-                      static_cast<int>(m_threshold - Constants::ADC_MIDPOINT),
+    params.push_back({"Voltage Level",
+                      Constants::ADC_VMIN,
+                      Constants::ADC_VMAX,
+                      m_threshold,
                       {}});
 
     std::vector<std::string> dirs = {"Rising", "Falling"};
-    int dir_idx = (m_direction == EdgeDirection::RISING) ? 0 : 1;
-    params.push_back({"Edge", 0, 1, dir_idx, dirs});
+    float dir_idx = (m_direction == EdgeDirection::RISING) ? 0.0f : 1.0f;
+    params.push_back({"Edge", 0.0f, 1.0f, dir_idx, dirs});
 
     params.push_back(
-        {"Hysteresis", 0, 50, static_cast<int>(m_hysteresis_margin), {}});
+        {"Hysteresis", 0.0f, 50.0f, m_hysteresis_margin, {}});
     return params;
   }
 
   // Setters
   void setThreshold(float level) { m_threshold = level; }
   void setDirection(EdgeDirection dir) { m_direction = dir; }
-  void setUIParameter(const std::string &name, int val) override {
-    if (name == "Level") {
-      m_threshold = static_cast<float>(val) + Constants::ADC_MIDPOINT;
+  void setUIParameter(const std::string &name, float val) override {
+    if (name == "Voltage Level") {
+      m_threshold = val;
     } else if (name == "Edge") {
-      m_direction = (val == 0) ? EdgeDirection::RISING : EdgeDirection::FALLING;
+      m_direction = (static_cast<int>(val) == 0) ? EdgeDirection::RISING : EdgeDirection::FALLING;
     } else if (name == "Hysteresis") {
-      m_hysteresis_margin = static_cast<float>(val);
+      m_hysteresis_margin = val;
     }
   }
   void clear() override { m_prev_sample = 0; }

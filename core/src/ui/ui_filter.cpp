@@ -38,7 +38,7 @@ void OscilloscopeUI::drawFilterControls(Oscilloscope &osc) {
 
       int h_scale = static_cast<int>(filter_proc->getHorizontalScale());
       int max_h_scale = static_cast<int>(osc.getMaxCaptureWidth());
-      if (drawSliderIntWithInput("Horizontal Scale", &h_scale, 256, max_h_scale,
+      if (drawSliderIntWithInput("Time Scale", &h_scale, 256, max_h_scale,
                                  "%d samples", false)) {
         filter_proc->setHorizontalScale(static_cast<size_t>(h_scale));
         osc.forceReprocess();
@@ -52,7 +52,7 @@ void OscilloscopeUI::drawFilterControls(Oscilloscope &osc) {
         h_offset = max_offset;
         filter_proc->setHorizontalOffset(static_cast<size_t>(h_offset));
       }
-      if (drawSliderIntWithInput("Horizontal Offset", &h_offset, -max_offset,
+      if (drawSliderIntWithInput("Time Offset", &h_offset, -max_offset,
                                  max_offset, "%d samples", true)) {
         filter_proc->setHorizontalOffset(static_cast<size_t>(h_offset));
         osc.forceReprocess();

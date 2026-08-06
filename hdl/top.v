@@ -9,78 +9,42 @@ module top (
     output       ulpi_stp,
     output       ulpi_reset,
 
-    // ADC Interface (declared so pins.lpf matches)
+    // ADC Interface
     output logic              adc_clk_out,
     input  logic              adc_otr,
     input  logic [11:0]       adc_data_raw,
 
-    // LEDs (Active-HIGH on iCESugar-Pro: 1 = ON, 0 = OFF)
+    // LEDs
+    // - Active high on iCESugar-Pro
     output led_r,
     output led_g,
     output led_b
 );
 
-
-    // ========================================================
-    // 1. PHY Hardware Reset Generator (25 MHz Onboard Clock)
-    // ========================================================
-    // Waveshare USB3300 RESET pin is Active-HIGH.
-    // Hold HIGH (1) for ~10ms at boot, then drive LOW (0) for normal operation.
-    reg [19:0] rst_cnt = 20'd0;
-    reg        phy_rst = 1'b1; // Active-High Reset
-
-    always @(posedge clk_25m) begin
-        if (rst_cnt < 20'd250_000) begin // 10ms at 25MHz
-            rst_cnt <= rst_cnt + 1'b1;
-            phy_rst <= 1'b1; // Hold PHY in reset
-        end else begin
-            phy_rst <= 1'b0; // Release reset (Normal operation)
-            rst_cnt <= 20'd250_000; // Lock counter to prevent rollover
-        end
-    end
-
+    // PHY reset
+    wire phy_rst;
+    rst_gen u_phy_rst_gen (
+        .clk_i(clk_25m),
+        .rst_i(1'b0),
+        .rst_o(phy_rst)
+    );
     assign ulpi_reset = phy_rst;
 
-    // ========================================================
-    // 2. Async Assert, Sync Deassert Reset Synchronizer for 60MHz
-    // ========================================================
-    reg [2:0] rst_sync = 3'b111;
-    always @(posedge ulpi_clk60 or posedge phy_rst) begin
-        if (phy_rst) begin
-            rst_sync <= 3'b111;
-        end else begin
-            rst_sync <= {rst_sync[1:0], 1'b0};
-        end
-    end
-    wire cdc_rst = rst_sync[2]; // Active-High internal logic reset
+    // CDC reset
+    wire cdc_rst;
+    rst_gen u_cdc_rst_gen (
+        .clk_i(ulpi_clk60),
+        .rst_i(phy_rst),
+        .rst_o(cdc_rst)
+    );
 
-    // Ignore startup transient glitches for ~100ms after reset
-    reg [22:0] startup_timer = 23'd0;
-    reg        ready_for_leds = 1'b0;
-    always @(posedge ulpi_clk60 or posedge cdc_rst) begin
-        if (cdc_rst) begin
-            startup_timer  <= 23'd0;
-            ready_for_leds <= 1'b0;
-        end else if (!ready_for_leds) begin
-            if (startup_timer < 23'd6_000_000) begin // 100ms at 60MHz
-                startup_timer <= startup_timer + 1'b1;
-            end else begin
-                ready_for_leds <= 1'b1;
-            end
-        end
-    end
-
-    // ========================================================
-    // 3. ULPI Tri-State Bus
-    // ========================================================
+    // ULPI tri-state bus
     wire [7:0] ulpi_data_in  = ulpi_data;
     wire [7:0] ulpi_data_out;
 
     assign ulpi_data = (!ulpi_dir) ? ulpi_data_out : 8'hzz;
 
-    // ========================================================
-    // 4. UTMI Signals between ULPI Wrapper and USB CDC Core
-    // ========================================================
+    // UTMI signals between ULPI wrapper and USB CDC core 
     wire [7:0] utmi_data_out_wrapper;
     wire [7:0] utmi_data_in_wrapper;
     wire       utmi_txvalid_core;
@@ -95,9 +59,7 @@ module top (
     wire       utmi_dppulldown_core;
     wire       utmi_dmpulldown_core;
 
-    // ========================================================
-    // 5. ULPI Wrapper Instantiation
-    // ========================================================
+    // ULPI wrapper instantiation
     ulpi_wrapper u_ulpi (
         .ulpi_clk60_i       (ulpi_clk60),
         .ulpi_rst_i         (cdc_rst),
@@ -122,22 +84,17 @@ module top (
         .utmi_linestate_o   (utmi_linestate_wrapper)
     );
 
-    // ========================================================
-    // 6. Signal Generator & USB Stream Source (sine_gen.v)
-    // ========================================================
+    // ADC wrapper instantiation
     wire [7:0] tx_data;
     wire       tx_valid;
     wire       tx_ready;
 
-    // ========================================================
-    // 6. ADC Wrapper Instantiation
-    // ========================================================
     wire [11:0] tx_data_12b;
     assign tx_data = tx_data_12b[11:4];
 
     adc_wrapper u_adc_wrapper (
         .rst          (cdc_rst),
-        .enable       (ready_for_leds),
+        .enable       (!cdc_rst),
 
         // Physical ADC pins
         .adc_clk      (clk_25m),
@@ -152,9 +109,7 @@ module top (
         .tx_valid     (tx_valid)
     );
 
-    // ========================================================
-    // 7. USB CDC Core Instantiation
-    // ========================================================
+    // USB CDC core instantiation
     usb_cdc_core #(
         .USB_SPEED_HS("True")
     ) u_cdc (
@@ -185,15 +140,13 @@ module top (
         .utmi_dmpulldown_o  (utmi_dmpulldown_core)
     );
 
-    // ========================================================
-    // 8. LED Indicators (Active-HIGH: 1 = ON, 0 = OFF)
-    // ========================================================
+    /* LED indicators (Active-HIGH: 1 = ON, 0 = OFF) */
     reg tx_seen = 1'b0;
 
     always @(posedge ulpi_clk60 or posedge cdc_rst) begin
         if (cdc_rst) begin
             tx_seen <= 1'b0;
-        end else if (ready_for_leds) begin
+        end else begin
             if (tx_valid && tx_ready) tx_seen <= 1'b1;
         end
     end

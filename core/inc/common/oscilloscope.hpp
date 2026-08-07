@@ -76,19 +76,6 @@ public:
 
   // Core
   void forceReprocess() {
-    if (m_trigger && m_trigger_source_idx < m_hardware_channels.size()) {
-      auto &source = m_hardware_channels[m_trigger_source_idx];
-      size_t new_in_frame_idx = 0;
-      float new_subsample = 0.0f;
-      if (m_trigger->scanRawBuffer(source->getRawFrame(), new_in_frame_idx, new_subsample)) {
-        for (auto &ch : m_hardware_channels) {
-          ch->updateTriggerPoint(new_in_frame_idx, new_subsample);
-        }
-        for (auto &ch : m_virtual_channels) {
-          ch->updateTriggerPoint(new_in_frame_idx, new_subsample);
-        }
-      }
-    }
     for (auto &ch : m_hardware_channels) {
       ch->reprocessLastFrame();
     }

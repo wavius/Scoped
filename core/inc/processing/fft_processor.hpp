@@ -174,7 +174,7 @@ public:
   }
 
   // Logic
-  [[deprecated("Recursive implementation is slow, use PocketFFT.")]]
+  // Unused
   void calculateFFTRecursive(const std::vector<float> &frame,
                              std::vector<std::complex<float>> &fft_frame) {
     size_t n = frame.size();

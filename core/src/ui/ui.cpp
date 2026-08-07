@@ -694,7 +694,7 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
       };
 
       if (m_active_channel) {
-        apply_interaction(m_active_channel, 16384.0, false, true);
+        apply_interaction(m_active_channel, static_cast<double>(osc.getMaxCaptureWidth()), false, true);
       } else if (m_active_processor) {
         bool is_fft =
             dynamic_cast<FFTProcessor *>(m_active_processor) != nullptr;

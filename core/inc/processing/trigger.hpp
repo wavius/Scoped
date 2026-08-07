@@ -228,7 +228,11 @@ public:
       m_hysteresis_margin = val;
     }
   }
-  void clear() override { m_prev_sample = 0; }
+  
+  void clear() override {
+    m_prev_sample = 0;
+    m_armed = false;
+  }
 };
 
 } // namespace Scoped

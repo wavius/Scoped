@@ -29,8 +29,8 @@ bool UARTDevice::connect() {
   struct termios options;
   tcgetattr(m_fd, &options);
 
-  // Set baud rate (460800)
-  speed_t speed = B460800;
+  // Set baud rate (500000)
+  speed_t speed = B500000;
   cfsetispeed(&options, speed);
   cfsetospeed(&options, speed);
 

@@ -90,7 +90,10 @@ public:
 
     if (m_trigger && !m_trigger->isEnabled()) {
       for (auto &ch : m_hardware_channels) {
-        ch->reprocessLastFrame();
+        size_t unread = ch->getUnreadSampleCount();
+        size_t amount = m_last_trigger_offset + m_max_capture_width;
+        if (amount > unread) amount = unread;
+        ch->consumeBuffer(amount);
       }
       for (auto &ch : m_virtual_channels) {
         ch->reprocessLastFrame();
@@ -122,6 +125,7 @@ public:
         size_t ch_unread = ch->getUnreadSampleCount();
         ch->consumeBuffer(std::min(ch_unread, discard));
       }
+      if (m_trigger) m_trigger->clear(); // Reset trigger state after discontinuity
     }
 
     size_t trigger_idx = 0;

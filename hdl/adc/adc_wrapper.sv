@@ -73,7 +73,7 @@ module adc_wrapper #(
   state_t current_state, next_state;
   
   // Combinational to fetch next FIFO sample 1 cycle early
-  assign fifo_rd_ena = (current_state == BURST) && tx_ready && !fifo_empty;
+  assign fifo_rd_ena = (current_state == BURST) && tx_ready && tx_valid && !fifo_empty;
 
   logic [9:0] burst_count;
   logic       byte_sent;
@@ -116,10 +116,10 @@ module adc_wrapper #(
     next_state = current_state;
     case (current_state)
       IDLE: begin
-        if (enable && (fifo_count >= 15'd511)) next_state = BURST;
+        if (enable && (fifo_count >= 15'd1)) next_state = BURST;
       end
       BURST: begin
-        if ((burst_count == 10'd511) && byte_sent) next_state = IDLE;
+        if ((burst_count == 10'd1) && byte_sent) next_state = IDLE;
       end
     endcase
   end

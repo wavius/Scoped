@@ -38,16 +38,18 @@ module top (
 
     /* UART clock generation (460800 Baud) */
     parameter clk_freq = 25000000;
-    parameter baudrate = 460800;
+    parameter baudrate = 500000;
     reg clk_uart = 0;
     reg [31:0] cntr_uart = 32'b0;
     parameter period_uart = (clk_freq / 2 / baudrate);
 
     always @(posedge clk_25m) begin
-        if (cntr_uart == period_uart) begin
+        if (cntr_uart + baudrate >= (clk_freq / 2)) begin
             clk_uart <= ~clk_uart;
-            cntr_uart <= 0;
-        end else cntr_uart <= cntr_uart + 1;
+            cntr_uart <= cntr_uart + baudrate - (clk_freq / 2);
+        end else begin
+            cntr_uart <= cntr_uart + baudrate;
+        end
     end
 
     /* ADC wrapper */

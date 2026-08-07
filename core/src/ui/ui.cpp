@@ -225,7 +225,13 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
   }
 
   if (any_new_frame || !any_active) {
-    m_display->clear();
+    if (m_display) {
+      if (any_active) {
+        m_display->decay(0.60f); // Fade previous frames instead of clearing (phosphorescence)
+      } else {
+        m_display->clear();
+      }
+    }
 
     if (!any_active)
       return; // Nothing to draw

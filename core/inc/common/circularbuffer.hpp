@@ -47,12 +47,19 @@ public:
     size_t write_idx = m_write_idx.load(std::memory_order_relaxed);
 
     for (size_t i = 0; i < length; ++i) {
-      m_buffer[write_idx] = data[i];
       size_t next_write = (write_idx + 1) % m_capacity;
-      size_t read_idx = m_read_idx.load(std::memory_order_relaxed);
-      if (next_write == read_idx) {
-        m_read_idx.store((read_idx + 1) % m_capacity, std::memory_order_release);
+      size_t read_idx = m_read_idx.load(std::memory_order_acquire);
+      
+      // If full, try to safely advance read_idx to drop the oldest sample
+      while (next_write == read_idx) {
+        size_t next_read = (read_idx + 1) % m_capacity;
+        if (m_read_idx.compare_exchange_weak(read_idx, next_read, std::memory_order_release, std::memory_order_relaxed)) {
+          break; // Successfully advanced read_idx
+        }
+        // If CAS failed, read_idx was updated by the reader, so we check again.
       }
+      
+      m_buffer[write_idx] = data[i];
       write_idx = next_write;
     }
     m_write_idx.store(write_idx, std::memory_order_release);
@@ -70,7 +77,11 @@ public:
   }
 
   void advanceReadIdx(size_t amount) {
-    m_read_idx = (m_read_idx.load() + amount) % m_capacity;
+    size_t current_read = m_read_idx.load(std::memory_order_acquire);
+    size_t next_read;
+    do {
+      next_read = (current_read + amount) % m_capacity;
+    } while (!m_read_idx.compare_exchange_weak(current_read, next_read, std::memory_order_release, std::memory_order_relaxed));
   }
 
   // Accessors

@@ -20,8 +20,8 @@ Notes/
 .obsidian/
 
 # FPGA build artifacts
-fpga/*.bit
-fpga/*.json
-fpga/*.svf
-fpga/*.config
-fpga/*_out.config
+hdl/*.bit
+hdl/*.json
+hdl/*.svf
+hdl/*.config
+hdl/*_out.config

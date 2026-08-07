@@ -819,12 +819,12 @@ void OscilloscopeUI::buildDefaultDockLayout(ImGuiID dockspace_id,
 
   ImGui::DockBuilderDockWindow("Channels", left_id);
   ImGui::DockBuilderDockWindow("Trigger", left_id);
+  ImGui::DockBuilderDockWindow("Hardware", left_id);
 
   ImGui::DockBuilderDockWindow("FFT", right_id);
   ImGui::DockBuilderDockWindow("Math", right_id);
   ImGui::DockBuilderDockWindow("Filter", right_id);
   ImGui::DockBuilderDockWindow("Measurements", right_id);
-  ImGui::DockBuilderDockWindow("Hardware", right_id);
 
   ImGui::DockBuilderDockWindow("Debug", bottom_id);
 
@@ -1100,13 +1100,17 @@ void OscilloscopeUI::render(Oscilloscope &osc) {
   drawDockSpace();
 
   drawScopeWindow(osc);
+
+  // Left side
   drawChannelWindow(osc);
   drawTriggerWindow(osc);
+  drawHardwareWindow(osc);
+
+  // Right side
   drawFFTWindow(osc);
   drawMathWindow(osc);
   drawFilterWindow(osc);
   drawMeasurementWindow(osc);
-  drawHardwareWindow(osc);
   drawDebugWindow(osc);
 }
 

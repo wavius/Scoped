@@ -58,7 +58,9 @@ module top (
     wire        tx_valid;
     wire        tx_ready;
 
-    adc_wrapper u_adc_wrapper (
+    adc_wrapper #(
+        .CTYPE(types_pkg::UART)
+    ) u_adc_wrapper (
         .rst          (rst),
         .enable       (!rst),
  

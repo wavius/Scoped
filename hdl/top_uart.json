@@ -23,7 +23,7 @@
         }
       },
       "cells": {
-        "$specify$5004": {
+        "$specify$5021": {
           "hide_name": 1,
           "type": "$specify2",
           "parameters": {
@@ -22065,7 +22065,7 @@
     "top": {
       "attributes": {
         "top": "00000000000000000000000000000001",
-        "src": "top_uart.v:1.1-112.10"
+        "src": "top_uart.v:1.1-114.10"
       },
       "parameter_default_values": {
         "baudrate": "00000000000001111010000100100000",
@@ -26320,7 +26320,7 @@
           "attributes": {
             "always_ff": "00000000000000000000000000000001",
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:82.3-113.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
+            "src": "adc/adc_wrapper.sv:88.3-119.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
           },
           "port_directions": {
             "CE": "input",
@@ -26351,7 +26351,7 @@
           "attributes": {
             "always_ff": "00000000000000000000000000000001",
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:82.3-113.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
+            "src": "adc/adc_wrapper.sv:88.3-119.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
           },
           "port_directions": {
             "CE": "input",
@@ -26382,7 +26382,7 @@
           "attributes": {
             "always_ff": "00000000000000000000000000000001",
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:82.3-113.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
+            "src": "adc/adc_wrapper.sv:88.3-119.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
           },
           "port_directions": {
             "CE": "input",
@@ -26413,7 +26413,7 @@
           "attributes": {
             "always_ff": "00000000000000000000000000000001",
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:82.3-113.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
+            "src": "adc/adc_wrapper.sv:88.3-119.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
           },
           "port_directions": {
             "CE": "input",
@@ -26444,7 +26444,7 @@
           "attributes": {
             "always_ff": "00000000000000000000000000000001",
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:82.3-113.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
+            "src": "adc/adc_wrapper.sv:88.3-119.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
           },
           "port_directions": {
             "CE": "input",
@@ -26475,7 +26475,7 @@
           "attributes": {
             "always_ff": "00000000000000000000000000000001",
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:82.3-113.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
+            "src": "adc/adc_wrapper.sv:88.3-119.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
           },
           "port_directions": {
             "CE": "input",
@@ -26506,7 +26506,7 @@
           "attributes": {
             "always_ff": "00000000000000000000000000000001",
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:82.3-113.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
+            "src": "adc/adc_wrapper.sv:88.3-119.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
           },
           "port_directions": {
             "CE": "input",
@@ -26562,7 +26562,7 @@
           "attributes": {
             "always_ff": "00000000000000000000000000000001",
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:82.3-113.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:63.157-63.208"
+            "src": "adc/adc_wrapper.sv:88.3-119.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:63.157-63.208"
           },
           "port_directions": {
             "CLK": "input",
@@ -26663,7 +26663,7 @@
           },
           "attributes": {
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:119.24-119.43|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
+            "src": "adc/adc_wrapper.sv:125.24-125.48|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
           },
           "port_directions": {
             "A0": "input",
@@ -29772,7 +29772,7 @@
           },
           "attributes": {
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:119.24-119.43|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
+            "src": "adc/adc_wrapper.sv:125.24-125.48|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
           },
           "port_directions": {
             "A0": "input",
@@ -29814,7 +29814,7 @@
           },
           "attributes": {
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:119.24-119.43|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
+            "src": "adc/adc_wrapper.sv:125.24-125.48|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
           },
           "port_directions": {
             "A0": "input",
@@ -29856,7 +29856,7 @@
           },
           "attributes": {
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:119.24-119.43|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
+            "src": "adc/adc_wrapper.sv:125.24-125.48|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
           },
           "port_directions": {
             "A0": "input",
@@ -29898,7 +29898,7 @@
           },
           "attributes": {
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:119.24-119.43|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
+            "src": "adc/adc_wrapper.sv:125.24-125.48|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
           },
           "port_directions": {
             "A0": "input",
@@ -29940,7 +29940,7 @@
           },
           "attributes": {
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:119.24-119.43|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
+            "src": "adc/adc_wrapper.sv:125.24-125.48|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
           },
           "port_directions": {
             "A0": "input",
@@ -29982,7 +29982,7 @@
           },
           "attributes": {
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:119.24-119.43|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
+            "src": "adc/adc_wrapper.sv:125.24-125.48|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
           },
           "port_directions": {
             "A0": "input",
@@ -30027,7 +30027,7 @@
           "attributes": {
             "always_ff": "00000000000000000000000000000001",
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:82.3-113.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:63.157-63.208"
+            "src": "adc/adc_wrapper.sv:88.3-119.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:63.157-63.208"
           },
           "port_directions": {
             "CLK": "input",
@@ -30505,7 +30505,7 @@
           },
           "attributes": {
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:109.28-109.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
+            "src": "adc/adc_wrapper.sv:115.28-115.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
           },
           "port_directions": {
             "A0": "input",
@@ -30547,7 +30547,7 @@
           },
           "attributes": {
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:109.28-109.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
+            "src": "adc/adc_wrapper.sv:115.28-115.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
           },
           "port_directions": {
             "A0": "input",
@@ -30814,7 +30814,7 @@
           },
           "attributes": {
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:109.28-109.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
+            "src": "adc/adc_wrapper.sv:115.28-115.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
           },
           "port_directions": {
             "A0": "input",
@@ -30881,7 +30881,7 @@
           },
           "attributes": {
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:109.28-109.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
+            "src": "adc/adc_wrapper.sv:115.28-115.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
           },
           "port_directions": {
             "A0": "input",
@@ -30923,7 +30923,7 @@
           },
           "attributes": {
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:109.28-109.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
+            "src": "adc/adc_wrapper.sv:115.28-115.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4"
           },
           "port_directions": {
             "A0": "input",
@@ -30968,7 +30968,7 @@
           "attributes": {
             "always_ff": "00000000000000000000000000000001",
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:82.3-113.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
+            "src": "adc/adc_wrapper.sv:88.3-119.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
           },
           "port_directions": {
             "CE": "input",
@@ -31024,7 +31024,7 @@
           "attributes": {
             "always_ff": "00000000000000000000000000000001",
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:82.3-113.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
+            "src": "adc/adc_wrapper.sv:88.3-119.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
           },
           "port_directions": {
             "CE": "input",
@@ -31055,7 +31055,7 @@
           "attributes": {
             "always_ff": "00000000000000000000000000000001",
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:82.3-113.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
+            "src": "adc/adc_wrapper.sv:88.3-119.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:73.163-73.222"
           },
           "port_directions": {
             "CE": "input",
@@ -31079,11 +31079,11 @@
             "TYPE": "module"
           },
           "attributes": {
-            "cell_module_not_derived": "00000000000000000000000000000001",
-            "cell_src": "top_uart.v:61.17-77.6",
-            "module": "adc_wrapper",
+            "cell_src": "top_uart.v:63.7-79.6",
+            "module": "$paramod\\adc_wrapper\\CTYPE=s32'00000000000000000000000000000000",
             "module_dynports": "00000000000000000000000000000001",
-            "module_src": "adc/adc_wrapper.sv:1.1-127.10"
+            "module_hdlname": "adc_wrapper",
+            "module_src": "adc/adc_wrapper.sv:1.1-133.10"
           },
           "port_directions": {
           },
@@ -31104,7 +31104,7 @@
           "attributes": {
             "always_ff": "00000000000000000000000000000001",
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:33.3-41.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:64.155-64.206"
+            "src": "adc/adc_wrapper.sv:39.3-47.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:64.155-64.206"
           },
           "port_directions": {
             "CLK": "input",
@@ -31295,7 +31295,7 @@
           "attributes": {
             "always_ff": "00000000000000000000000000000001",
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:33.3-41.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:64.155-64.206"
+            "src": "adc/adc_wrapper.sv:39.3-47.6|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:64.155-64.206"
           },
           "port_directions": {
             "CLK": "input",
@@ -31343,7 +31343,7 @@
           },
           "attributes": {
             "cell_module_not_derived": "00000000000000000000000000000001",
-            "cell_src": "adc/adc_wrapper.sv:43.17-55.4",
+            "cell_src": "adc/adc_wrapper.sv:49.17-61.4",
             "hdlname": "u_adc_wrapper u_adc_int",
             "module": "adc_interface",
             "module_dynports": "00000000000000000000000000000001",
@@ -31619,7 +31619,7 @@
           },
           "attributes": {
             "cell_module_not_derived": "00000000000000000000000000000001",
-            "cell_src": "adc/adc_wrapper.sv:57.22-70.4",
+            "cell_src": "adc/adc_wrapper.sv:63.22-76.4",
             "hdlname": "u_adc_wrapper u_dc_fifo",
             "module": "fwft_dual_clk_fifo",
             "module_dynports": "00000000000000000000000000000001",
@@ -39109,7 +39109,7 @@
           },
           "attributes": {
             "cell_module_not_derived": "00000000000000000000000000000001",
-            "cell_src": "top_uart.v:99.17-105.6",
+            "cell_src": "top_uart.v:101.17-107.6",
             "module": "uart_tx_8n1",
             "module_src": "uart/uart_tx.v:3.1-74.10"
           },
@@ -40808,7 +40808,7 @@
           },
           "attributes": {
             "module_not_derived": "00000000000000000000000000000001",
-            "src": "top_uart.v:83.5-93.8|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:83.170-83.229"
+            "src": "top_uart.v:85.5-95.8|/usr/bin/../share/yosys/lattice/cells_map_trellis.v:83.170-83.229"
           },
           "port_directions": {
             "CE": "input",
@@ -41675,7 +41675,7 @@
           "hide_name": 0,
           "bits": [ 260 ],
           "attributes": {
-            "src": "top_uart.v:96.10-96.18"
+            "src": "top_uart.v:98.10-98.18"
           }
         },
         "senddata_LUT4_D_1_Z": {
@@ -41719,7 +41719,7 @@
           "bits": [ 282 ],
           "attributes": {
             "abc9_carry": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:119.24-119.43|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
+            "src": "adc/adc_wrapper.sv:125.24-125.48|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
           }
         },
         "senddata_LUT4_Z_C_TRELLIS_FF_Q_DI_LUT4_Z_D_LUT4_C_D_CCU2C_COUT_A0": {
@@ -42498,7 +42498,7 @@
           "bits": [ 290 ],
           "attributes": {
             "abc9_carry": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:119.24-119.43|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
+            "src": "adc/adc_wrapper.sv:125.24-125.48|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
           }
         },
         "senddata_LUT4_Z_C_TRELLIS_FF_Q_DI_LUT4_Z_D_LUT4_C_D_CCU2C_COUT_CIN_CCU2C_COUT_A0": {
@@ -42518,7 +42518,7 @@
           "bits": [ 459 ],
           "attributes": {
             "abc9_carry": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:119.24-119.43|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
+            "src": "adc/adc_wrapper.sv:125.24-125.48|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
           }
         },
         "senddata_LUT4_Z_C_TRELLIS_FF_Q_DI_LUT4_Z_D_LUT4_C_D_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_A0": {
@@ -42538,7 +42538,7 @@
           "bits": [ 462 ],
           "attributes": {
             "abc9_carry": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:119.24-119.43|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
+            "src": "adc/adc_wrapper.sv:125.24-125.48|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
           }
         },
         "senddata_LUT4_Z_C_TRELLIS_FF_Q_DI_LUT4_Z_D_LUT4_C_D_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_A0": {
@@ -42558,7 +42558,7 @@
           "bits": [ 465 ],
           "attributes": {
             "abc9_carry": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:119.24-119.43|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
+            "src": "adc/adc_wrapper.sv:125.24-125.48|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
           }
         },
         "senddata_LUT4_Z_C_TRELLIS_FF_Q_DI_LUT4_Z_D_LUT4_C_D_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_A0": {
@@ -42578,7 +42578,7 @@
           "bits": [ 468 ],
           "attributes": {
             "abc9_carry": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:119.24-119.43|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
+            "src": "adc/adc_wrapper.sv:125.24-125.48|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
           }
         },
         "senddata_LUT4_Z_C_TRELLIS_FF_Q_DI_LUT4_Z_D_LUT4_C_D_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_A0": {
@@ -42598,7 +42598,7 @@
           "bits": [ 471 ],
           "attributes": {
             "abc9_carry": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:119.24-119.43|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
+            "src": "adc/adc_wrapper.sv:125.24-125.48|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
           }
         },
         "senddata_LUT4_Z_C_TRELLIS_FF_Q_DI_LUT4_Z_D_LUT4_C_D_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_A0": {
@@ -42824,7 +42824,7 @@
           "bits": [ 500 ],
           "attributes": {
             "abc9_carry": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:109.28-109.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
+            "src": "adc/adc_wrapper.sv:115.28-115.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
           }
         },
         "senddata_LUT4_Z_C_TRELLIS_FF_Q_DI_LUT4_Z_D_LUT4_Z_D_LUT4_Z_1_C_CCU2C_B0_COUT_CCU2C_CIN_COUT": {
@@ -42832,7 +42832,7 @@
           "bits": [ 503 ],
           "attributes": {
             "abc9_carry": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:109.28-109.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
+            "src": "adc/adc_wrapper.sv:115.28-115.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
           }
         },
         "senddata_LUT4_Z_C_TRELLIS_FF_Q_DI_LUT4_Z_D_LUT4_Z_D_LUT4_Z_1_C_CCU2C_B0_S0": {
@@ -42909,7 +42909,7 @@
           "bits": [ 513 ],
           "attributes": {
             "abc9_carry": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:109.28-109.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
+            "src": "adc/adc_wrapper.sv:115.28-115.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
           }
         },
         "senddata_LUT4_Z_C_TRELLIS_FF_Q_DI_LUT4_Z_D_LUT4_Z_D_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_8_D": {
@@ -42925,7 +42925,7 @@
           "bits": [ 517 ],
           "attributes": {
             "abc9_carry": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:109.28-109.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13",
+            "src": "adc/adc_wrapper.sv:115.28-115.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13",
             "unused_bits": "0 "
           }
         },
@@ -42942,7 +42942,7 @@
           "bits": [ 516 ],
           "attributes": {
             "abc9_carry": "00000000000000000000000000000001",
-            "src": "adc/adc_wrapper.sv:109.28-109.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
+            "src": "adc/adc_wrapper.sv:115.28-115.47|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
           }
         },
         "senddata_LUT4_Z_C_TRELLIS_FF_Q_DI_LUT4_Z_D_LUT4_Z_D_LUT4_Z_1_D": {
@@ -42990,7 +42990,7 @@
           "bits": [ 2 ],
           "attributes": {
             "hdlname": "u_adc_wrapper adc_clk",
-            "src": "adc/adc_wrapper.sv:9.29-9.36"
+            "src": "adc/adc_wrapper.sv:10.29-10.36"
           }
         },
         "u_adc_wrapper.adc_clk_out": {
@@ -42998,7 +42998,7 @@
           "bits": [ 3 ],
           "attributes": {
             "hdlname": "u_adc_wrapper adc_clk_out",
-            "src": "adc/adc_wrapper.sv:11.29-11.40"
+            "src": "adc/adc_wrapper.sv:12.29-12.40"
           }
         },
         "u_adc_wrapper.adc_data": {
@@ -43006,7 +43006,7 @@
           "bits": [ "x", "x", "x", "x", 526, 527, 528, 532, 530, 533, 531, 529 ],
           "attributes": {
             "hdlname": "u_adc_wrapper adc_data",
-            "src": "adc/adc_wrapper.sv:23.22-23.30"
+            "src": "adc/adc_wrapper.sv:29.22-29.30"
           }
         },
         "u_adc_wrapper.adc_data_raw": {
@@ -43014,7 +43014,7 @@
           "bits": [ 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ],
           "attributes": {
             "hdlname": "u_adc_wrapper adc_data_raw",
-            "src": "adc/adc_wrapper.sv:12.29-12.41",
+            "src": "adc/adc_wrapper.sv:13.29-13.41",
             "unused_bits": "0 1 2 3"
           }
         },
@@ -43023,7 +43023,7 @@
           "bits": [ 4 ],
           "attributes": {
             "hdlname": "u_adc_wrapper adc_otr",
-            "src": "adc/adc_wrapper.sv:13.29-13.36",
+            "src": "adc/adc_wrapper.sv:14.29-14.36",
             "unused_bits": "0 "
           }
         },
@@ -43032,7 +43032,7 @@
           "bits": [ 518 ],
           "attributes": {
             "hdlname": "u_adc_wrapper adc_rst_ms",
-            "src": "adc/adc_wrapper.sv:32.9-32.19"
+            "src": "adc/adc_wrapper.sv:38.9-38.19"
           }
         },
         "u_adc_wrapper.adc_rst_sync": {
@@ -43040,7 +43040,7 @@
           "bits": [ 520 ],
           "attributes": {
             "hdlname": "u_adc_wrapper adc_rst_sync",
-            "src": "adc/adc_wrapper.sv:32.21-32.33"
+            "src": "adc/adc_wrapper.sv:38.21-38.33"
           }
         },
         "u_adc_wrapper.adc_rst_sync_TRELLIS_FF_LSR_DI": {
@@ -43062,7 +43062,7 @@
           "bits": [ 525 ],
           "attributes": {
             "hdlname": "u_adc_wrapper adc_valid",
-            "src": "adc/adc_wrapper.sv:24.22-24.31"
+            "src": "adc/adc_wrapper.sv:30.22-30.31"
           }
         },
         "u_adc_wrapper.byte_sent": {
@@ -43070,7 +43070,7 @@
           "bits": [ 260 ],
           "attributes": {
             "hdlname": "u_adc_wrapper byte_sent",
-            "src": "adc/adc_wrapper.sv:79.15-79.24"
+            "src": "adc/adc_wrapper.sv:85.15-85.24"
           }
         },
         "u_adc_wrapper.capture_en": {
@@ -43078,7 +43078,7 @@
           "bits": [ 30 ],
           "attributes": {
             "hdlname": "u_adc_wrapper capture_en",
-            "src": "adc/adc_wrapper.sv:10.29-10.39"
+            "src": "adc/adc_wrapper.sv:11.29-11.39"
           }
         },
         "u_adc_wrapper.enable": {
@@ -43086,7 +43086,7 @@
           "bits": [ 18 ],
           "attributes": {
             "hdlname": "u_adc_wrapper enable",
-            "src": "adc/adc_wrapper.sv:6.29-6.35"
+            "src": "adc/adc_wrapper.sv:7.29-7.35"
           }
         },
         "u_adc_wrapper.tx_data": {
@@ -43094,7 +43094,7 @@
           "bits": [ "x", "x", "x", "x", 1015, 1016, 1017, 1018, 1019, 1020, 1021, 535 ],
           "attributes": {
             "hdlname": "u_adc_wrapper tx_data",
-            "src": "adc/adc_wrapper.sv:18.29-18.36",
+            "src": "adc/adc_wrapper.sv:19.29-19.36",
             "unused_bits": "4 5 6 7 8 9 10"
           }
         },
@@ -43400,7 +43400,7 @@
           "bits": [ 592 ],
           "attributes": {
             "abc9_carry": "00000000000000000000000000000001",
-            "src": "common/dual_clk_fifo.sv:82.17-82.27|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
+            "src": "common/dual_clk_fifo.sv:82.17-82.27|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:5.9-5.12"
           }
         },
         "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.rd_ptr_gray_CCU2C_S1_COUT_CCU2C_CIN_S1_CCU2C_S1_2_COUT": {
@@ -43722,76 +43722,76 @@
             "src": "common/dual_port_dual_clk_ram.sv:13.29-13.35"
           }
         },
-        "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.utils_pkg::bin2gray$func$common/dual_clk_fifo.sv:89$1160.bin": {
+        "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.utils_pkg::bin2gray$func$common/dual_clk_fifo.sv:89$1177.bin": {
           "hide_name": 0,
           "bits": [ "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x" ],
           "attributes": {
-            "hdlname": "u_adc_wrapper u_dc_fifo u_std_dc_fifo utils_pkg::bin2gray$func$common/dual_clk_fifo.sv:89$1160.bin",
+            "hdlname": "u_adc_wrapper u_dc_fifo u_std_dc_fifo utils_pkg::bin2gray$func$common/dual_clk_fifo.sv:89$1177.bin",
             "nosync": "00000000000000000000000000000001",
             "src": "packages/utils_pkg.sv:9.42-9.45"
           }
         },
-        "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.utils_pkg::bin2gray$func$common/dual_clk_fifo.sv:90$1161.bin": {
+        "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.utils_pkg::bin2gray$func$common/dual_clk_fifo.sv:90$1178.bin": {
           "hide_name": 0,
           "bits": [ "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x" ],
           "attributes": {
-            "hdlname": "u_adc_wrapper u_dc_fifo u_std_dc_fifo utils_pkg::bin2gray$func$common/dual_clk_fifo.sv:90$1161.bin",
+            "hdlname": "u_adc_wrapper u_dc_fifo u_std_dc_fifo utils_pkg::bin2gray$func$common/dual_clk_fifo.sv:90$1178.bin",
             "nosync": "00000000000000000000000000000001",
             "src": "packages/utils_pkg.sv:9.42-9.45"
           }
         },
-        "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:109$1162.b": {
+        "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:109$1179.b": {
           "hide_name": 0,
           "bits": [ "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x" ],
           "attributes": {
-            "hdlname": "u_adc_wrapper u_dc_fifo u_std_dc_fifo utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:109$1162.b",
+            "hdlname": "u_adc_wrapper u_dc_fifo u_std_dc_fifo utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:109$1179.b",
             "nosync": "00000000000000000000000000000001",
             "src": "packages/utils_pkg.sv:18.40-18.41"
           }
         },
-        "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:109$1162.gray": {
+        "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:109$1179.gray": {
           "hide_name": 0,
           "bits": [ "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x" ],
           "attributes": {
-            "hdlname": "u_adc_wrapper u_dc_fifo u_std_dc_fifo utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:109$1162.gray",
+            "hdlname": "u_adc_wrapper u_dc_fifo u_std_dc_fifo utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:109$1179.gray",
             "nosync": "00000000000000000000000000000001",
             "src": "packages/utils_pkg.sv:16.42-16.46"
           }
         },
-        "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:109$1162.i": {
+        "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:109$1179.i": {
           "hide_name": 0,
           "bits": [ "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x" ],
           "signed": 1,
           "attributes": {
-            "hdlname": "u_adc_wrapper u_dc_fifo u_std_dc_fifo utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:109$1162.i",
+            "hdlname": "u_adc_wrapper u_dc_fifo u_std_dc_fifo utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:109$1179.i",
             "nosync": "00000000000000000000000000000001",
             "src": "packages/utils_pkg.sv:17.13-17.14"
           }
         },
-        "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:110$1163.b": {
+        "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:110$1180.b": {
           "hide_name": 0,
           "bits": [ "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x" ],
           "attributes": {
-            "hdlname": "u_adc_wrapper u_dc_fifo u_std_dc_fifo utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:110$1163.b",
+            "hdlname": "u_adc_wrapper u_dc_fifo u_std_dc_fifo utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:110$1180.b",
             "nosync": "00000000000000000000000000000001",
             "src": "packages/utils_pkg.sv:18.40-18.41"
           }
         },
-        "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:110$1163.gray": {
+        "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:110$1180.gray": {
           "hide_name": 0,
           "bits": [ "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x" ],
           "attributes": {
-            "hdlname": "u_adc_wrapper u_dc_fifo u_std_dc_fifo utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:110$1163.gray",
+            "hdlname": "u_adc_wrapper u_dc_fifo u_std_dc_fifo utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:110$1180.gray",
             "nosync": "00000000000000000000000000000001",
             "src": "packages/utils_pkg.sv:16.42-16.46"
           }
         },
-        "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:110$1163.i": {
+        "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:110$1180.i": {
           "hide_name": 0,
           "bits": [ "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x" ],
           "signed": 1,
           "attributes": {
-            "hdlname": "u_adc_wrapper u_dc_fifo u_std_dc_fifo utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:110$1163.i",
+            "hdlname": "u_adc_wrapper u_dc_fifo u_std_dc_fifo utils_pkg::gray2bin$func$common/dual_clk_fifo.sv:110$1180.i",
             "nosync": "00000000000000000000000000000001",
             "src": "packages/utils_pkg.sv:17.13-17.14"
           }
@@ -43857,7 +43857,7 @@
           "bits": [ 918 ],
           "attributes": {
             "abc9_carry": "00000000000000000000000000000001",
-            "src": "common/dual_clk_fifo.sv:73.17-73.27|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:5.9-5.12"
+            "src": "common/dual_clk_fifo.sv:73.17-73.27|/usr/bin/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4|/usr/bin/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13"
           }
         },
         "u_adc_wrapper.u_dc_fifo.u_std_dc_fifo.wr_ptr_gray_CCU2C_S1_COUT_CCU2C_CIN_COUT": {
@@ -43993,7 +43993,7 @@
           "bits": [ 93 ],
           "attributes": {
             "hdlname": "u_adc_wrapper ulpi_clk",
-            "src": "adc/adc_wrapper.sv:16.29-16.37"
+            "src": "adc/adc_wrapper.sv:17.29-17.37"
           }
         },
         "u_rst_gen.clk_i": {
@@ -44299,7 +44299,7 @@
           "hide_name": 0,
           "bits": [ 278 ],
           "attributes": {
-            "src": "top_uart.v:81.10-81.19"
+            "src": "top_uart.v:83.10-83.19"
           }
         },
         "uart_busy_TRELLIS_FF_Q_CE": {
@@ -44319,7 +44319,7 @@
           "hide_name": 0,
           "bits": [ 1009 ],
           "attributes": {
-            "src": "top_uart.v:80.10-80.19"
+            "src": "top_uart.v:82.10-82.19"
           }
         }
       }

@@ -92,7 +92,9 @@ module top (
     wire [11:0] tx_data_12b;
     assign tx_data = tx_data_12b[11:4];
 
-    adc_wrapper u_adc_wrapper (
+    adc_wrapper #(
+        .CTYPE(types_pkg::USB)
+    ) u_adc_wrapper (
         .rst          (cdc_rst),
         .enable       (!cdc_rst),
 

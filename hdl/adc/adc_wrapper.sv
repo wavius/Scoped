@@ -1,6 +1,7 @@
 module adc_wrapper #(
   parameter DWIDTH = params_pkg::DWIDTH,
-  parameter AWIDTH = params_pkg::AWIDTH
+  parameter AWIDTH = params_pkg::AWIDTH,
+  parameter CTYPE  = types_pkg::USB
 ) (
   input  logic              rst,
   input  logic              enable,
@@ -18,6 +19,11 @@ module adc_wrapper #(
   output logic [DWIDTH-1:0] tx_data,
   output logic              tx_valid
 );
+
+  // Local parameters
+  localparam [8:0] BURST_SIZE = (CTYPE == types_pkg::USB)  ? 9'd511 : 
+                                (CTYPE == types_pkg::UART) ? 9'd1   :
+                                                             9'd0;
   
   // ADC signals
   logic [DWIDTH-1:0] adc_data;
@@ -116,10 +122,10 @@ module adc_wrapper #(
     next_state = current_state;
     case (current_state)
       IDLE: begin
-        if (enable && (fifo_count >= 15'd1)) next_state = BURST;
+        if (enable && (fifo_count >= BURST_SIZE)) next_state = BURST;
       end
       BURST: begin
-        if ((burst_count == 10'd1) && byte_sent) next_state = IDLE;
+        if ((burst_count == BURST_SIZE) && byte_sent) next_state = IDLE;
       end
     endcase
   end

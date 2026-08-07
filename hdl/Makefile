@@ -3,6 +3,7 @@ TOP=top
 
 VSRCS = packages/params_pkg.sv \
 	packages/utils_pkg.sv \
+	packages/types_pkg.sv \
 	common/ODDRX1F.v \
 	common/dual_port_dual_clk_ram.sv \
 	common/dual_clk_fifo.sv \

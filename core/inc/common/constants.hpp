@@ -16,7 +16,7 @@ constexpr float ADC_MIDPOINT = ADC_LEVELS / 2.0f; // 128.0f for 8-bit
 
 // ADC sample rate is generated via FPGA clock divider: 25MHz / 10000 / 2 = 1250
 // Note: Adjusted to 5000.0f to account for hardware timing reporting double frequency.
-constexpr float ADC_SAMPLE_RATE_HZ = 5000.0f;
+constexpr float ADC_SAMPLE_RATE_HZ = 10000.0f;
 
 // Voltage mappings
 constexpr float ADC_VMIN = -5.0f;

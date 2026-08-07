@@ -2,7 +2,7 @@
 
 Scoped is a C++ software oscilloscope with an FPGA frontend.
 
-![Preview](img/Scoped_preview.png)
+![Preview](docs/img/preview_2ch.png)
 
 ## Features
 
@@ -34,7 +34,7 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
   - Vpp, Vrms, Vavg, Vmin, Vmax, Frequency, and Period.
 
 - **Hardware Integration:**
-  - Connection to FPGA frontend over USB.
+  - Connection to FPGA frontend over USB or UART.
 
 ## Building from Source
 
@@ -63,5 +63,35 @@ Future software features are described in docs/TODO.md.
 
 ## Hardware Specs
 
-- ADC: TBD
-- FPGA: Muse LAB iCESugar-Pro v1.3
+### ADC
+
+AD9226
+- 65M samplers per second (max)
+- 12-bit resolution
+
+<br>
+<div align="left">
+  <img src="docs/img/boards/ad9226.png" alt="AD9226" width="600px">
+</div>
+<br>
+
+### FPGA
+
+Lattice ECP5
+- Muse LAB iCESugar-Pro v1.3
+
+<br>
+<div align="left">
+  <img src="docs/img/boards/icesugar_pro.jpg" alt="iCESugar-Pro v1.3" width="600px">
+</div>
+<br>
+
+### USB PHY
+
+USB3300
+
+<br>
+<div align="left">
+  <img src="docs/img/boards/usb3300.jpg" alt="iCESugar-Pro v1.3" width="600px">
+</div>
+<br>

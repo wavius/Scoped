@@ -21,31 +21,9 @@ void OscilloscopeUI::drawMathControls(Oscilloscope &osc) {
 
       UI::drawComponentHeader(processor, processor->getName(), osc);
 
-      auto drawSlider = [&](const char *label, float *v, float v_min,
-                            float v_max, const char *format, bool add_spacing) {
-        return this->drawSliderFloatWithInput(label, v, v_min, v_max, format,
-                                              add_spacing);
-      };
-      UI::drawVerticalControlsT(processor, osc, -500.0f, 500.0f, "%.1f",
-                            drawSlider);
+      drawVerticalControls(processor, osc);
 
-      int h_scale = static_cast<int>(processor->getHorizontalScale());
-      int max_h_scale = static_cast<int>(osc.getMaxCaptureWidth());
-      if (drawSliderIntWithInput("Time Scale", &h_scale, 256, max_h_scale,
-                                 "%d samples", false)) {
-        processor->setHorizontalScale(static_cast<size_t>(h_scale));
-        osc.forceReprocess();
-      }
-
-      int h_offset = static_cast<int>(processor->getHorizontalOffset());
-      int capture_width = static_cast<int>(osc.getMaxCaptureWidth());
-      int max_offset = std::max(0, (capture_width - h_scale) / 2);
-
-      if (drawSliderIntWithInput("Time Offset", &h_offset, -max_offset,
-                                 max_offset, "%d samples", true)) {
-        processor->setHorizontalOffset(static_cast<size_t>(h_offset));
-        osc.forceReprocess();
-      }
+      drawHorizontalControls(processor, osc);
 
       auto *math_proc = dynamic_cast<MathProcessor *>(processor);
       if (math_proc) {

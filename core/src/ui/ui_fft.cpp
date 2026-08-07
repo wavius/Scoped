@@ -27,21 +27,21 @@ void OscilloscopeUI::drawFFTControls(Oscilloscope &osc) {
       UI::drawComponentHeader(fft_proc, fft_proc->getName(), osc,
                           fft_proc->getWindowSize() / 2);
 
-      auto drawSlider = [&](const char *label, float *v, float v_min,
-                            float v_max, const char *format, bool add_spacing) {
-        return this->drawSliderFloatWithInput(label, v, v_min, v_max, format,
-                                              add_spacing);
-      };
-      UI::drawVerticalControlsT(fft_proc, osc, -500.0f, 500.0f, "%.1f", drawSlider);
+      drawVerticalControls(fft_proc, osc);
 
+      float sample_rate = Constants::ADC_SAMPLE_RATE_HZ;
       int fft_size = static_cast<int>(fft_proc->getWindowSize());
       int num_bins = fft_size / 2;
+      float hz_per_bin = sample_rate / static_cast<float>(fft_size);
+      
       int h_scale = static_cast<int>(fft_proc->getHorizontalScale());
       if (h_scale == 0 || h_scale > num_bins)
         h_scale = num_bins;
-      if (drawSliderIntWithInput("Time Scale", &h_scale, 2, num_bins,
-                                 "%d bins", false)) {
-        fft_proc->setHorizontalScale(static_cast<size_t>(h_scale));
+        
+      float freq_scale_hz = h_scale * hz_per_bin;
+      if (drawSliderFloatWithInput("Freq Scale", &freq_scale_hz, 2.0f * hz_per_bin, num_bins * hz_per_bin,
+                                 "%.2f Hz", false)) {
+        fft_proc->setHorizontalScale(static_cast<size_t>(freq_scale_hz / hz_per_bin));
         osc.forceReprocess();
       }
 
@@ -51,9 +51,12 @@ void OscilloscopeUI::drawFFTControls(Oscilloscope &osc) {
         h_offset = max_offset;
         fft_proc->setHorizontalOffset(static_cast<size_t>(h_offset));
       }
-      if (drawSliderIntWithInput("Time Offset", &h_offset, 0, max_offset,
-                                 "%d bins", true)) {
-        fft_proc->setHorizontalOffset(static_cast<size_t>(h_offset));
+      
+      float freq_offset_hz = h_offset * hz_per_bin;
+      float max_offset_hz = max_offset * hz_per_bin;
+      if (drawSliderFloatWithInput("Freq Offset", &freq_offset_hz, 0, max_offset_hz,
+                                 "%.2f Hz", true)) {
+        fft_proc->setHorizontalOffset(static_cast<size_t>(freq_offset_hz / hz_per_bin));
         osc.forceReprocess();
       }
 

@@ -48,14 +48,14 @@ public:
 
   // Pipeline
   virtual float getNormalizedSample(size_t index_offset) const = 0;
-  virtual void extractAndProcessFrame(size_t trigger_idx, size_t max_width) = 0;
+  virtual void extractAndProcessFrame(size_t trigger_idx, size_t max_width, float trigger_subsample_offset) = 0;
   virtual void reprocessLastFrame() = 0;
   virtual void consumeBuffer(size_t amount) = 0;
   virtual void pushRawBytes(const uint8_t *data, size_t size) = 0;
   virtual void clearBuffer() = 0;
   virtual void clearTraces() = 0;
   virtual const std::vector<float> &getRawFrame() const = 0;
-  virtual void updateTriggerPoint(size_t idx) = 0;
+  virtual void updateTriggerPoint(size_t idx, float subsample_offset) = 0;
 };
 
 // Channel that pulls data from other channels' traces
@@ -76,6 +76,7 @@ private:
   size_t m_horizontal_scale;
   int m_horizontal_offset = Constants::DEFAULT_HORIZONTAL_OFFSET;
   size_t m_last_trigger_in_frame = 0;
+  float m_last_trigger_subsample_offset = 0.0f;
 
   // Display color
   Color m_color = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -135,10 +136,11 @@ public:
   float getNormalizedSample(size_t /*index_offset*/) const override {
     return 0.0f;
   }
-  void extractAndProcessFrame(size_t trigger_idx, size_t max_width) override {
+  void extractAndProcessFrame(size_t trigger_idx, size_t max_width, float trigger_subsample_offset) override {
     size_t half_max = max_width / 2;
     size_t start = (trigger_idx >= half_max) ? trigger_idx - half_max : 0;
     m_last_trigger_in_frame = trigger_idx - start;
+    m_last_trigger_subsample_offset = trigger_subsample_offset;
 
     m_traces.clear();
     for (auto &proc : m_processors) {
@@ -148,6 +150,7 @@ public:
     }
     for (auto &trace : m_traces) {
       trace.trigger_index = m_last_trigger_in_frame;
+      trace.trigger_subsample_offset = m_last_trigger_subsample_offset;
     }
     m_has_new_frame = true;
   }
@@ -160,6 +163,7 @@ public:
     }
     for (auto &trace : m_traces) {
       trace.trigger_index = m_last_trigger_in_frame;
+      trace.trigger_subsample_offset = m_last_trigger_subsample_offset;
     }
     m_has_new_frame = true;
   }
@@ -174,10 +178,11 @@ public:
     static std::vector<float> empty;
     return empty;
   }
-  void updateTriggerPoint(size_t idx) override {
+  void updateTriggerPoint(size_t idx, float subsample_offset) override {
     size_t half_max = 16384 / 2;
     size_t start = (idx >= half_max) ? idx - half_max : 0;
     m_last_trigger_in_frame = idx - start;
+    m_last_trigger_subsample_offset = subsample_offset;
   }
 };
 
@@ -200,6 +205,7 @@ private:
   std::vector<float> m_float_frame;
   std::vector<Trace> m_traces;
   size_t m_last_trigger_in_frame = 0;
+  float m_last_trigger_subsample_offset = 0.0f;
   bool m_enabled = true;
   bool m_has_new_frame = false;
 
@@ -231,6 +237,8 @@ public:
   }
   Color getColor() const override { return m_color; }
   float getSampleRate() const override { return Constants::ADC_SAMPLE_RATE_HZ; }
+  
+  const std::vector<HardwareT>& getHardwareFrame() const { return m_raw_frame; }
 
   std::vector<IProcessorControl *> getProcessors() const override {
     std::vector<IProcessorControl *> list;
@@ -264,7 +272,7 @@ public:
     return static_cast<float>(m_buffer.peekAhead(index_offset));
   }
 
-  void extractAndProcessFrame(size_t trigger_idx, size_t max_width) override {
+  void extractAndProcessFrame(size_t trigger_idx, size_t max_width, float trigger_subsample_offset) override {
     size_t unread = m_buffer.getUnreadCount();
     size_t half_record = max_width / 2;
 
@@ -297,6 +305,10 @@ public:
 
     m_traces.clear();
 
+    size_t trigger_in_frame = (trigger_idx >= start) ? (trigger_idx - start) : 0;
+    m_last_trigger_in_frame = trigger_in_frame;
+    m_last_trigger_subsample_offset = trigger_subsample_offset;
+    
     Trace base_trace;
     base_trace.name = m_label + " Time";
     base_trace.domain = Domain::Time;
@@ -304,25 +316,11 @@ public:
     base_trace.vertical_offset = m_vertical_offset;
     base_trace.horizontal_scale = m_horizontal_scale;
     base_trace.horizontal_offset = m_horizontal_offset;
+    base_trace.trigger_index = trigger_in_frame;
+    base_trace.trigger_subsample_offset = trigger_subsample_offset;
     base_trace.color = m_color;
 
-    size_t trigger_in_frame = (trigger_idx >= start) ? (trigger_idx - start) : 0;
-    m_last_trigger_in_frame = trigger_in_frame;
-
-    size_t half_vis = m_horizontal_scale / 2;
-    int offset_val = m_horizontal_offset;
-    long long center_idx = static_cast<long long>(trigger_in_frame) + offset_val;
-    long long start_idx = center_idx - half_vis;
-
-    size_t time_start = (start_idx < 0) ? 0 : static_cast<size_t>(start_idx);
-    if (time_start >= actual_width)
-      time_start = actual_width - 1;
-
-    size_t time_width = std::min(m_horizontal_scale, actual_width - time_start);
-    base_trace.data.resize(time_width);
-    for (size_t i = 0; i < time_width; ++i) {
-      base_trace.data[i] = Constants::ADC_VMIN + (static_cast<float>(m_raw_frame[time_start + i]) / Constants::ADC_LEVELS) * v_range;
-    }
+    base_trace.data = m_float_frame;
 
     m_traces.push_back(std::move(base_trace));
 
@@ -356,31 +354,16 @@ public:
     base_trace.color = m_color;
 
     size_t trigger_in_frame = m_last_trigger_in_frame;
-    size_t half_vis = m_horizontal_scale / 2;
-    int offset_val = m_horizontal_offset;
-
-    long long center_idx =
-        static_cast<long long>(trigger_in_frame) + offset_val;
-    long long start_idx = center_idx - half_vis;
-
-    size_t time_start = (start_idx < 0) ? 0 : static_cast<size_t>(start_idx);
-    if (time_start >= actual_width)
-      time_start = actual_width - 1;
-
-    size_t time_width = std::min(m_horizontal_scale, actual_width - time_start);
-
-    base_trace.data.resize(time_width);
-    float v_range = Constants::ADC_VMAX - Constants::ADC_VMIN;
-    for (size_t i = 0; i < time_width; ++i) {
-      base_trace.data[i] = Constants::ADC_VMIN + (static_cast<float>(m_raw_frame[time_start + i]) / Constants::ADC_LEVELS) * v_range;
-    }
-
-    m_traces.push_back(std::move(base_trace));
-
+    
     m_float_frame.resize(actual_width);
+    float v_range = Constants::ADC_VMAX - Constants::ADC_VMIN;
     for (size_t i = 0; i < actual_width; ++i) {
       m_float_frame[i] = Constants::ADC_VMIN + (static_cast<float>(m_raw_frame[i]) / Constants::ADC_LEVELS) * v_range;
     }
+    
+    base_trace.data = m_float_frame;
+
+    m_traces.push_back(std::move(base_trace));
 
     for (auto &proc : m_processors) {
       if (proc->isEnabled()) {
@@ -421,8 +404,9 @@ public:
   const std::vector<float> &getRawFrame() const override {
     return m_float_frame;
   }
-  void updateTriggerPoint(size_t idx) override {
+  void updateTriggerPoint(size_t idx, float subsample_offset) override {
     m_last_trigger_in_frame = idx;
+    m_last_trigger_subsample_offset = subsample_offset;
   }
 
   // Hardware

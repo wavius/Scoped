@@ -21,6 +21,7 @@ struct Trace {
   size_t horizontal_scale = 1024;
   int horizontal_offset = 0;
   size_t trigger_index = 0;
+  float trigger_subsample_offset = 0.0f;
   Color color = {1.0f, 1.0f, 1.0f, 1.0f};
 
   // Pipeline

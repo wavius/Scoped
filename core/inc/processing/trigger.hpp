@@ -31,7 +31,7 @@ protected:
   Clock::time_point m_last_trigger_time;
   static constexpr std::chrono::milliseconds AUTO_TIMEOUT{50};
 
-  virtual bool scanForTrigger(IChannel *channel, size_t &trigger_offset) = 0;
+  virtual bool scanForTrigger(IChannel *channel, size_t &trigger_offset, float &trigger_subsample_offset) = 0;
   virtual void onTriggerFired() {}
 
 public:
@@ -58,14 +58,14 @@ public:
 
   // Pipeline
   // Scans the buffer and determines if a trigger has occurred
-  bool processStream(IChannel *channel, size_t &out_trigger_offset) {
+  bool processStream(IChannel *channel, size_t &out_trigger_offset, float &out_trigger_subsample_offset) {
     if (!channel)
       return false;
     size_t unread = channel->getUnreadSampleCount();
     if (unread < m_frame_width)
       return false;
 
-    if (scanForTrigger(channel, out_trigger_offset)) {
+    if (scanForTrigger(channel, out_trigger_offset, out_trigger_subsample_offset)) {
       m_last_trigger_time = Clock::now();
       onTriggerFired();
       return true;
@@ -75,6 +75,7 @@ public:
       auto elapsed = Clock::now() - m_last_trigger_time;
       if (elapsed > AUTO_TIMEOUT) {
         out_trigger_offset = unread / 2;
+        out_trigger_subsample_offset = 0.0f;
         m_last_trigger_time = Clock::now();
         onTriggerFired();
         return true;
@@ -86,7 +87,7 @@ public:
 
   // Scans a raw float buffer for a trigger crossing
   virtual bool scanRawBuffer(const std::vector<float> &buffer,
-                             size_t &out_offset) = 0;
+                             size_t &out_offset, float &out_subsample_offset) = 0;
 
   // Checks if stale data should be discarded
   bool shouldDiscardStale(IChannel *channel, size_t &discard_amount) {
@@ -114,12 +115,17 @@ private:
   float m_hysteresis_margin;
   mutable bool m_armed = false;
 
-  bool checkEdge(float current) const {
+  bool checkEdge(float current, float prev, float &out_subsample_offset) const {
     if (m_direction == EdgeDirection::RISING) {
       if (current < (m_threshold - m_hysteresis_margin)) {
         m_armed = true;
       } else if (m_armed && current >= m_threshold) {
         m_armed = false;
+        if (current > prev) {
+          out_subsample_offset = (current - m_threshold) / (current - prev);
+        } else {
+          out_subsample_offset = 0.0f;
+        }
         return true;
       }
     } else {
@@ -127,6 +133,11 @@ private:
         m_armed = true;
       } else if (m_armed && current <= m_threshold) {
         m_armed = false;
+        if (prev > current) {
+          out_subsample_offset = (m_threshold - current) / (prev - current);
+        } else {
+          out_subsample_offset = 0.0f;
+        }
         return true;
       }
     }
@@ -134,13 +145,13 @@ private:
   }
 
 protected:
-  bool scanForTrigger(IChannel *channel, size_t &trigger_offset) override {
+  bool scanForTrigger(IChannel *channel, size_t &trigger_offset, float &trigger_subsample_offset) override {
     size_t unread = channel->getUnreadSampleCount();
     size_t half = m_frame_width / 2;
     if (unread < m_frame_width)
       return false;
 
-    m_armed = false;
+    // m_armed is preserved across calls to support low frequency or small buffer windows
     float raw_prev = channel->getNormalizedSample(half > 0 ? half - 1 : 0);
     m_prev_sample = Constants::ADC_VMIN + (raw_prev / Constants::ADC_LEVELS) * (Constants::ADC_VMAX - Constants::ADC_VMIN);
 
@@ -148,7 +159,7 @@ protected:
     for (size_t i = half; i < search_end; ++i) {
       float raw_curr = channel->getNormalizedSample(i);
       float current = Constants::ADC_VMIN + (raw_curr / Constants::ADC_LEVELS) * (Constants::ADC_VMAX - Constants::ADC_VMIN);
-      if (checkEdge(current)) {
+      if (checkEdge(current, m_prev_sample, trigger_subsample_offset)) {
         trigger_offset = i;
         return true;
       }
@@ -158,7 +169,7 @@ protected:
   }
 
   bool scanRawBuffer(const std::vector<float> &buffer,
-                     size_t &out_offset) override {
+                     size_t &out_offset, float &out_subsample_offset) override {
     if (buffer.size() < 2)
       return false;
 
@@ -166,7 +177,7 @@ protected:
     m_prev_sample = buffer[0];
     for (size_t i = 1; i < buffer.size(); ++i) {
       float current = buffer[i];
-      if (checkEdge(current)) {
+      if (checkEdge(current, m_prev_sample, out_subsample_offset)) {
         out_offset = i;
         return true;
       }
@@ -176,12 +187,11 @@ protected:
   }
 
 public:
-  // Lifecycle
   explicit EdgeTrigger(size_t width = 1024,
                        float level = Constants::ADC_MIDPOINT_V) // default 0.0 V
       : ITrigger(width), m_threshold(level), m_direction(EdgeDirection::RISING),
         m_prev_sample(0) {
-    m_hysteresis_margin = 2.0f;
+    m_hysteresis_margin = 0.05f;
   }
 
   // Accessors
@@ -202,7 +212,7 @@ public:
     params.push_back({"Edge", 0.0f, 1.0f, dir_idx, dirs});
 
     params.push_back(
-        {"Hysteresis", 0.0f, 50.0f, m_hysteresis_margin, {}});
+        {"Hysteresis", 0.0f, 1.0f, m_hysteresis_margin, {}});
     return params;
   }
 

@@ -42,8 +42,70 @@ private:
 
   // Control helpers
   void drawModeCombo(Oscilloscope &osc);
-  void drawHorizontalControls(IChannel &channel, Oscilloscope &osc);
-  void drawVerticalControls(IChannel &channel, Oscilloscope &osc);
+  
+  template <typename T>
+  void drawHorizontalControls(T *target, Oscilloscope &osc) {
+    double sample_rate = Constants::ADC_SAMPLE_RATE_HZ;
+    if constexpr (std::is_base_of_v<IChannel, T>) {
+      sample_rate = target->getSampleRate();
+    }
+    if (sample_rate <= 0.0) sample_rate = Constants::ADC_SAMPLE_RATE_HZ;
+    
+    float time_span_s = static_cast<float>(target->getHorizontalScale()) / sample_rate;
+    float max_time_s = static_cast<float>(osc.getMaxCaptureWidth()) / sample_rate;
+
+    ImGui::Spacing();
+    if (time_span_s < 1e-6f) {
+        ImGui::Text("Time Scale: %.2f ns", time_span_s * 1e9f);
+    } else if (time_span_s < 1e-3f) {
+        ImGui::Text("Time Scale: %.2f us", time_span_s * 1e6f);
+    } else if (time_span_s < 1.0f) {
+        ImGui::Text("Time Scale: %.2f ms", time_span_s * 1e3f);
+    } else {
+        ImGui::Text("Time Scale: %.2f s", time_span_s);
+    }
+
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    
+    // allow zooming deep into the buffer (e.g. 2 samples)
+    float min_time_s = 2.0f / sample_rate;
+    
+    if (ImGui::SliderFloat("##TimeScale", &time_span_s, min_time_s, max_time_s, "", ImGuiSliderFlags_Logarithmic)) {
+      size_t new_samples = static_cast<size_t>(time_span_s * sample_rate);
+      if (new_samples < 2) new_samples = 2;
+      target->setHorizontalScale(new_samples);
+      osc.forceReprocess();
+    }
+
+    int visible_width = static_cast<int>(target->getHorizontalScale());
+    int capture_width = static_cast<int>(osc.getMaxCaptureWidth());
+    float max_offset_ms = std::max(0, (capture_width - visible_width) / 2) / sample_rate * 1000.0f;
+    
+    float time_offset_ms = static_cast<float>(target->getHorizontalOffset()) / sample_rate * 1000.0f;
+
+    if (drawSliderFloatWithInput("Time Offset", &time_offset_ms, -max_offset_ms,
+                               max_offset_ms, "%.2f ms", true)) {
+      target->setHorizontalOffset(static_cast<int>((time_offset_ms / 1000.0f) * sample_rate));
+      osc.forceReprocess();
+    }
+  }
+
+  template <typename T>
+  void drawVerticalControls(T *target, Oscilloscope &osc) {
+    float v_range = Constants::ADC_VMAX - Constants::ADC_VMIN;
+    float scale = target->getVerticalScale();
+    if (drawSliderFloatWithInput("Voltage Scale", &scale, 0.01f, 5.0f, "%.2fx", false)) {
+      target->setVerticalScale(scale);
+      osc.forceReprocess();
+    }
+    
+    float offset_v = target->getVerticalOffset();
+    if (drawSliderFloatWithInput("Voltage Offset", &offset_v, -v_range, v_range, "%.2f V", true)) {
+      target->setVerticalOffset(offset_v);
+      osc.forceReprocess();
+    }
+  }
+
   void drawFFTControls(Oscilloscope &osc);
   void drawMathControls(Oscilloscope &osc);
   void drawFilterControls(Oscilloscope &osc);

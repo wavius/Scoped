@@ -113,7 +113,7 @@ public:
 
     // Update master clock
     s_fundamental_phase +=
-        (1.0 / static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ));
+        (static_cast<double>(count) / static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ));
     if (s_fundamental_phase >=
         static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ)) {
       s_fundamental_phase =
@@ -162,7 +162,7 @@ public:
 
     // Update master clock
     s_fundamental_phase +=
-        (1.0 / static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ));
+        (static_cast<double>(chunk_size) / static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ));
     if (s_fundamental_phase >=
         static_cast<double>(Constants::ADC_SAMPLE_RATE_HZ)) {
       s_fundamental_phase =

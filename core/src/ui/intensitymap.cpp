@@ -145,30 +145,101 @@ static inline void plotLineFast(IntensityMap::Pixel *grid, int width, int x1, in
   }
 }
 
-void IntensityMap::processFrame(const float *normalized, size_t count, float r, float g, float b) {
+void IntensityMap::processFrame(const float *normalized, size_t count, float r, float g, float b, double x0, double dx) {
   if (count < 2 || m_width == 0 || m_height == 0)
     return;
 
-  const float x_scale =
-      static_cast<float>(m_width - 1) / static_cast<float>(count - 1);
+  double actual_dx = dx;
+  if (actual_dx < 0.0) {
+    actual_dx = static_cast<double>(m_width - 1) / static_cast<double>(count - 1);
+  }
+  
   const int max_y = static_cast<int>(m_height - 1);
 
   auto toPixelY = [max_y](float n) -> int {
-    return static_cast<int>(std::clamp(n * static_cast<float>(max_y) + 0.5f, 0.0f,
+    return static_cast<int>(std::clamp((1.0f - n) * static_cast<float>(max_y) + 0.5f, 0.0f,
                                       static_cast<float>(max_y)));
   };
 
-  int prev_x = 0;
+  int prev_x = static_cast<int>(x0);
   int prev_y = toPixelY(normalized[0]);
 
-  for (size_t i = 1; i < count; ++i) {
-    int cur_x = static_cast<int>(i * x_scale);
-    int cur_y = toPixelY(normalized[i]);
+  if (actual_dx < 1.0) {
+    // Peak-detect (Min-Max) decimation to prevent Moiré aliasing when zoomed out
+    int current_pixel_x = prev_x;
+    int pixel_min_y = prev_y;
+    int pixel_max_y = prev_y;
+    int last_drawn_y = prev_y;
 
-    plotLineFast(m_grid.data(), static_cast<int>(m_width), prev_x, prev_y, cur_x, cur_y, r, g, b);
+    for (size_t i = 1; i <= count; ++i) {
+      int next_x = (i < count) ? static_cast<int>(x0 + static_cast<double>(i) * actual_dx) : current_pixel_x + 1;
+      
+      if (next_x == current_pixel_x && i < count) {
+        int y = toPixelY(normalized[i]);
+        if (y < pixel_min_y) pixel_min_y = y;
+        if (y > pixel_max_y) pixel_max_y = y;
+      } else {
+        if (current_pixel_x >= 0 && current_pixel_x < static_cast<int>(m_width)) {
+          // Connect gaps to previous column to ensure continuous waveform
+          int draw_min = std::min(pixel_min_y, last_drawn_y);
+          int draw_max = std::max(pixel_max_y, last_drawn_y);
+          
+          plotLineFast(m_grid.data(), static_cast<int>(m_width), 
+                       current_pixel_x, draw_min, 
+                       current_pixel_x, draw_max, r, g, b);
+          
+          // Next column's connection point is the end of this wave segment
+          last_drawn_y = (std::abs(last_drawn_y - pixel_min_y) < std::abs(last_drawn_y - pixel_max_y)) ? pixel_max_y : pixel_min_y;
+        }
+        
+        if (i < count) {
+          current_pixel_x = next_x;
+          pixel_min_y = toPixelY(normalized[i]);
+          pixel_max_y = pixel_min_y;
+        }
+      }
+    }
+  } else {
+    // Standard Bresenham rendering for zoomed-in traces
+    for (size_t i = 1; i < count; ++i) {
+      int cur_x = static_cast<int>(x0 + static_cast<double>(i) * actual_dx);
+      int cur_y = toPixelY(normalized[i]);
 
-    prev_x = cur_x;
-    prev_y = cur_y;
+      if (cur_x >= 0 && cur_x < static_cast<int>(m_width) && prev_x >= 0 && prev_x < static_cast<int>(m_width)) {
+        plotLineFast(m_grid.data(), static_cast<int>(m_width), prev_x, prev_y, cur_x, cur_y, r, g, b);
+      } else if ((prev_x < 0 && cur_x >= 0) || (prev_x < static_cast<int>(m_width) && cur_x >= static_cast<int>(m_width))) {
+        // Interpolate Y at the boundaries to prevent vertical artifact lines
+        float t1 = 0.0f;
+        float t2 = 1.0f;
+        
+        if (prev_x < 0) {
+          t1 = static_cast<float>(-prev_x) / static_cast<float>(cur_x - prev_x);
+        } else if (prev_x >= static_cast<int>(m_width)) {
+          t1 = static_cast<float>(m_width - 1 - prev_x) / static_cast<float>(cur_x - prev_x);
+        }
+        
+        if (cur_x < 0) {
+          t2 = static_cast<float>(-prev_x) / static_cast<float>(cur_x - prev_x);
+        } else if (cur_x >= static_cast<int>(m_width)) {
+          t2 = static_cast<float>(m_width - 1 - prev_x) / static_cast<float>(cur_x - prev_x);
+        }
+        
+        if (t1 > t2) std::swap(t1, t2);
+        
+        int draw_x1 = prev_x + static_cast<int>(t1 * (cur_x - prev_x));
+        int draw_y1 = prev_y + static_cast<int>(t1 * (cur_y - prev_y));
+        int draw_x2 = prev_x + static_cast<int>(t2 * (cur_x - prev_x));
+        int draw_y2 = prev_y + static_cast<int>(t2 * (cur_y - prev_y));
+        
+        draw_x1 = std::clamp(draw_x1, 0, static_cast<int>(m_width - 1));
+        draw_x2 = std::clamp(draw_x2, 0, static_cast<int>(m_width - 1));
+        
+        plotLineFast(m_grid.data(), static_cast<int>(m_width), draw_x1, draw_y1, draw_x2, draw_y2, r, g, b);
+      }
+
+      prev_x = cur_x;
+      prev_y = cur_y;
+    }
   }
 }
 

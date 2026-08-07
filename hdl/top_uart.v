@@ -1,7 +1,7 @@
 module top (
     input clk_25m,
 
-    /* ADC Interface */
+    /* ADC interface */
     output logic              adc_clk_out,
     input  logic              adc_otr,
     input  logic [11:0]       adc_data_raw,
@@ -23,7 +23,7 @@ module top (
         .rst_o(rst)
     );
 
-    /* ADC Decimator (Capture 1 in 2500 samples to get 10 kHz from 25 MHz) */
+    /* ADC decimator (capture 1 in 2500 samples to get 10 kHz from 25 MHz) */
     reg [11:0] decimate_cnt = 12'd0;
     reg capture_en = 1'b0;
     always @(posedge clk_25m) begin
@@ -36,9 +36,9 @@ module top (
         end
     end
 
-    /* UART Clock Generation (115200 Baud) */
+    /* UART clock generation (460800 Baud) */
     parameter clk_freq = 25000000;
-    parameter baudrate = 115200;
+    parameter baudrate = 460800;
     reg clk_uart = 0;
     reg [31:0] cntr_uart = 32'b0;
     parameter period_uart = (clk_freq / 2 / baudrate);
@@ -50,24 +50,24 @@ module top (
         end else cntr_uart <= cntr_uart + 1;
     end
 
-    /* ADC Wrapper */
+    /* ADC wrapper */
     wire [11:0] tx_data_12b;
-    wire [7:0]  tx_data = tx_data_12b[11:4]; // 8 most significant bits
+    wire [7:0]  tx_data = tx_data_12b[11:4]; // 8 MSBs
     wire        tx_valid;
     wire        tx_ready;
 
     adc_wrapper u_adc_wrapper (
         .rst          (rst),
         .enable       (!rst),
-
-        // Physical ADC pins (Clocked directly by stable 25MHz)
+ 
+        // ADC interface
         .adc_clk      (clk_25m),
         .capture_en   (capture_en),
         .adc_clk_out  (adc_clk_out),
         .adc_data_raw (adc_data_raw),
         .adc_otr      (adc_otr),
 
-        // To UART (FIFO output)
+        // UART interface
         .ulpi_clk     (clk_uart),
         .tx_ready     (tx_ready),
         .tx_data      (tx_data_12b),
@@ -102,7 +102,7 @@ module top (
         .tx       (uart_tx)
     );
 
-    /* LEDs (Active-HIGH on iCESugar-Pro: 1 = ON, 0 = OFF) */
+    /* LEDs */
     assign led_r = 1'b0;
     assign led_g = 1'b0;
     assign led_b = !rst; // Health indicator

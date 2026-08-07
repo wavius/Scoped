@@ -79,12 +79,13 @@ public:
     if (m_trigger && m_trigger_source_idx < m_hardware_channels.size()) {
       auto &source = m_hardware_channels[m_trigger_source_idx];
       size_t new_in_frame_idx = 0;
-      if (m_trigger->scanRawBuffer(source->getRawFrame(), new_in_frame_idx)) {
+      float new_subsample = 0.0f;
+      if (m_trigger->scanRawBuffer(source->getRawFrame(), new_in_frame_idx, new_subsample)) {
         for (auto &ch : m_hardware_channels) {
-          ch->updateTriggerPoint(new_in_frame_idx);
+          ch->updateTriggerPoint(new_in_frame_idx, new_subsample);
         }
         for (auto &ch : m_virtual_channels) {
-          ch->updateTriggerPoint(new_in_frame_idx);
+          ch->updateTriggerPoint(new_in_frame_idx, new_subsample);
         }
       }
     }
@@ -137,8 +138,9 @@ public:
     }
 
     size_t trigger_idx = 0;
+    float trigger_subsample_offset = 0.0f;
     bool triggered = m_trigger &&
-                     m_trigger->processStream(source_channel.get(), trigger_idx);
+                     m_trigger->processStream(source_channel.get(), trigger_idx, trigger_subsample_offset);
 
     if (triggered) {
       m_last_trigger_offset = trigger_idx;
@@ -151,13 +153,20 @@ public:
         }
 
         if (ch->isEnabled() || any_proc_enabled) {
-          ch->extractAndProcessFrame(trigger_idx, max_req);
+          ch->extractAndProcessFrame(trigger_idx, max_req, trigger_subsample_offset);
         } else {
           ch->clearTraces();
         }
 
-        // Drain unread samples so buffer never backs up or overwrites
-        ch->consumeBuffer(ch->getUnreadSampleCount());
+        // Consume up to the trigger point minus half the max capture width.
+        // This retains 'max_req / 2' pre-trigger samples for the next frame,
+        // while ensuring the next scan starts exactly after this trigger to maintain phase.
+        size_t half_req = max_req / 2;
+        size_t consume_amount = 0;
+        if (trigger_idx >= half_req) {
+          consume_amount = std::min(trigger_idx - half_req + 1, ch->getUnreadSampleCount());
+        }
+        ch->consumeBuffer(consume_amount);
       }
 
       for (auto &ch : m_virtual_channels) {
@@ -167,7 +176,7 @@ public:
             any_proc_enabled = true;
         }
         if (ch->isEnabled() || any_proc_enabled) {
-          ch->extractAndProcessFrame(trigger_idx, max_req);
+          ch->extractAndProcessFrame(trigger_idx, max_req, trigger_subsample_offset);
         } else {
           ch->clearTraces();
         }

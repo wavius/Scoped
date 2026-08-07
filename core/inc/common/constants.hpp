@@ -15,11 +15,12 @@ constexpr float ADC_MAX_VAL = ADC_LEVELS - 1.0f;  // 255.0f for 8-bit
 constexpr float ADC_MIDPOINT = ADC_LEVELS / 2.0f; // 128.0f for 8-bit
 
 // ADC sample rate is generated via FPGA clock divider: 25MHz / 10000 / 2 = 1250
-constexpr float ADC_SAMPLE_RATE_HZ = 10000.0f;
+// Note: Adjusted to 5000.0f to account for hardware timing reporting double frequency.
+constexpr float ADC_SAMPLE_RATE_HZ = 5000.0f;
 
 // Voltage mappings
-constexpr float ADC_VMIN = -2.0f;
-constexpr float ADC_VMAX = 2.0f;
+constexpr float ADC_VMIN = -5.0f;
+constexpr float ADC_VMAX = 5.0f;
 constexpr float ADC_MIDPOINT_V = ADC_VMIN + (ADC_MIDPOINT / ADC_LEVELS) * (ADC_VMAX - ADC_VMIN);
 
 // Default Plot Settings

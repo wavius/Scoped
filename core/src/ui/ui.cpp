@@ -34,8 +34,10 @@ static int FormatTimeAxis(double value, char* buff, int size, void* user_data) {
     auto& ch = data->osc->getHardwareChannels()[0];
     double h_scale = static_cast<double>(ch->getHorizontalScale());
     double sample_rate = ch->getSampleRate();
+    double h_offset = static_cast<double>(ch->getHorizontalOffset());
     
-    double time_s = ((value - data->w / 2.0) / data->w) * (h_scale / sample_rate);
+    // Calculate time based on centered origin and the current time offset
+    double time_s = (((value - data->w / 2.0) / data->w) * h_scale + h_offset) / sample_rate;
     
     double abs_t = std::abs(time_s);
     if (abs_t < 1e-6 && time_s != 0.0) {
@@ -247,9 +249,18 @@ void OscilloscopeUI::processNewFrames(Oscilloscope &osc) {
             m_normalized_time[j] = trace.normalizeToIntensity(trace.data[j]);
           }
 
+          double dx = static_cast<double>(m_display_width) / static_cast<double>(trace.horizontal_scale);
+          
+          double h_offset = static_cast<double>(trace.horizontal_offset);
+          double trigger_frac = 0.5 - (h_offset / static_cast<double>(trace.horizontal_scale));
+          double trigger_x = static_cast<double>(m_display_width) * trigger_frac;
+          
+          // Explicitly tie the wave's trigger sample to the visual trigger marker
+          double x0 = trigger_x - (static_cast<double>(trace.trigger_index) - static_cast<double>(trace.trigger_subsample_offset)) * dx;
+
           ImVec4 color = toImVec4(trace.color);
-          m_display->processFrame(m_normalized_time.data(), count, color.x,
-                                  color.y, color.z);
+          m_display->processFrame(m_normalized_time.data(), count, color.x, color.y, color.z,
+                                  x0, dx);
         }
       }
 
@@ -526,8 +537,13 @@ void OscilloscopeUI::drawPlotArea(Oscilloscope &osc) {
     axis_data.w = w;
     axis_data.h = h;
     
+    ImPlot::SetupAxis(ImAxis_X1, nullptr, ImPlotAxisFlags_NoGridLines);
+    ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_NoGridLines);
     ImPlot::SetupAxisFormat(ImAxis_X1, FormatTimeAxis, &axis_data);
     ImPlot::SetupAxisFormat(ImAxis_Y1, FormatVoltageAxis, &axis_data);
+
+    // Draw our custom fixed 10x8 grid with bold center lines
+    drawGridLines(w, h);
 
     if (m_display) {
       m_display->updateTexture();

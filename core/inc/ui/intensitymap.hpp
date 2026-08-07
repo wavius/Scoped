@@ -51,7 +51,7 @@ public:
   // Rasterizes normalized waveform data into the intensity grid
   // Values in [0.0, 1.0] map to [bottom, top] of the display
   void processFrame(const float *normalized, size_t count, float r, float g,
-                    float b);
+                    float b, double x0 = 0.0, double dx = -1.0);
 
   void updateTexture();
 };

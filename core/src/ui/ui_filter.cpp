@@ -28,35 +28,9 @@ void OscilloscopeUI::drawFilterControls(Oscilloscope &osc) {
       UI::drawComponentHeader(filter_proc, filter_proc->getName(), osc,
                           Scoped::Constants::DEFAULT_HORIZONTAL_SCALE);
 
-      auto drawSlider = [&](const char *label, float *v, float v_min,
-                            float v_max, const char *format, bool add_spacing) {
-        return this->drawSliderFloatWithInput(label, v, v_min, v_max, format,
-                                              add_spacing);
-      };
-      UI::drawVerticalControlsT(filter_proc, osc, -500.0f, 500.0f, "%.1f",
-                            drawSlider);
+      drawVerticalControls(filter_proc, osc);
 
-      int h_scale = static_cast<int>(filter_proc->getHorizontalScale());
-      int max_h_scale = static_cast<int>(osc.getMaxCaptureWidth());
-      if (drawSliderIntWithInput("Time Scale", &h_scale, 256, max_h_scale,
-                                 "%d samples", false)) {
-        filter_proc->setHorizontalScale(static_cast<size_t>(h_scale));
-        osc.forceReprocess();
-      }
-
-      int h_offset = static_cast<int>(filter_proc->getHorizontalOffset());
-      int capture_width = static_cast<int>(osc.getMaxCaptureWidth());
-      int visible_width = static_cast<int>(filter_proc->getHorizontalScale());
-      int max_offset = std::max(0, (capture_width - visible_width) / 2);
-      if (h_offset > max_offset) {
-        h_offset = max_offset;
-        filter_proc->setHorizontalOffset(static_cast<size_t>(h_offset));
-      }
-      if (drawSliderIntWithInput("Time Offset", &h_offset, -max_offset,
-                                 max_offset, "%d samples", true)) {
-        filter_proc->setHorizontalOffset(static_cast<size_t>(h_offset));
-        osc.forceReprocess();
-      }
+      drawHorizontalControls(processor, osc);
 
       int selected_type = static_cast<int>(filter_proc->getFilterType());
       const char *types[] = {"Lowpass", "Highpass", "Bandpass", "Bandstop"};

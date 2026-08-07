@@ -12,6 +12,7 @@ compile_commands.json
 # Optional editor/cache files
 .vscode/ipch/
 .cache/
+.nvim/
 
 # Internal docs
 NOTES.md

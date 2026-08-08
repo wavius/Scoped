@@ -2,29 +2,23 @@
 
 ## Data Pipeline
 
-```text
-USB Hardware ──► Oscilloscope ──► HardwareChannel (Buffer) ──► Raw Frame ──► IProcessor[] ──► Trace[] 
-                 (Hub/Trigger)                                                                     │
-                                                                                                   ▼
-                                      VirtualChannel (Math/Logic) ◄── IVirtualProcessor ◄── Trace[]
-                                                                                                   │
-                                                                                                   ▼
-                                                       Trace[] ──► UI Router ──► IntensityMap (Time Domain)
-                                                                             └──► ImPlot Line (Frequency Domain)
-```
+<div align="left">
+  <img src="img/flowchart1.png" height="600">
+  <img src="img/flowchart2.png"" height="600">
+</div>
 
 The pipeline is split into structural layers:
 
 - **Oscilloscope (Hub)** coordinates hardware, global triggers, and implements a **Two-Pass Update Engine** (updating hardware channels first, then virtual channels).
 - **IChannel / Channel** abstracts data sources. `HardwareChannel` handles buffer acquisition. `VirtualChannel` evaluates cross-channel logic. Both output `Trace` objects.
-- **Processors** act as generators, taking frames and mutating or creating new trace representations (e.g., adding an FFT Trace).
+- **Processors** act as generators, taking frames and mutating or creating new trace representations (e.g., adding an FFT Trace or filtered traces).
 - **UI** iterates over generated traces and routes them to the correct plotting subsystem based on their `Domain` metadata.
 
 ## Objects
 
 ### Oscilloscope
 
-The central core abstraction. Owns the hardware connection (`USBDevice`), the global trigger engine (`ITrigger`), and an array of abstract `IChannel` objects. Provides multi-channel synchronization by evaluating a trigger on a source channel and capturing a time-aligned frame across all channels simultaneously using a Two-Pass execution model.
+The central core abstraction. Owns the hardware connections (`USBDevice` / `UARTDevice`), the global trigger engine (`ITrigger`), and an array of abstract `IChannel` objects. Provides multi-channel synchronization by evaluating a trigger on a source channel and capturing a time-aligned frame across all channels simultaneously using a Two-Pass execution model.
 
 ### CircularBuffer\<T\>
 
@@ -39,8 +33,8 @@ Abstract base for type-agnostic trigger strategies. Operates on normalized float
 
 ### IProcessor\<HardwareT\> & IVirtualProcessor
 
-- **IProcessor** applies isolated signal processing on a raw frame within a hardware channel.
-- **IVirtualProcessor** takes data from multiple channel traces and produces new traces (e.g., Math CH1 + CH2).
+- **IProcessor** applies isolated signal processing on a raw frame within a hardware channel. Implementations include `FilterProcessor`, `FFTProcessor`, and `MeasurementProcessor`.
+- **IVirtualProcessor** takes data from multiple channel traces and produces new traces. For example, `MathProcessor` handles operations like CH1 + CH2.
 
 ### Trace
 
@@ -56,21 +50,56 @@ A single output artifact representing a plottable line or matrix. Contains metad
 
 2D hit-count grid for digital phosphor display. Accepts time-domain normalized data and rasterizes using Bresenham lines.
 
-### USBDevice
+### Hardware Interface
 
-CDC bulk-transfer interface for the iCESugar-Pro FPGA. Runs a background thread that streams raw bytes into the active hardware channel.
+Provides data acquisition from the FPGA backend.
+- **USBDevice**: CDC bulk-transfer interface running a background thread for high-speed streaming.
+- **UARTDevice**: Slower serial interface for stable data capture at lower sampling rates.
 
 ## File Map
 
+The codebase is organized into four main modules within the `core` directory:
+
+### `common/`
+Core data structures and base interfaces.
 | File | Role |
 |---|---|
 | `oscilloscope.hpp` | Central hub, Two-Pass updater & triggers |
-| `circularbuffer.hpp` | Ring buffer (header-only template) |
-| `trigger.hpp` | ITrigger + EdgeTrigger |
-| `trace.hpp` | Trace object + Domain metadata |
-| `processor.hpp` | IProcessor interface (header-only template) |
 | `channel.hpp` | IChannel, Channel\<T\>, VirtualChannel |
+| `trace.hpp` | Trace object + Domain metadata |
+| `circularbuffer.hpp` | Ring buffer (header-only template) |
+| `constants.hpp` | Global configuration constants |
+
+### `hardware/`
+Physical communication layers.
+| File | Role |
+|---|---|
+| `usb.hpp/.cpp` | High-speed USB CDC acquisition |
+| `uart.hpp/.cpp` | Serial UART acquisition |
+
+### `processing/`
+Signal processing nodes.
+| File | Role |
+|---|---|
+| `iprocessor.hpp` | Base templates for IProcessor and IVirtualProcessor |
+| `trigger.hpp` | ITrigger + EdgeTrigger |
+| `filter_processor.hpp` | IIR/FIR filter implementation |
+| `fft_processor.hpp` | Real-time Fast Fourier Transform |
+| `math_processor.hpp` | Cross-channel math operations |
+| `measurement_processor.hpp` | Waveform statistics (Vpp, Vrms, Freq) |
+| `window.hpp` | Window functions for FFT |
+
+### `ui/`
+User Interface and rendering.
+| File | Role |
+|---|---|
+| `ui.hpp/.cpp` | Main UI layout, rendering loops |
+| `ui_*.cpp` | Submodules for Channels, FFT, Math, Filters |
 | `intensitymap.hpp/.cpp` | Phosphor display rasterizer |
-| `usb.hpp/.cpp` | Hardware acquisition |
-| `ui.hpp/.cpp` | ImGui/ImPlot rendering + display ownership |
-| `main.cpp` | SDL lifecycle + main loop |
+| `ui_helpers.hpp` | ImGui helper utilities |
+| `colors.hpp` | Centralized color themes |
+
+### Root
+| File | Role |
+|---|---|
+| `main.cpp` | SDL lifecycle + main loop initialization |

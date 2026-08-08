@@ -2,10 +2,12 @@
 
 ## Data Pipeline
 
+<br>
 <div align="left">
   <img src="img/flowchart1.png" height="600">
   <img src="img/flowchart2.png"" height="600">
 </div>
+<br>
 
 The pipeline is split into structural layers:
 

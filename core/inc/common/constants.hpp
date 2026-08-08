@@ -33,7 +33,10 @@ constexpr size_t DEFAULT_HORIZONTAL_SCALE = 2048;
 constexpr int DEFAULT_HORIZONTAL_OFFSET = 0;
 
 // Processing Settings
-constexpr size_t BUFFER_SIZE = 1048576; // 1M samples (1 MB buffer per channel)
+constexpr size_t BUFFER_SIZE = 1024 * 1000; // 1 MB buffer per channel
+
+// Oscilloscope settings
+constexpr size_t CAPTURE_WIDTH = 1024 * 100; // 100 kB
 
 } // namespace Constants
 } // namespace Scoped

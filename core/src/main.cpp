@@ -143,7 +143,7 @@ int main(int, char **) {
       1024, Scoped::Constants::ADC_MIDPOINT_V);
   osc.setTrigger(std::move(trigger));
   osc.setTriggerSource(0);
-  osc.setMaxCaptureWidth(8192);
+  osc.setMaxCaptureWidth(Scoped::Constants::CAPTURE_WIDTH);
 
   ImGuiIO &io = ImGui::GetIO();
 

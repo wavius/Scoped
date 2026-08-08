@@ -1,6 +1,7 @@
 #pragma once
 
 #include <../../extern/pocketfft/pocketfft_hdronly.h>
+#include <algorithm>
 #include <cmath>
 #include <common/channel.hpp>
 #include <common/constants.hpp>
@@ -196,62 +197,191 @@ public:
   }
 
   // FFT implementation
-  void calculateFreqAndPeriod(const std::vector<float> &frame) {
-    if (frame.empty()) {
+  void calculateFreqAndPeriod(const std::vector<float>& frame) {
       m_freq = 0.0f;
       m_period = 0.0f;
-      return;
-    }
 
-    size_t frame_size = frame.size();
+      const size_t N = frame.size();
 
-    // Center the frame to remove DC offset
-    float sum = 0.0f;
-    for (float v : frame)
-      sum += v;
-    float mean = sum / frame_size;
+      if (N < 16)
+          return;
 
-    std::vector<float> centered_frame(frame_size);
-    for (size_t i = 0; i < frame_size; i++) {
-      centered_frame[i] = frame[i] - mean;
-    }
+      const float sample_rate =
+          static_cast<float>(Constants::ADC_SAMPLE_RATE_HZ);
 
-    pocketfft::shape_t shape{frame_size};
-    pocketfft::stride_t stride_float(1);
-    stride_float[0] = sizeof(float);
-    pocketfft::stride_t stride_complex(1);
-    stride_complex[0] = sizeof(std::complex<float>);
-    pocketfft::shape_t axes;
-    axes.push_back(0);
+      // Remove DC offset
+      float mean = 0.0f;
 
-    std::vector<std::complex<float>> fft_output(frame_size);
+      for (float v : frame)
+          mean += v;
 
-    pocketfft::r2c(shape, stride_float, stride_complex, axes,
-                   pocketfft::FORWARD, centered_frame.data(), fft_output.data(),
-                   2.0f / static_cast<float>(frame_size));
+      mean /= static_cast<float>(N);
 
-    size_t num_bins = frame_size / 2;
-    float max_mag = 0.0f;
-    size_t max_bin = 0;
+      std::vector<float> centered(N);
 
-    // Start from bin 1 to ignore remaining DC
-    for (size_t k = 1; k <= num_bins; k++) {
-      float mag = std::abs(fft_output[k]);
-      if (mag > max_mag) {
-        max_mag = mag;
-        max_bin = k;
+      float energy = 0.0f;
+
+      for (size_t i = 0; i < N; ++i) {
+          centered[i] = frame[i] - mean;
+          energy += centered[i] * centered[i];
       }
+
+      // No useful signal
+      if (energy <= 1e-12f)
+          return;
+
+
+      // Zero-pad to 2N
+      size_t fft_size = 1;
+
+      while (fft_size < 2 * N)
+          fft_size <<= 1;
+
+
+      // Prepare complex FFT input
+      std::vector<std::complex<float>> fft_data(fft_size);
+
+      for (size_t i = 0; i < N; ++i)
+          fft_data[i] = std::complex<float>(centered[i], 0.0f);
+
+      for (size_t i = N; i < fft_size; ++i)
+          fft_data[i] = std::complex<float>(0.0f, 0.0f);
+
+      // Forward FFT
+      pocketfft::shape_t shape{fft_size};
+
+      pocketfft::stride_t stride{
+          static_cast<std::ptrdiff_t>(sizeof(std::complex<float>))
+      };
+
+      pocketfft::shape_t axes{0};
+
+      pocketfft::c2c(
+          shape,
+          stride,
+          stride,
+          axes,
+          pocketfft::FORWARD,
+          fft_data.data(),
+          fft_data.data(),
+          1.0f
+      );
+
+      // Convert FFT into power spectrum
+      // X[k] * conj(X[k])
+      for (size_t k = 0; k < fft_size; ++k) {
+          fft_data[k] =
+              fft_data[k] * std::conj(fft_data[k]);
+      }
+
+      // Inverse FFT
+      const float inverse_scale =
+          1.0f / static_cast<float>(fft_size);
+
+      pocketfft::c2c(
+          shape,
+          stride,
+          stride,
+          axes,
+          pocketfft::BACKWARD,
+          fft_data.data(),
+          fft_data.data(),
+          inverse_scale
+      );
+
+
+      // Determine useful lag range
+      // lag = samples between repeated waveform features
+      const size_t min_lag = 2;
+      const size_t max_lag = N / 2;
+
+      if (max_lag <= min_lag)
+          return;
+
+
+      // Normalize autocorrelation
+      std::vector<float> correlation(max_lag + 1);
+
+      const float zero_lag =
+          fft_data[0].real();
+
+      if (zero_lag <= 1e-12f)
+          return;
+
+      for (size_t lag = 0; lag <= max_lag; ++lag) {
+          correlation[lag] =
+              fft_data[lag].real() / zero_lag;
+      }
+
+      // Find the first strong autocorrelation peak
+      constexpr float MIN_CORRELATION = 0.50f;
+
+      size_t best_lag = 0;
+
+      for (size_t lag = min_lag + 1;
+          lag < max_lag;
+          ++lag) {
+
+          const float previous = correlation[lag - 1];
+          const float current  = correlation[lag];
+          const float next     = correlation[lag + 1];
+
+          // Must be a local maximum
+          if (current < previous)
+              continue;
+
+          if (current < next)
+              continue;
+
+          // Must be sufficiently periodic
+          if (current >= MIN_CORRELATION) {
+              best_lag = lag;
+              break;
+          }
+      }
+
+      // No sufficiently strong periodicity
+      if (best_lag == 0)
+          return;
+
+      // Parabolic interpolation
+      float refined_lag =
+          static_cast<float>(best_lag);
+
+      const float ym1 =
+          correlation[best_lag - 1];
+
+      const float y0 =
+          correlation[best_lag];
+
+      const float yp1 =
+          correlation[best_lag + 1];
+
+      const float denominator =
+          ym1 - 2.0f * y0 + yp1;
+
+      if (std::abs(denominator) > 1e-12f) {
+
+          float delta =
+              0.5f * (ym1 - yp1) / denominator;
+
+          // Prevent pathological interpolation
+          delta = std::clamp(delta, -0.5f, 0.5f);
+
+          refined_lag += delta;
+      }
+
+      // Convert period to frequency
+      if (refined_lag <= 0.0f)
+          return;
+
+      m_period =
+          refined_lag / sample_rate;
+
+      m_freq =
+          sample_rate / refined_lag;
     }
 
-    if (max_bin > 0 && max_mag > 0.01f) {
-      m_freq = static_cast<float>(max_bin) * Constants::ADC_SAMPLE_RATE_HZ /
-               static_cast<float>(frame_size);
-      m_period = 1.0f / m_freq;
-    } else {
-      m_freq = 0.0f;
-      m_period = 0.0f;
-    }
-  }
-};
+  };
 
 } // namespace Scoped

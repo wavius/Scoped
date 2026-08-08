@@ -15,6 +15,7 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 - **Trigger:**
   - Rising and falling edge triggering.
   - Source and level selection.
+  - Auto (50 ms) and normal (wait for edge) trigger modes
 
 - **FFT:**
   - Real-time Fast Fourier Transform powered by `pocketfft`.

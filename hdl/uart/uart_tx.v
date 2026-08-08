@@ -1,4 +1,5 @@
 // 8N1 UART Module, transmit only
+// 13 cycles per byte
 
 module uart_tx_8n1 (
     clk,        // input clock

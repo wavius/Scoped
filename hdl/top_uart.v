@@ -23,11 +23,11 @@ module top (
         .rst_o(rst)
     );
 
-    /* ADC decimator (capture 1 in 100 samples to get 250 kHz from 25 MHz) */
+    /* ADC decimator (capture 1 in 500 samples to get 50 kHz from 25 MHz) */
     reg [11:0] decimate_cnt = 12'd0;
     reg capture_en = 1'b0;
     always @(posedge clk_25m) begin
-        if (decimate_cnt == 12'd99) begin
+        if (decimate_cnt == 12'd499) begin
             decimate_cnt <= 12'd0;
             capture_en <= 1'b1;
         end else begin

@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <termios.h>
+#include <common/constants.hpp>
 #include <hardware/uart.hpp>
 
 namespace Scoped {
@@ -29,8 +30,8 @@ bool UARTDevice::connect() {
   struct termios options;
   tcgetattr(m_fd, &options);
 
-  // Set baud rate (500000)
-  speed_t speed = B500000;
+  // Set baud rate
+  speed_t speed = Constants::UART_BAUD_RATE;
   cfsetispeed(&options, speed);
   cfsetospeed(&options, speed);
 

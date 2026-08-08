@@ -23,11 +23,11 @@ module top (
         .rst_o(rst)
     );
 
-    /* ADC decimator (capture 1 in 2500 samples to get 10 kHz from 25 MHz) */
+    /* ADC decimator (capture 1 in 100 samples to get 250 kHz from 25 MHz) */
     reg [11:0] decimate_cnt = 12'd0;
     reg capture_en = 1'b0;
     always @(posedge clk_25m) begin
-        if (decimate_cnt == 12'd2499) begin
+        if (decimate_cnt == 12'd99) begin
             decimate_cnt <= 12'd0;
             capture_en <= 1'b1;
         end else begin
@@ -36,9 +36,9 @@ module top (
         end
     end
 
-    /* UART clock generation (460800 Baud) */
+    /* UART clock generation (1 MBaud) */
     parameter clk_freq = 25000000;
-    parameter baudrate = 500000;
+    parameter baudrate = 1000000;
     reg clk_uart = 0;
     reg [31:0] cntr_uart = 32'b0;
     parameter period_uart = (clk_freq / 2 / baudrate);

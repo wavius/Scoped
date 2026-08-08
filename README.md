@@ -33,8 +33,9 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 - **Measurements:**
   - Vpp, Vrms, Vavg, Vmin, Vmax, Frequency, and Period.
 
-- **Hardware Integration:**
-  - Connection to FPGA frontend over USB or UART.
+- **Acquisition:**
+  - High-speed ACD to FPGA hardware backend.
+  - Connection to scope software frontend over USB or UART.
 
 ## Building from Source
 
@@ -55,17 +56,19 @@ make all
 make run
 ```
 
-## Next Steps
-
-The software side is mostly complete and fully functional with simulated inputs. The FPGA-based hardware frontend needs to be designed and built.
-
-Future software features are described in docs/TODO.md.
-
 ## Hardware Specs
+
+The following setup was used for testing. The USB PHY and ADC modules are connected to the iCESugar-Pro FPGA board using 20 cm DuPont jumper wires. Shorter wires would've been preferred as I was having signal integrity issues and was constantly dropping the USB 2.0 HS connection.
+
+<br>
+<div align="left">
+  <img src="docs/img/hardware_on.jpg" alt="Hardware setup" width="800px">
+</div>
+<br>
 
 ### ADC
 
-AD9226
+AD9226 module
 - 65M samplers per second (max)
 - 12-bit resolution
 
@@ -75,10 +78,11 @@ AD9226
 </div>
 <br>
 
+
 ### FPGA
 
-Lattice ECP5
-- Muse LAB iCESugar-Pro v1.3
+Muse LAB iCESugar-Pro v1.3
+- Lattice ECP5
 
 <br>
 <div align="left">
@@ -88,10 +92,18 @@ Lattice ECP5
 
 ### USB PHY
 
-USB3300
+USB3300 USB High-Speed PHY Board
+- USB 2.0 High-Speed (480 Mbps)
+- ULPI Interface
 
 <br>
 <div align="left">
-  <img src="docs/img/boards/usb3300.jpg" alt="iCESugar-Pro v1.3" width="600px">
+  <img src="docs/img/boards/usb3300.jpg" alt="USB3300" width="600px">
 </div>
 <br>
+
+## Mext Steps
+
+A custom PCB needs to be made for the hardware backend to fix the signal integrity issues with the USB PHY. This will allow for full-speed operation with a much faster ADC acquisition rate as samples can be sent to the software much faster over USB 2.0 HS compared to UART.
+
+Future software features are described in docs/TODO.md.

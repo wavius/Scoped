@@ -55,7 +55,7 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 ### Trigger:
   - Rising and falling edge triggering.
   - Source and level selection.
-  - Auto (50 ms) and normal (wait for edge) trigger modes
+  - Auto (50 ms) and normal (wait for edge) trigger modes.
 
 <br>
 <div align="left">
@@ -134,7 +134,7 @@ For an in-depth breakdown of the data pipeline and the codebase file map, please
 
 ## Hardware Specs
 
-The Scoped hardware consists of an FPGA board, ADC module, and USB PHY. The USB PHY and ADC modules were connected to the iCESugar-Pro FPGA board using 20 cm DuPont jumper wires.
+Scoped's hardware consists of an FPGA board, ADC module, and USB PHY. The USB PHY and ADC modules were connected to the iCESugar-Pro FPGA board using 20 cm DuPont jumper wires.
 
 Either the UART or USB 2.0 port can be used to connect to the software: 
 - **UART:** Runs at 1 MBaud, supporting an ADC acquisition rate of 50 kHz; it is slower but more stable.

@@ -120,8 +120,8 @@ Scoped uses a modular, two-pass data pipeline separated into core processing lay
 
 <br>
 <div align="left">
-  <img src="docs/img/flowchart1.png" height="400">
-  <img src="docs/img/flowchart2.png"" height="400">
+  <img src="docs/img/flowchart1.png" height="500">
+  <img src="docs/img/flowchart2.png"" height="500">
 </div>
 <br>
 

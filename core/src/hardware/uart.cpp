@@ -1,15 +1,15 @@
 #include <chrono>
+#include <common/constants.hpp>
 #include <iostream>
 #include <thread>
 #include <fcntl.h>
 #include <unistd.h>
 #include <termios.h>
-#include <common/constants.hpp>
 #include <hardware/uart.hpp>
 
 namespace Scoped {
 
-UARTDevice::UARTDevice(const std::string& port, int baudrate)
+UARTDevice::UARTDevice(const std::string& port, speed_t baudrate)
   : m_port(port), m_baudrate(baudrate) {
 }
 
@@ -18,7 +18,7 @@ UARTDevice::~UARTDevice() {
 }
 
 bool UARTDevice::connect() {
-  std::cout << "[UART] Attempting connection to " << m_port << " at " << m_baudrate << " baud...\n";
+  std::cout << "[UART] Attempting connection to " << m_port << " at " << static_cast<int>(m_baudrate) << " baud...\n";
 
   m_fd = ::open(m_port.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
   if (m_fd < 0) {
@@ -31,7 +31,7 @@ bool UARTDevice::connect() {
   tcgetattr(m_fd, &options);
 
   // Set baud rate
-  speed_t speed = Constants::UART_BAUD_RATE;
+  speed_t speed = m_baudrate;
   cfsetispeed(&options, speed);
   cfsetospeed(&options, speed);
 

@@ -2,6 +2,8 @@
 
 #include <atomic>
 #include <common/channel.hpp>
+#include <common/constants.hpp>
+#include <termios.h>
 #include <thread>
 #include <string>
 
@@ -14,13 +16,13 @@ private:
   std::thread m_stream_thread;
   std::atomic<bool> m_is_streaming{false};
   std::string m_port;
-  int m_baudrate;
+  speed_t m_baudrate;
 
   void streamLoop(IChannel *channel);
 
 public:
   // Lifecycle
-  UARTDevice(const std::string& port = "/dev/ttyACM0", int baudrate = 115200);
+  UARTDevice(const std::string& port = "/dev/ttyACM0", speed_t baudrate = Constants::UART_BAUD_RATE);
   ~UARTDevice();
 
   // Accessors

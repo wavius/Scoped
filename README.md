@@ -20,7 +20,7 @@ The UART connection was used instead of USB 2.0 because the USB connection repea
 </div>
 <br>
 
-**Note:** Both the signal generator and ADC input had 50 Ω impedance, resulting in the measured voltage being ≈half the expected value.
+**Note:** Both the signal generator and ADC input have 50 Ω impedance, resulting in the measured voltage being ≈half the expected value.
 
 ## Demo
 

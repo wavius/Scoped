@@ -57,7 +57,7 @@ flowchart TD
     VC -. reads raw frames .-> HC
 
     subgraph Proc ["Processors"]
-        IP[IProcessor<br/>(FFT)]
+        IP["IProcessor<br/>(FFT)"]
         VP[IVirtualProcessor<br/>(Math, Filter, Measurement)]
     end
 

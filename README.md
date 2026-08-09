@@ -133,7 +133,7 @@ flowchart LR
     TR --> UI["UI Rendering<br/>(Plots, Phosphor)"]
 ```
 
-The data pipeline flows from the FPGA backend through the oscilloscope hub, channels, and processors to generate traces that the UI renders. The complete flowchart with detailed layer breakdowns is in the [Architecture Documentation](docs/ARCHITECTURE.md).
+The data pipeline flows from the FPGA backend through the oscilloscope hub, channels, and processors to generate traces that the UI renders.
 
 - **Oscilloscope:** Manages hardware interfaces (USB/UART), coordinates global triggers, and drives the multi-channel synchronization engine.
 - **Channels:** `HardwareChannel` handles lock-free buffer acquisition, while `VirtualChannel` processes cross-channel logic. Both yield standard `Trace` objects.

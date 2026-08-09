@@ -91,7 +91,7 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 
 <br>
 <div align="left">
-  <img src="docs/gif/channel.gif" alt="Filter" width="800px">
+  <img src="docs/gif/filter.gif" alt="Filter" width="800px">
 </div>
 <br>
 

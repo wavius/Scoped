@@ -129,7 +129,7 @@ flowchart LR
     HW[FPGA Backend] -->|USB / UART| OSC[Oscilloscope Hub]
     OSC --> CH["Channels<br/>(Hardware, Virtual)"]
     CH --> PR["Processors<br/>(Filter, FFT, Math, Measure)"]
-    PR --> TR["Traces<br/>(Time, Frequency)""]
+    PR --> TR["Traces<br/>(Time, Frequency)"]
     TR --> UI["UI Rendering<br/>(Plots, Phosphor)"]
 ```
 

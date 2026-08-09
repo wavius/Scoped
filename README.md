@@ -1,6 +1,6 @@
 # Scoped
 
-Scoped is a C++ software oscilloscope with an FPGA frontend.
+Scoped is a C++ software oscilloscope with a field-programmable gate array (FPGA) frontend.
 
 <br>
 <div align="left">

@@ -24,7 +24,7 @@ The UART connection was used instead of USB 2.0 because the USB connection repea
 
 ## Demo
 
-Scoped accurately displays signals of varying types, frequencies, amplitudes, and DC offsets using an input from my signal generator
+Scoped accurately displays signals of varying types, frequencies, amplitudes, and DC offsets using an input from my signal generator.
 
 <table>
   <tr>

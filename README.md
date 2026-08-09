@@ -37,14 +37,14 @@ Scoped accurately displays signals of varying types, frequencies, amplitudes, an
   </tr>
 </table>
 
-
 ## Features
 
 Scoped is designed with a modern, modular user interface featuring fully dockable tabs.
 
-### Display:
-  - Hardware-accelerated digital phosphor rendering.
-  - Channel controls for vertical/horizontal scale and offset.
+### Display
+
+- Hardware-accelerated digital phosphor rendering.
+- Channel controls for vertical/horizontal scale and offset.
 
 <br>
 <div align="left">
@@ -52,10 +52,11 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 </div>
 <br>
 
-### Trigger:
-  - Rising and falling edge triggering.
-  - Source and level selection.
-  - Auto (50 ms) and normal (wait for edge) trigger modes.
+### Trigger
+
+- Rising and falling edge triggering.
+- Source and level selection.
+- Auto (50 ms) and normal (wait for edge) trigger modes.
 
 <br>
 <div align="left">
@@ -63,10 +64,11 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 </div>
 <br>
 
-### FFT:
-  - Real-time Fast Fourier Transform powered by `pocketfft`.
-  - **Window functions:** Rectangular, Hanning, Hamming, Blackman-Harris, Flat Top.
-  - Linear or Decibel (dB) scale.
+### FFT
+
+- Real-time Fast Fourier Transform powered by `pocketfft`.
+- **Window functions:** Rectangular, Hanning, Hamming, Blackman-Harris, Flat Top.
+- Linear or Decibel (dB) scale.
 
 <br>
 <div align="left">
@@ -74,8 +76,9 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 </div>
 <br>
 
-### Math:
-  - Addition, Subtraction, Multiplication, Inversion, Integration, Differentiation.
+### Math
+
+- Addition, Subtraction, Multiplication, Inversion, Integration, Differentiation.
 
 <br>
 <div align="left">
@@ -83,11 +86,12 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 </div>
 <br>
 
-### Filters:
-  - Cascaded dual-biquad filter architecture.
-  - **Responses:** Lowpass, Highpass, Bandpass, Bandstop.
-  - **Topologies:** Butterworth, Bessel, Chebyshev.
-  - Frequency response graph.
+### Filters
+
+- Cascaded dual-biquad filter architecture.
+- **Responses:** Lowpass, Highpass, Bandpass, Bandstop.
+- **Topologies:** Butterworth, Bessel, Chebyshev.
+- Frequency response graph.
 
 <br>
 <div align="left">
@@ -95,8 +99,9 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 </div>
 <br>
 
-### Measurements:
-  - Vpp, Vrms, Vavg, Vmin, Vmax, Frequency, and Period.
+### Measurements
+
+- Vpp, Vrms, Vavg, Vmin, Vmax, Frequency, and Period.
 
 <br>
 <div align="left">
@@ -104,9 +109,10 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 </div>
 <br>
 
-### Hardware:
-  - High-speed ACD to FPGA hardware backend.
-  - Connection to scope software frontend over USB or UART.
+### Hardware
+
+- High-speed ACD to FPGA hardware backend.
+- Connection to scope software frontend over USB or UART.
 
 <br>
 <div align="left">
@@ -119,61 +125,15 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 Scoped uses a modular, two-pass data pipeline separated into core processing layers:
 
 ```mermaid
-flowchart TD
-    HW[FPGA Backend]
-
-    subgraph Interface ["Hardware Interface"]
-        USB[USBDevice<br/>CDC bulk transfer, bg thread]
-        UART[UARTDevice<br/>low-rate serial]
-    end
-
-    HW --> USB & UART
-
-    subgraph Core ["Oscilloscope (Hub)"]
-        OSC[Oscilloscope<br/>Two-Pass Update Engine]
-        TRG[ITrigger / EdgeTrigger]
-        CB[CircularBuffer]
-        OSC --> TRG
-        OSC --> CB
-    end
-
-    USB & UART --> OSC
-
-    subgraph Channels ["IChannel / Channel"]
-        HC[HardwareChannel<br/>owns buffer + processor chain]
-        VC[VirtualChannel<br/>queries other traces]
-    end
-
-    OSC --> HC
-    CB -. samples .-> HC
-
-    subgraph Proc ["Processors (generators)"]
-        IP[IProcessor<br/>Filter / FFT / Measurement]
-        VP[IVirtualProcessor<br/>Math CH1+CH2]
-    end
-
-    HC --> IP
-    HC --> VC
-    VC --> VP
-
-    subgraph Traces ["Trace Objects"]
-        TR[Trace<br/>Domain: Time / Frequency]
-    end
-
-    IP --> TR
-    VP --> TR
-    VC --> TR
-    HC --> TR
-
-    subgraph Render ["UI Rendering"]
-        IM[IntensityMap<br/>phosphor rasterizer]
-        PLT[Plot subsystems<br/>routed by Domain]
-    end
-
-    TR --> PLT
-    TR --> IM
-    PLT --> IM
+flowchart LR
+    HW[FPGA Backend] -->|USB / UART| OSC[Oscilloscope Hub]
+    OSC --> CH[Channels<br/>Hardware + Virtual]
+    CH --> PR[Processors<br/>Filter / FFT / Math / Measure]
+    PR --> TR[Traces<br/>Time / Frequency]
+    TR --> UI[UI Rendering<br/>Plots + Phosphor]
 ```
+
+The data pipeline flows from the FPGA backend through the oscilloscope hub, channels, and processors to generate traces that the UI renders. The complete flowchart with detailed layer breakdowns is in the [Architecture Documentation](docs/ARCHITECTURE.md).
 
 - **Oscilloscope:** Manages hardware interfaces (USB/UART), coordinates global triggers, and drives the multi-channel synchronization engine.
 - **Channels:** `HardwareChannel` handles lock-free buffer acquisition, while `VirtualChannel` processes cross-channel logic. Both yield standard `Trace` objects.
@@ -186,9 +146,10 @@ For an in-depth breakdown of the data pipeline and the codebase file map, please
 
 Scoped's hardware consists of an FPGA board, ADC module, and USB PHY. The USB PHY and ADC modules were connected to the iCESugar-Pro FPGA board using 20 cm DuPont jumper wires.
 
-Either the UART or USB 2.0 port can be used to connect to the software: 
+Either the UART or USB 2.0 port can be used to connect to the software:
+
 - **UART:** Runs at 1 MBaud, supporting an ADC acquisition rate of 50 kHz; it is slower but more stable.
-- **USB 2.0:** Runs at up to 480 Mbps, supporting an ADC acquisition rate of 25 MHz in the current implemenation; it provides much faster data transfer and acquisition rates, but the high-speed signals are more prone to signal integrity issues.
+- **USB 2.0:** Runs at up to 480 Mbps, supporting an ADC acquisition rate of 25 MHz in the current implemention; it provides much faster data transfer and acquisition rates, but the high-speed signals are more prone to signal integrity issues.
 
 HDL implementations are provided for both configurations and must be synthesized separately.
 
@@ -201,6 +162,7 @@ HDL implementations are provided for both configurations and must be synthesized
 ### ADC
 
 AD9226 module
+
 - 65M samples per second (max)
 - 12-bit resolution
 
@@ -210,10 +172,10 @@ AD9226 module
 </div>
 <br>
 
-
 ### FPGA
 
 Muse LAB iCESugar-Pro v1.3
+
 - Lattice ECP5
 
 <br>
@@ -225,6 +187,7 @@ Muse LAB iCESugar-Pro v1.3
 ### USB PHY
 
 USB3300 USB High-Speed PHY Board
+
 - USB 2.0 High-Speed (480 Mbps)
 - ULPI Interface
 
@@ -258,6 +221,7 @@ make run
 ### Hardware (HDL)
 
 To build the FPGA bitstream, you will need the following tools installed:
+
 - [Yosys](https://github.com/YosysHQ/yosys) (Synthesis)
 - [nextpnr-ecp5](https://github.com/YosysHQ/nextpnr) (Place and Route)
 - [Project Trellis / ecppack](https://github.com/YosysHQ/prjtrellis) (Bitstream generation)

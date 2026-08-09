@@ -1,6 +1,30 @@
 # Scoped Architecture
 
+Scoped is a C++ software oscilloscope backed by an FPGA frontend. The software is built around a modular, two-pass data pipeline. This document mirrors the summary in the [README](../README.md) `Architecture` section, then expands on each layer, the core objects, and the codebase file map.
+
+## Overview
+
+At a high level, data flows through five stages: the hardware captures samples, the hub drives synchronized frames, channels own the acquisition and processing, processors generate traces, and the UI renders them.
+
+```mermaid
+flowchart LR
+    HW[FPGA Backend] -->|USB / UART| OSC[Oscilloscope Hub]
+    OSC --> CH[Channels<br/>Hardware + Virtual]
+    CH --> PR[Processors<br/>Filter / FFT / Math / Measure]
+    PR --> TR[Traces<br/>Time / Frequency]
+    TR --> UI[UI Rendering<br/>Plots + Phosphor]
+```
+
+The pipeline is split into four layers:
+
+- **Oscilloscope:** Manages hardware interfaces (USB/UART), coordinates global triggers, and drives the multi-channel synchronization engine.
+- **Channels:** `Channel<HardwareT>` handles lock-free buffer acquisition, while `VirtualChannel` processes cross-channel logic. Both yield standard `Trace` objects.
+- **Processors:** Expandable modules (FFT, Filters, Math, Measurements) that take raw frames and mutate or generate new trace representations.
+- **UI:** Iterates over generated traces and maps them to the appropriate rendering subsystems (digital phosphor map or standard plots) based on their domain metadata.
+
 ## Data Pipeline
+
+The detailed data flow shows where each stage lives and how the layers connect:
 
 ```mermaid
 flowchart TD
@@ -24,20 +48,20 @@ flowchart TD
     USB & UART --> OSC
 
     subgraph Channels ["IChannel / Channel"]
-        HC[HardwareChannel<br/>owns buffer + processor chain]
-        VC[VirtualChannel<br/>queries other traces]
+        HC[Channel&lt;HardwareT&gt;<br/>owns buffer + IProcessor chain]
+        VC[VirtualChannel<br/>owns IVirtualProcessor chain]
     end
 
     OSC --> HC
     CB -. samples .-> HC
+    VC -. reads raw frames .-> HC
 
-    subgraph Proc ["Processors (generators)"]
-        IP[IProcessor<br/>Filter / FFT / Measurement]
-        VP[IVirtualProcessor<br/>Math CH1+CH2]
+    subgraph Proc ["Processors"]
+        IP[IProcessor<br/>FFT]
+        VP[IVirtualProcessor<br/>Math / Filter / Measurement]
     end
 
     HC --> IP
-    HC --> VC
     VC --> VP
 
     subgraph Traces ["Trace Objects"]
@@ -46,7 +70,6 @@ flowchart TD
 
     IP --> TR
     VP --> TR
-    VC --> TR
     HC --> TR
 
     subgraph Render ["UI Rendering"]
@@ -59,11 +82,11 @@ flowchart TD
     PLT --> IM
 ```
 
-The pipeline is split into structural layers:
+The stages in detail:
 
 - **Oscilloscope (Hub)** coordinates hardware, global triggers, and implements a **Two-Pass Update Engine** (updating hardware channels first, then virtual channels).
-- **IChannel / Channel** abstracts data sources. `HardwareChannel` handles buffer acquisition. `VirtualChannel` evaluates cross-channel logic. Both output `Trace` objects.
-- **Processors** act as generators, taking frames and mutating or creating new trace representations (e.g., adding an FFT Trace or filtered traces).
+- **IChannel / Channel** abstracts data sources. `Channel<HardwareT>` owns a `CircularBuffer` and a chain of `IProcessor`s. `VirtualChannel` evaluates cross-channel logic via `IVirtualProcessor`s. Both output `Trace` objects.
+- **Processors** act as generators. `IProcessor`s take a single channel's raw frame and create or mutate traces (e.g., an FFT Trace); `IVirtualProcessor`s combine multiple channel traces (e.g., math or filtered traces).
 - **UI** iterates over generated traces and routes them to the correct plotting subsystem based on their `Domain` metadata.
 
 ## Objects
@@ -83,10 +106,12 @@ Abstract base for type-agnostic trigger strategies. Operates on normalized float
 - Exposes `getUIParameters()` and `getTriggerLevels()` so the UI can dynamically generate controls (sliders, combos) and draw trigger lines.
 - **EdgeTrigger** — Fires when a sample crosses a threshold with hysteresis. Supports rising/falling edge selection.
 
-### IProcessor\<HardwareT\> & IVirtualProcessor
+### IProcessor & IVirtualProcessor
 
-- **IProcessor** applies isolated signal processing on a raw frame within a hardware channel. Implementations include `FilterProcessor`, `FFTProcessor`, and `MeasurementProcessor`.
-- **IVirtualProcessor** takes data from multiple channel traces and produces new traces. For example, `MathProcessor` handles operations like CH1 + CH2.
+Both processor base classes derive from `IProcessorControl`, which exposes the uniform UI controls (enable state, scale/offset, color) shared by all processing modules.
+
+- **IProcessor** applies isolated signal processing on a single channel's raw frame. Its only implementation is `FFTProcessor`.
+- **IVirtualProcessor** takes data from multiple channel traces and produces new traces. Implementations include `MathProcessor` (cross-channel math), `FilterProcessor`, and `MeasurementProcessor`.
 
 ### Trace
 
@@ -95,8 +120,8 @@ A single output artifact representing a plottable line or matrix. Contains metad
 ### IChannel, Channel\<HardwareT\> & VirtualChannel
 
 - **IChannel**: Type-agnostic interface exposing normalized samples and output traces.
-- **Channel\<HardwareT\>**: A concrete hardware pipeline owning a buffer and processor chain.
-- **VirtualChannel**: A channel without a buffer that queries traces from other source channels and applies `IVirtualProcessor`s.
+- **Channel\<HardwareT\>**: A concrete hardware pipeline owning a `CircularBuffer` and a chain of `IProcessor`s.
+- **VirtualChannel**: A channel without a buffer that reads raw frames from source `IChannel`s and applies `IVirtualProcessor`s.
 
 ### IntensityMap
 
@@ -119,7 +144,7 @@ Core data structures and base interfaces.
 
 | File | Role |
 |---|---|
-| `oscilloscope.hpp` | Central hub, Two-Pass updater & triggers |
+| `oscilloscope.hpp` | Central hub & Two-Pass updater |
 | `channel.hpp` | IChannel, Channel\<T\>, VirtualChannel |
 | `trace.hpp` | Trace object + Domain metadata |
 | `circularbuffer.hpp` | Ring buffer (header-only template) |
@@ -140,9 +165,9 @@ Signal processing nodes.
 
 | File | Role |
 |---|---|
-| `iprocessor.hpp` | Base templates for IProcessor and IVirtualProcessor |
+| `iprocessor.hpp` | Base classes IProcessorControl, IProcessor, IVirtualProcessor |
 | `trigger.hpp` | ITrigger + EdgeTrigger |
-| `filter_processor.hpp` | IIR/FIR filter implementation |
+| `filter_processor.hpp` | Cascaded dual-biquad IIR filter |
 | `fft_processor.hpp` | Real-time Fast Fourier Transform |
 | `math_processor.hpp` | Cross-channel math operations |
 | `measurement_processor.hpp` | Waveform statistics (Vpp, Vrms, Freq) |

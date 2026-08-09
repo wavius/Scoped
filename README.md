@@ -1,12 +1,12 @@
+<div align="center">
+
+<img src="docs/img/scoped_logo.png" alt="Cat" height="200">
+
 # Scoped
 
-Scoped is a C++ software oscilloscope with a field-programmable gate array (FPGA) frontend.
+C++ software oscilloscope with a field-programmable gate array (FPGA) frontend.
 
-<br>
-<div align="left">
-  <img src="docs/img/scoped_gui.png" alt="Preview" width="800px">
 </div>
-<br>
 
 ## Setup
 
@@ -36,6 +36,14 @@ Scoped accurately displays signals of varying types, frequencies, amplitudes, an
     <td><img src="docs/gif/offset.gif" alt="DC offset" width="400px"></td>
   </tr>
 </table>
+<br>
+
+The next image is a clearer UI preview.
+
+<div align="left">
+  <img src="docs/img/scoped_gui.png" alt="Preview" width="800px">
+</div>
+<br>
 
 ## Features
 

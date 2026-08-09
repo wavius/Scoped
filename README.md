@@ -128,7 +128,7 @@ Scoped uses a modular, two-pass data pipeline separated into core processing lay
 flowchart LR
     HW[FPGA Backend] -->|USB / UART| OSC[Oscilloscope Hub]
     OSC --> CH[Channels<br/>Hardware + Virtual]
-    CH --> PR[Processors<br/>(Filter, FFT, Math, Measure)]
+    CH --> PR["Processors<br/>(Filter, FFT, Math, Measure)"]
     PR --> TR[Traces<br/>Time / Frequency]
     TR --> UI[UI Rendering<br/>Plots + Phosphor]
 ```

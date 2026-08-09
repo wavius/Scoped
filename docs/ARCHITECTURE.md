@@ -9,10 +9,10 @@ At a high level, data flows through five stages: the hardware captures samples, 
 ```mermaid
 flowchart LR
     HW[FPGA Backend] -->|USB / UART| OSC[Oscilloscope Hub]
-    OSC --> CH[Channels<br/>Hardware + Virtual]
-    CH --> PR[Processors<br/>Filter / FFT / Math / Measure]
-    PR --> TR[Traces<br/>Time / Frequency]
-    TR --> UI[UI Rendering<br/>Plots + Phosphor]
+    OSC --> CH["Channels<br/>(Hardware, Virtual)"]
+    CH --> PR["Processors<br/>(Filter, FFT, Math, Measure)"]
+    PR --> TR["Traces<br/>(Time, Frequency)"]
+    TR --> UI["UI Rendering<br/>(Plots, Phosphor)"]
 ```
 
 The pipeline is split into four layers:
@@ -58,7 +58,7 @@ flowchart TD
 
     subgraph Proc ["Processors"]
         IP["IProcessor<br/>(FFT)"]
-        VP[IVirtualProcessor<br/>(Math, Filter, Measurement)]
+        VP["IVirtualProcessor<br/>(Math, Filter, Measurement)"]
     end
 
     HC --> IP

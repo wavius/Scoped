@@ -127,10 +127,10 @@ Scoped uses a modular, two-pass data pipeline separated into core processing lay
 ```mermaid
 flowchart LR
     HW[FPGA Backend] -->|USB / UART| OSC[Oscilloscope Hub]
-    OSC --> CH[Channels<br/>Hardware + Virtual]
+    OSC --> CH["Channels<br/>(Hardware, Virtual)"]
     CH --> PR["Processors<br/>(Filter, FFT, Math, Measure)"]
-    PR --> TR[Traces<br/>Time / Frequency]
-    TR --> UI[UI Rendering<br/>Plots + Phosphor]
+    PR --> TR["Traces<br/>(Time, Frequency)""]
+    TR --> UI["UI Rendering<br/>(Plots, Phosphor)"]
 ```
 
 The data pipeline flows from the FPGA backend through the oscilloscope hub, channels, and processors to generate traces that the UI renders. The complete flowchart with detailed layer breakdowns is in the [Architecture Documentation](docs/ARCHITECTURE.md).

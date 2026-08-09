@@ -118,12 +118,62 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 
 Scoped uses a modular, two-pass data pipeline separated into core processing layers:
 
-<br>
-<div align="left">
-  <img src="docs/img/flowchart1.png" height="515">
-  <img src="docs/img/flowchart2.png"" height="515">
-</div>
-<br>
+```mermaid
+flowchart TD
+    HW[FPGA Backend]
+
+    subgraph Interface ["Hardware Interface"]
+        USB[USBDevice<br/>CDC bulk transfer, bg thread]
+        UART[UARTDevice<br/>low-rate serial]
+    end
+
+    HW --> USB & UART
+
+    subgraph Core ["Oscilloscope (Hub)"]
+        OSC[Oscilloscope<br/>Two-Pass Update Engine]
+        TRG[ITrigger / EdgeTrigger]
+        CB[CircularBuffer]
+        OSC --> TRG
+        OSC --> CB
+    end
+
+    USB & UART --> OSC
+
+    subgraph Channels ["IChannel / Channel"]
+        HC[HardwareChannel<br/>owns buffer + processor chain]
+        VC[VirtualChannel<br/>queries other traces]
+    end
+
+    OSC --> HC
+    CB -. samples .-> HC
+
+    subgraph Proc ["Processors (generators)"]
+        IP[IProcessor<br/>Filter / FFT / Measurement]
+        VP[IVirtualProcessor<br/>Math CH1+CH2]
+    end
+
+    HC --> IP
+    HC --> VC
+    VC --> VP
+
+    subgraph Traces ["Trace Objects"]
+        TR[Trace<br/>Domain: Time / Frequency]
+    end
+
+    IP --> TR
+    VP --> TR
+    VC --> TR
+    HC --> TR
+
+    subgraph Render ["UI Rendering"]
+        IM[IntensityMap<br/>phosphor rasterizer]
+        PLT[Plot subsystems<br/>routed by Domain]
+    end
+
+    TR --> PLT
+    TR --> IM
+    PLT --> IM
+```
 
 - **Oscilloscope:** Manages hardware interfaces (USB/UART), coordinates global triggers, and drives the multi-channel synchronization engine.
 - **Channels:** `HardwareChannel` handles lock-free buffer acquisition, while `VirtualChannel` processes cross-channel logic. Both yield standard `Trace` objects.

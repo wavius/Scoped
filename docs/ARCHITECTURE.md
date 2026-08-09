@@ -2,12 +2,62 @@
 
 ## Data Pipeline
 
-<br>
-<div align="left">
-  <img src="img/flowchart1.png" height="600">
-  <img src="img/flowchart2.png"" height="600">
-</div>
-<br>
+```mermaid
+flowchart TD
+    HW[FPGA Backend]
+
+    subgraph Interface ["Hardware Interface"]
+        USB[USBDevice<br/>CDC bulk transfer, bg thread]
+        UART[UARTDevice<br/>low-rate serial]
+    end
+
+    HW --> USB & UART
+
+    subgraph Core ["Oscilloscope (Hub)"]
+        OSC[Oscilloscope<br/>Two-Pass Update Engine]
+        TRG[ITrigger / EdgeTrigger]
+        CB[CircularBuffer]
+        OSC --> TRG
+        OSC --> CB
+    end
+
+    USB & UART --> OSC
+
+    subgraph Channels ["IChannel / Channel"]
+        HC[HardwareChannel<br/>owns buffer + processor chain]
+        VC[VirtualChannel<br/>queries other traces]
+    end
+
+    OSC --> HC
+    CB -. samples .-> HC
+
+    subgraph Proc ["Processors (generators)"]
+        IP[IProcessor<br/>Filter / FFT / Measurement]
+        VP[IVirtualProcessor<br/>Math CH1+CH2]
+    end
+
+    HC --> IP
+    HC --> VC
+    VC --> VP
+
+    subgraph Traces ["Trace Objects"]
+        TR[Trace<br/>Domain: Time / Frequency]
+    end
+
+    IP --> TR
+    VP --> TR
+    VC --> TR
+    HC --> TR
+
+    subgraph Render ["UI Rendering"]
+        IM[IntensityMap<br/>phosphor rasterizer]
+        PLT[Plot subsystems<br/>routed by Domain]
+    end
+
+    TR --> PLT
+    TR --> IM
+    PLT --> IM
+```
 
 The pipeline is split into structural layers:
 
@@ -55,6 +105,7 @@ A single output artifact representing a plottable line or matrix. Contains metad
 ### Hardware Interface
 
 Provides data acquisition from the FPGA backend.
+
 - **USBDevice**: CDC bulk-transfer interface running a background thread for high-speed streaming.
 - **UARTDevice**: Slower serial interface for stable data capture at lower sampling rates.
 
@@ -63,7 +114,9 @@ Provides data acquisition from the FPGA backend.
 The codebase is organized into four main modules within the `core` directory:
 
 ### `common/`
+
 Core data structures and base interfaces.
+
 | File | Role |
 |---|---|
 | `oscilloscope.hpp` | Central hub, Two-Pass updater & triggers |
@@ -73,14 +126,18 @@ Core data structures and base interfaces.
 | `constants.hpp` | Global configuration constants |
 
 ### `hardware/`
+
 Physical communication layers.
+
 | File | Role |
 |---|---|
 | `usb.hpp/.cpp` | High-speed USB CDC acquisition |
 | `uart.hpp/.cpp` | Serial UART acquisition |
 
 ### `processing/`
+
 Signal processing nodes.
+
 | File | Role |
 |---|---|
 | `iprocessor.hpp` | Base templates for IProcessor and IVirtualProcessor |
@@ -92,7 +149,9 @@ Signal processing nodes.
 | `window.hpp` | Window functions for FFT |
 
 ### `ui/`
+
 User Interface and rendering.
+
 | File | Role |
 |---|---|
 | `ui.hpp/.cpp` | Main UI layout, rendering loops |
@@ -102,6 +161,7 @@ User Interface and rendering.
 | `colors.hpp` | Centralized color themes |
 
 ### Root
+
 | File | Role |
 |---|---|
 | `main.cpp` | SDL lifecycle + main loop initialization |

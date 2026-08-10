@@ -28,12 +28,12 @@ Scoped accurately displays signals of varying types, frequencies, amplitudes, an
 
 <table>
   <tr>
-    <td><img src="docs/gif/type.gif" alt="Type" width="400px"></td>
-    <td><img src="docs/gif/amplitude.gif" alt="Amplitude" width="400px"></td>
+    <td><img src="docs/gif/type.gif" alt="Type" width="380px"></td>
+    <td><img src="docs/gif/amplitude.gif" alt="Amplitude" width="380px"></td>
   </tr>
   <tr>
-    <td><img src="docs/gif/frequency.gif" alt="Frequency" width="400px"></td>
-    <td><img src="docs/gif/offset.gif" alt="DC offset" width="400px"></td>
+    <td><img src="docs/gif/frequency.gif" alt="Frequency" width="380px"></td>
+    <td><img src="docs/gif/offset.gif" alt="DC offset" width="380px"></td>
   </tr>
 </table>
 <br>

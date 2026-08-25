@@ -11,7 +11,7 @@ At a high level, data flows through five stages: the hardware captures samples, 
 flowchart TD
     HW["FPGA Backend<br/>(HDL frontend)"]
 
-    subgraph OSC["Oscilloscope (Hub) — owns ↓"]
+    subgraph OSC["Oscilloscope (Hub)"]
         subgraph HWIF["Hardware transport"]
             USB["USBDevice<br/>CDC bulk · bg thread"]
             UART["UARTDevice<br/>serial"]
@@ -47,8 +47,11 @@ flowchart TD
     UART -->|"pushRawBytes"| CB
 
     TRG -. "reads samples" .-> CB
-    HC -. "Pass 1: extract frame" .-> CB
-    VC -. "Pass 2: reads raw frame" .-> HC
+
+    subgraph PASS["Two-Pass update"]
+        HC -. "Pass 1 · extract frame" .-> CB
+        VC -. "Pass 2 · reads raw frame" .-> HC
+    end
 
     HC -->|"Time + FFT traces"| PLT
     VC -->|"derived traces"| PLT

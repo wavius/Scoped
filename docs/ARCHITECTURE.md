@@ -46,11 +46,11 @@ flowchart TD
     HW -->|"Streams bytes"| USB
     HW -->|"Streams bytes"| UART
 
-    HWIF -.->|"Reads samples"| TRG
+    HWIF -->|"Reads samples"| TRG
 
-    TRG -.->|"Pass 1 · Extract frame"| HC
+    TRG -->|"Pass 1 · Extract frame"| HC
 
-    HC -.->|"Pass 2 · Reads raw frame"| VC
+    HC -->|"Pass 2 · Reads raw frame"| VC
 
     HC -->|"Traces"| PLT
     VC -->|"Traces"| PLT
@@ -58,12 +58,6 @@ flowchart TD
 
     HC ~~~ VC
 ```
-
-**Legend:**
-
-- **Nested box = ownership** — the outer box owns what's inside it.
-- **Solid arrow = data moves** between blocks.
-- **Dashed arrow = non-owning read** — a block reads data it doesn't own.
 
 The stages in detail, and who owns what:
 

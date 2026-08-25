@@ -130,13 +130,9 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 
 ## Architecture
 
-<<<<<<< Updated upstream
 Scoped is split into two parts: the software frontend and the HDL backend, separated by a USB/UART transport. 
 For an in-depth breakdown of the architecture and the codebase file map, please see the full [Architecture Documentation](docs/ARCHITECTURE.md).
 Alternatively, this documentation is summarized below.
-=======
-Scoped is split into two parts: the software frontend and the HDL backend, separated by a USB/UART transport.
->>>>>>> Stashed changes
 
 ### Software
 

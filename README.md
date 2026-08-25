@@ -130,7 +130,9 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 
 ## Architecture
 
-Scoped is split into two parts: the software frontend and the HDL backend, separated by a USB/UART transport.
+Scoped is split into two parts: the software frontend and the HDL backend, separated by a USB/UART transport. 
+For an in-depth breakdown of the architecture and the codebase file map, please see the full [Architecture Documentation](docs/ARCHITECTURE.md).
+Alternatively, this documentation is summarized below.
 
 ### Software
 
@@ -150,8 +152,6 @@ The data pipeline flows from the oscilloscope hub through channels and processor
 - **Channels:** `HardwareChannel` handles lock-free buffer acquisition, while `VirtualChannel` processes cross-channel logic. Both yield standard `Trace` objects.
 - **Processors:** Expandable modules (FFT, Filters, Math, Measurements) that take raw frames and mutate or generate new trace representations.
 - **UI:** Iterates over generated traces and maps them to the appropriate rendering subsystems (digital phosphor map or standard plots) based on their domain metadata.
-
-For an in-depth breakdown of the data pipeline and the codebase file map, please see the full [Architecture Documentation](docs/ARCHITECTURE.md).
 
 ### Hardware (HDL)
 

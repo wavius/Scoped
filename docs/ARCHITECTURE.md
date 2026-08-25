@@ -44,10 +44,11 @@ flowchart TD
     HW -->|"streams bytes"| USB
     HW -->|"streams bytes"| UART
 
-    HWIF -->|"Pass 1 · extract frame"| CB
+    HWIF -->|"extract frame"| TRG
 
-    TRG -. "reads samples" .-> CB
-    VC -. "Pass 2 · reads raw frame" .-> HC
+    TRG -.->|"Pass 1"| HC
+
+    HC -.->|"Pass 2 · reads raw frame"| VC
 
     HC -->|"traces"| PLT
     VC -->|"traces"| PLT

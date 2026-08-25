@@ -173,26 +173,6 @@ The FWFT FIFO handles clock domain crossing between the independent ADC clock an
 
 These bytes are handed to a USB CDC core, which packetizes and transmits them through a ULPI wrapper to the USB3300 PHY for delivery over USB 2.0 High-Speed. A UART variant replaces the USB transmit path with a 1 MBaud UART transmitter for slower but more stable acquisition.
 
-### Hardware (HDL)
-
-The HDL backend reads the ADC through a parallel interface, synchronizes the data across clock domains, and streams it out over USB:
-
-```mermaid
-flowchart LR
-    ADC["AD9226 ADC<br/>(Parallel Interface)"] -->|"adc_clk (25 MHz)"| INT["ADC Interface"]
-    INT --> FIFO["FWFT Dual-Clock FIFO<br/>(ADC clk → USB clk)"]
-    FIFO --> BURST["Burst Controller<br/>(512 B packets)"]
-    BURST --> CDC["USB CDC Core"]
-    CDC --> ULPI["ULPI Wrapper"]
-    ULPI --> USB["USB3300 PHY<br/>(USB 2.0 HS)"]
-```
-
-The ADC module outputs 12-bit samples in parallel, clocked by a 25 MHz clock the FPGA generates and feeds back to the ADC. The ADC interface registers these samples and drives them into a first-word fall-through (FWFT) dual-clock FIFO.
-
-The FWFT FIFO handles clock domain crossing between the independent ADC clock and the 60 MHz ULPI/PHY clock. Its fall-through behavior makes the oldest sample available immediately on the output, allowing a burst controller to read out 512-sample packets whenever the FIFO has enough data buffered.
-
-These bytes are handed to a USB CDC core, which packetizes and transmits them through a ULPI wrapper to the USB3300 PHY for delivery over USB 2.0 High-Speed. A UART variant replaces the USB transmit path with a 1 MBaud UART transmitter for slower but more stable acquisition.
-
 ## Hardware Specs
 
 Scoped's hardware consists of an FPGA board, ADC module, and USB PHY. The USB PHY and ADC modules were connected to the iCESugar-Pro FPGA board using 20 cm DuPont jumper wires.

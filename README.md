@@ -171,8 +171,10 @@ HDL implementations are provided for both configurations and must be synthesized
 
 AD9226 module
 
-- 65M samples per second (max)
-- 12-bit resolution
+- **Sample Rate:** 65 MSPS (max)
+- **Resolution:** 12-bit
+- **Input Range:** 10 Vpp, ±5 V
+- **Input Impedance:** 50 Ω
 
 <br>
 <div align="left">
@@ -184,7 +186,9 @@ AD9226 module
 
 Muse LAB iCESugar-Pro v1.3
 
-- Lattice ECP5
+- **FPGA:** Lattice ECP5 LFE5U-25F-6BG256C
+- **Logic:** 24K LUT4s + 24K flip-flops
+- **Block RAM:** 56 EBR blocks, 126 KiB
 
 <br>
 <div align="left">
@@ -196,8 +200,9 @@ Muse LAB iCESugar-Pro v1.3
 
 USB3300 USB High-Speed PHY Board
 
-- USB 2.0 High-Speed (480 Mbps)
-- ULPI Interface
+- **Speed:** USB 2.0 High-Speed (480 Mbps)
+- **Interface:** ULPI
+
 
 <br>
 <div align="left">

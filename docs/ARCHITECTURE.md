@@ -1,8 +1,12 @@
 # Scoped Architecture
 
-Scoped is a C++ software oscilloscope backed by an FPGA frontend. The software is built around a modular, two-pass data pipeline. This document mirrors the summary in the [README](../README.md) `Architecture` section, then expands on each layer, the core objects, and the codebase file map.
+Scoped is a C++ software oscilloscope backed by an FPGA frontend. It is split into two parts: the software frontend and the HDL backend, separated by a USB/UART transport. This document expands on the overview in the [README](../README.md) `Architecture` section, covering each layer, the core objects, and the codebase file maps.
 
-## Overview
+## Software Architecture
+
+The software is built around a modular, two-pass data pipeline.
+
+### Overview
 
 At a high level, data flows through five stages: the hardware captures samples, the hub drives synchronized frames, channels own the acquisition and processing, processors generate traces, and the UI renders them.
 
@@ -22,7 +26,7 @@ The pipeline is split into four layers:
 - **Processors:** Expandable modules (FFT, Filters, Math, Measurements) that take raw frames and mutate or generate new trace representations.
 - **UI:** Iterates over generated traces and maps them to the appropriate rendering subsystems (digital phosphor map or standard plots) based on their domain metadata.
 
-## Data Pipeline
+### Data Pipeline
 
 The detailed data flow shows where each stage lives and how the layers connect:
 
@@ -89,56 +93,56 @@ The stages in detail:
 - **Processors** act as generators. `IProcessor`s take a single channel's raw frame and create or mutate traces (e.g., an FFT Trace); `IVirtualProcessor`s combine multiple channel traces (e.g., math or filtered traces).
 - **UI** iterates over generated traces and routes them to the correct plotting subsystem based on their `Domain` metadata.
 
-## Objects
+### Objects
 
-### Oscilloscope
+#### Oscilloscope
 
 The central core abstraction. Owns the hardware connections (`USBDevice` / `UARTDevice`), the global trigger engine (`ITrigger`), and an array of abstract `IChannel` objects. Provides multi-channel synchronization by evaluating a trigger on a source channel and capturing a time-aligned frame across all channels simultaneously using a Two-Pass execution model.
 
-### CircularBuffer\<T\>
+#### CircularBuffer\<T\>
 
 Lock-free ring buffer for raw sample acquisition.
 
-### ITrigger
+#### ITrigger
 
 Abstract base for type-agnostic trigger strategies. Operates on normalized float samples from an `IChannel` to avoid coupling with specific hardware bit-depths.
 
 - Exposes `getUIParameters()` and `getTriggerLevels()` so the UI can dynamically generate controls (sliders, combos) and draw trigger lines.
 - **EdgeTrigger** — Fires when a sample crosses a threshold with hysteresis. Supports rising/falling edge selection.
 
-### IProcessor & IVirtualProcessor
+#### IProcessor & IVirtualProcessor
 
 Both processor base classes derive from `IProcessorControl`, which exposes the uniform UI controls (enable state, scale/offset, color) shared by all processing modules.
 
 - **IProcessor** applies isolated signal processing on a single channel's raw frame. Its only implementation is `FFTProcessor`.
 - **IVirtualProcessor** takes data from multiple channel traces and produces new traces. Implementations include `MathProcessor` (cross-channel math), `FilterProcessor`, and `MeasurementProcessor`.
 
-### Trace
+#### Trace
 
 A single output artifact representing a plottable line or matrix. Contains metadata such as `Domain::Time` or `Domain::Frequency` along with localized scaling parameters. Extensible for Decoders and Measurements.
 
-### IChannel, Channel\<HardwareT\> & VirtualChannel
+#### IChannel, Channel\<HardwareT\> & VirtualChannel
 
 - **IChannel**: Type-agnostic interface exposing normalized samples and output traces.
 - **Channel\<HardwareT\>**: A concrete hardware pipeline owning a `CircularBuffer` and a chain of `IProcessor`s.
 - **VirtualChannel**: A channel without a buffer that reads raw frames from source `IChannel`s and applies `IVirtualProcessor`s.
 
-### IntensityMap
+#### IntensityMap
 
 2D hit-count grid for digital phosphor display. Accepts time-domain normalized data and rasterizes using Bresenham lines.
 
-### Hardware Interface
+#### Hardware Interface
 
 Provides data acquisition from the FPGA backend.
 
 - **USBDevice**: CDC bulk-transfer interface running a background thread for high-speed streaming.
 - **UARTDevice**: Slower serial interface for stable data capture at lower sampling rates.
 
-## File Map
+### File Map
 
-The codebase is organized into four main modules within the `core` directory:
+The software codebase is organized into four main modules within the `core` directory:
 
-### `common/`
+#### `common/`
 
 Core data structures and base interfaces.
 
@@ -150,7 +154,7 @@ Core data structures and base interfaces.
 | `circularbuffer.hpp` | Ring buffer (header-only template) |
 | `constants.hpp` | Global configuration constants |
 
-### `hardware/`
+#### `hardware/`
 
 Physical communication layers.
 
@@ -159,7 +163,7 @@ Physical communication layers.
 | `usb.hpp/.cpp` | High-speed USB CDC acquisition |
 | `uart.hpp/.cpp` | Serial UART acquisition |
 
-### `processing/`
+#### `processing/`
 
 Signal processing nodes.
 
@@ -173,7 +177,7 @@ Signal processing nodes.
 | `measurement_processor.hpp` | Waveform statistics (Vpp, Vrms, Freq) |
 | `window.hpp` | Window functions for FFT |
 
-### `ui/`
+#### `ui/`
 
 User Interface and rendering.
 
@@ -185,8 +189,118 @@ User Interface and rendering.
 | `ui_helpers.hpp` | ImGui helper utilities |
 | `colors.hpp` | Centralized color themes |
 
-### Root
+#### Root
 
 | File | Role |
 |---|---|
 | `main.cpp` | SDL lifecycle + main loop initialization |
+
+## Hardware (HDL) Architecture
+
+The HDL backend captures samples from the ADC, synchronizes them across clock domains, and streams them to the host over USB (or UART). At a high level, data flows through four stages: the ADC interface samples the parallel bus, a dual-clock FIFO bridges the ADC and USB clock domains, a burst controller reads out packets, and the USB CDC core transmits them over ULPI to the PHY.
+
+```mermaid
+flowchart LR
+    ADC["AD9226 ADC<br/>(Parallel Interface)"] -->|"adc_clk (25 MHz)"| INT["adc_interface"]
+    INT --> FIFO["FWFT Dual-Clock FIFO<br/>(ADC clk → USB clk)"]
+    FIFO --> BURST["Burst Controller<br/>(512 B packets)"]
+    BURST --> CDC["USB CDC Core"]
+    CDC --> ULPI["ULPI Wrapper"]
+    ULPI --> USB["USB3300 PHY<br/>(USB 2.0 HS)"]
+```
+
+### Clock Domains
+
+There are two independent clock domains that must be bridged:
+
+- **ADC clock (`clk_25m`, 25 MHz):** The FPGA generates `adc_clk_out` and feeds it back to the ADC. The ADC drives its parallel 12-bit data bus synchronously to this clock, and `adc_interface` registers the samples on it.
+- **ULPI clock (`ulpi_clk60`, 60 MHz):** Provided by the USB3300 PHY for all USB transport logic.
+
+Because these clocks are independent and unrelated, samples cannot be passed between them directly; a dual-clock FIFO is required.
+
+### adc_interface
+
+Registered on the 25 MHz ADC clock, this module captures the parallel sample bus and presents it as a single-cycle `sample_valid`/`sample_data` stream to the write side of the FIFO. It also generates the 25 MHz clock fed back to the ADC and flags over-range via `adc_otr`. A 2-FF reset synchronizer (`adc_rst_sync`) deasserts reset into the ADC clock domain.
+
+### fwft_dual_clk_fifo
+
+A First-Word Fall-Through (FWFT) dual-clock FIFO wrapping a standard `dual_clk_fifo`. On the write side it accepts samples at the ADC clock; on the read side it presents the oldest sample immediately on its output (fall-through behavior), so `rd_data` is valid as soon as `empty` is low — no separate read enable handshake is needed before the first word. It also exposes a `count` of buffered samples used by the burst controller.
+
+### Burst Controller (adc_wrapper)
+
+The `adc_wrapper` instantiates both the `adc_interface` and the FWFT FIFO, and adds a small state machine that reads the FIFO on the ULPI clock and streams samples out. Its behavior is configured by a `CTYPE` parameter:
+
+- **USB mode:** Waits in `IDLE` until the FIFO holds at least 511 samples, then enters `BURST` and transmits a fixed 511-sample packet (≈512 B with framing) on every `tx_ready && tx_valid` handshake, returning to `IDLE` once the burst completes. This batches samples into large efficient USB transfers.
+- **UART mode:** Uses a burst size of 1, transmitting each sample as it arrives.
+
+The 12-bit ADC sample is truncated to its 8 MSBs (`tx_data_12b[11:4]`) at the top level before transmission, giving the software an effective 8-bit resolution.
+
+### usb_cdc_core & ulpi_wrapper
+
+The `usb_cdc_core` implements a USB Communication Device Class (CDC) endpoint, packetizing the incoming sample stream into USB bulk transfers. It drives the `ulpi_wrapper`, which translates the core's UTMI signals to and from the ULPI interface: it multiplexes the 8-bit ULPI data bus in both directions and generates the `stp`/`nxt`/`dir` handshaking to the PHY. The PHY handles the physical USB 2.0 High-Speed signaling.
+
+### Reset
+
+A `rst_gen` module generates a power-on reset. For USB, an additional CDC reset is synchronized into the 60 MHz ULPI domain before use. LEDs provide visual status (e.g., green lit while samples stream over USB).
+
+### UART Variant
+
+The `top_uart` module replaces the USB transmit path with a 1 MBaud UART transmitter. A decimator captures 1 in every 500 ADC samples to derive a 50 kHz acquisition rate from the 25 MHz ADC clock, and a generated 1 MHz UART clock drives a `uart_tx_8n1` transmitter that serializes each 8-bit sample.
+
+### HDL File Map
+
+The HDL is organized under the `hdl/` directory.
+
+#### `adc/`
+
+| File | Role |
+|---|---|
+| `adc_interface.sv` | Captures the parallel ADC bus on the 25 MHz clock |
+| `adc_wrapper.sv` | ADC interface + FWFT FIFO + burst controller state machine |
+
+#### `common/`
+
+| File | Role |
+|---|---|
+| `fwft_dual_clk_fifo.sv` | First-word fall-through wrapper over `dual_clk_fifo` |
+| `dual_clk_fifo.sv` | Standard dual-clock FIFO (write/read clock domains) |
+| `dual_port_dual_clk_ram.sv` | Dual-port, dual-clock RAM backing the FIFO |
+| `rst_gen.v` | Power-on reset generator |
+| `ODDRX1F.v` | ODDR primitive for output clock generation |
+| `sine_gen.v` | Test sine generator |
+
+#### `usb/`
+
+| File | Role |
+|---|---|
+| `usb_cdc_core.v` | USB CDC core (device side) |
+| `ulpi_wrapper.v` | UTMI ↔ ULPI interface translation |
+| `usb_desc_rom.v` | USB descriptor ROM (CDC descriptors) |
+| `usbf_crc16.v` | USB CRC16 generator |
+| `usbf_device_core.v` | USB device core |
+| `usbf_sie_rx.v` | USB serial interface engine (receive) |
+| `usbf_sie_tx.v` | USB serial interface engine (transmit) |
+| `usbf_defs.v` | USB protocol definitions |
+
+#### `uart/`
+
+| File | Role |
+|---|---|
+| `uart_tx.v` | 8N1 UART transmitter |
+
+#### `packages/`
+
+| File | Role |
+|---|---|
+| `params_pkg.sv` | Width/parameter constants (DWIDTH, AWIDTH) |
+| `types_pkg.sv` | Backend type enum (USB/UART) |
+| `utils_pkg.sv` | Shared utilities |
+
+#### Top level
+
+| File | Role |
+|---|---|
+| `top_usb.v` | USB backend top: ties ADC wrapper to USB CDC/ULPI/PHY |
+| `top_uart.v` | UART backend top: ties ADC wrapper to UART transmitter |
+| `pins.lpf` | Pin constraints / placement |
+| `Makefile` | Bitstream build & programming targets |

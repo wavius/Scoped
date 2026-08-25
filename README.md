@@ -130,18 +130,21 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 
 ## Architecture
 
-Scoped uses a modular, two-pass data pipeline separated into core processing layers:
+Scoped is split into two parts: the software frontend and the HDL backend, separated by a USB/UART transport.
+
+### Software
+
+The software frontend uses a modular, two-pass data pipeline separated into core processing layers:
 
 ```mermaid
 flowchart LR
-    HW[FPGA Backend] -->|USB / UART| OSC[Oscilloscope Hub]
-    OSC --> CH["Channels<br/>(Hardware, Virtual)"]
+    OSC[Oscilloscope Hub] --> CH["Channels<br/>(Hardware, Virtual)"]
     CH --> PR["Processors<br/>(Filter, FFT, Math, Measure)"]
     PR --> TR["Traces<br/>(Time, Frequency)"]
     TR --> UI["UI Rendering<br/>(Plots, Phosphor)"]
 ```
 
-The data pipeline flows from the FPGA backend through the oscilloscope hub, channels, and processors to generate traces that the UI renders.
+The data pipeline flows from the oscilloscope hub through channels and processors to generate traces that the UI renders.
 
 - **Oscilloscope:** Manages hardware interfaces (USB/UART), coordinates global triggers, and drives the multi-channel synchronization engine.
 - **Channels:** `HardwareChannel` handles lock-free buffer acquisition, while `VirtualChannel` processes cross-channel logic. Both yield standard `Trace` objects.
@@ -149,6 +152,26 @@ The data pipeline flows from the FPGA backend through the oscilloscope hub, chan
 - **UI:** Iterates over generated traces and maps them to the appropriate rendering subsystems (digital phosphor map or standard plots) based on their domain metadata.
 
 For an in-depth breakdown of the data pipeline and the codebase file map, please see the full [Architecture Documentation](docs/ARCHITECTURE.md).
+
+### Hardware (HDL)
+
+The HDL backend reads the ADC through a parallel interface, synchronizes the data across clock domains, and streams it out over USB:
+
+```mermaid
+flowchart LR
+    ADC["AD9226 ADC<br/>(Parallel Interface)"] -->|"adc_clk (25 MHz)"| INT["ADC Interface"]
+    INT --> FIFO["FWFT Dual-Clock FIFO<br/>(ADC clk → USB clk)"]
+    FIFO --> BURST["Burst Controller<br/>(512 B packets)"]
+    BURST --> CDC["USB CDC Core"]
+    CDC --> ULPI["ULPI Wrapper"]
+    ULPI --> USB["USB3300 PHY<br/>(USB 2.0 HS)"]
+```
+
+The ADC module outputs 12-bit samples in parallel, clocked by a 25 MHz clock the FPGA generates and feeds back to the ADC. The ADC interface registers these samples and drives them into a first-word fall-through (FWFT) dual-clock FIFO.
+
+The FWFT FIFO handles clock domain crossing between the independent ADC clock and the 60 MHz ULPI/PHY clock. Its fall-through behavior makes the oldest sample available immediately on the output, allowing a burst controller to read out 512-sample packets whenever the FIFO has enough data buffered.
+
+These bytes are handed to a USB CDC core, which packetizes and transmits them through a ULPI wrapper to the USB3300 PHY for delivery over USB 2.0 High-Speed. A UART variant replaces the USB transmit path with a 1 MBaud UART transmitter for slower but more stable acquisition.
 
 ## Hardware Specs
 
@@ -172,7 +195,7 @@ HDL implementations are provided for both configurations and must be synthesized
 AD9226 module
 
 - **Sample Rate:** 65 MSPS (max)
-- **Resolution:** 12-bit
+- **Resolution:** 12-bit (4 LSBs are dropped when sent to the software, so the effective resolution is 8-bit)
 - **Input Range:** 10 Vpp, ±5 V
 - **Input Impedance:** 50 Ω
 

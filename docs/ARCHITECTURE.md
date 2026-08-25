@@ -59,17 +59,9 @@ flowchart TD
     HC ~~~ VC
 ```
 
-The stages in detail, and who owns what:
-
-- **Oscilloscope (Hub)** *owns* the hardware transport (`USBDevice`, `UARTDevice`), the global trigger (`EdgeTrigger`), and both channel lists (hardware + virtual). It coordinates acquisition and drives the Two-Pass update.
-- **Channel\<HardwareT\>** *owns* a `CircularBuffer` (filled directly by `USBDevice`/`UARTDevice` via `pushRawBytes`) and a chain of `IProcessor`s. In **Pass 1** it extracts the frame aligned to the trigger, builds a base `Time` trace, and lets each processor append traces (e.g. an FFT `Frequency` trace).
-- **VirtualChannel** *owns* only its `IVirtualProcessor` chain. In **Pass 2** it *reads* (non-owning raw pointer) the finished raw frames of its source hardware channels, and its processors emit derived traces (math, filter, measurement).
-- **ITrigger** *reads* (non-owning) the source channel's `CircularBuffer` to find the trigger point that aligns every frame.
-- **UI** *reads* the `Trace` lists produced by channels and routes each one to the correct plotting subsystem based on its `Domain` metadata (Time vs Frequency), then feeds it to the `IntensityMap` rasterizer.
-
 ### Objects
 
-Objects follow the path data takes through the system.
+This section describes each object in more detail, and the ordering follows the path data takes through the system.
 
 #### Hardware Interface
 
@@ -77,6 +69,17 @@ Provides data acquisition from the FPGA backend.
 
 - **USBDevice**: CDC bulk-transfer interface running a background thread for high-speed streaming.
 - **UARTDevice**: Slower serial interface for stable data capture at lower sampling rates.
+
+#### Oscilloscope
+
+The central core abstraction. Owns the hardware connections (`USBDevice` / `UARTDevice`), the global trigger engine (`ITrigger`), and an array of abstract `IChannel` objects. Provides multi-channel synchronization by evaluating a trigger on a source channel and capturing a time-aligned frame across all channels simultaneously.
+
+#### ITrigger
+
+Abstract base for type-agnostic trigger strategies. Operates on normalized float samples from an `IChannel` to avoid coupling with a specific bit-depth.
+
+- Exposes `getUIParameters()` and `getTriggerLevels()` so the UI can dynamically generate controls (sliders, combos) and draw trigger lines.
+- **EdgeTrigger**: Fires when a sample crosses a threshold with hysteresis. Supports rising/falling edge selection.
 
 #### CircularBuffer\<T\>
 
@@ -104,17 +107,6 @@ Both processor base classes derive from `IProcessorControl`, which exposes the u
 #### Trace
 
 A single output artifact representing a plottable line or matrix. Contains metadata such as `Domain::Time` or `Domain::Frequency` along with localized scaling parameters. Extensible for Decoders and Measurements.
-
-#### ITrigger
-
-Abstract base for type-agnostic trigger strategies. Operates on normalized float samples from an `IChannel` to avoid coupling with a specific bit-depth.
-
-- Exposes `getUIParameters()` and `getTriggerLevels()` so the UI can dynamically generate controls (sliders, combos) and draw trigger lines.
-- **EdgeTrigger**: Fires when a sample crosses a threshold with hysteresis. Supports rising/falling edge selection.
-
-#### Oscilloscope
-
-The central core abstraction. Owns the hardware connections (`USBDevice` / `UARTDevice`), the global trigger engine (`ITrigger`), and an array of abstract `IChannel` objects. Provides multi-channel synchronization by evaluating a trigger on a source channel and capturing a time-aligned frame across all channels simultaneously.
 
 #### IntensityMap
 

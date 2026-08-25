@@ -5,30 +5,7 @@ Scoped is a C++ software oscilloscope backed by an FPGA frontend. It is split in
 ## Software Architecture
 
 The software is built around a modular, two-pass data pipeline.
-
-### Overview
-
 At a high level, data flows through five stages: the hardware captures samples, the hub drives synchronized frames, channels own the acquisition and processing, processors generate traces, and the UI renders them.
-
-```mermaid
-flowchart LR
-    HW[FPGA Backend] -->|USB / UART| OSC[Oscilloscope Hub]
-    OSC --> CH["Channels<br/>(Hardware, Virtual)"]
-    CH --> PR["Processors<br/>(Filter, FFT, Math, Measure)"]
-    PR --> TR["Traces<br/>(Time, Frequency)"]
-    TR --> UI["UI Rendering<br/>(Plots, Phosphor)"]
-```
-
-The pipeline is split into four layers:
-
-- **Oscilloscope:** Manages hardware interfaces (USB/UART), coordinates global triggers, and drives the multi-channel synchronization engine.
-- **Channels:** `Channel<HardwareT>` handles lock-free buffer acquisition, while `VirtualChannel` processes cross-channel logic. Both yield standard `Trace` objects.
-- **Processors:** Expandable modules (FFT, Filters, Math, Measurements) that take raw frames and mutate or generate new trace representations.
-- **UI:** Iterates over generated traces and maps them to the appropriate rendering subsystems (digital phosphor map or standard plots) based on their domain metadata.
-
-### Data Pipeline
-
-The detailed data flow shows where each stage lives and how the layers connect:
 
 ```mermaid
 flowchart TD
@@ -42,7 +19,7 @@ flowchart TD
     HW --> USB & UART
 
     subgraph Core ["Oscilloscope (Hub)"]
-        OSC[Oscilloscope<br/>Two-Pass Update Engine]
+        OSC[Oscilloscope<br/>Two-Pass system]
         TRG[ITrigger / EdgeTrigger]
         CB[CircularBuffer]
         OSC --> TRG
@@ -88,27 +65,37 @@ flowchart TD
 
 The stages in detail:
 
-- **Oscilloscope (Hub)** coordinates hardware, global triggers, and implements a **Two-Pass Update Engine** (updating hardware channels first, then virtual channels).
-- **IChannel / Channel** abstracts data sources. `Channel<HardwareT>` owns a `CircularBuffer` and a chain of `IProcessor`s. `VirtualChannel` evaluates cross-channel logic via `IVirtualProcessor`s. Both output `Trace` objects.
+- **Oscilloscope (Hub)** coordinates hardware and global triggers.
+- **IChannel / Channel** abstracts data sources. `Channel<HardwareT>` owns a `CircularBuffer` and a chain of `IProcessor`s; `VirtualChannel` evaluates cross-channel logic via `IVirtualProcessor`s. Both output `Trace` objects.
 - **Processors** act as generators. `IProcessor`s take a single channel's raw frame and create or mutate traces (e.g., an FFT Trace); `IVirtualProcessor`s combine multiple channel traces (e.g., math or filtered traces).
 - **UI** iterates over generated traces and routes them to the correct plotting subsystem based on their `Domain` metadata.
 
 ### Objects
 
-#### Oscilloscope
+Objects follow the path data takes through the system.
 
-The central core abstraction. Owns the hardware connections (`USBDevice` / `UARTDevice`), the global trigger engine (`ITrigger`), and an array of abstract `IChannel` objects. Provides multi-channel synchronization by evaluating a trigger on a source channel and capturing a time-aligned frame across all channels simultaneously using a Two-Pass execution model.
+#### Hardware Interface
+
+Provides data acquisition from the FPGA backend.
+
+- **USBDevice**: CDC bulk-transfer interface running a background thread for high-speed streaming.
+- **UARTDevice**: Slower serial interface for stable data capture at lower sampling rates.
 
 #### CircularBuffer\<T\>
 
 Lock-free ring buffer for raw sample acquisition.
 
-#### ITrigger
+#### IChannel, Channel\<HardwareT\> & VirtualChannel
 
-Abstract base for type-agnostic trigger strategies. Operates on normalized float samples from an `IChannel` to avoid coupling with specific hardware bit-depths.
+There are two kinds of channel, and the difference is *where their data comes from*:
 
-- Exposes `getUIParameters()` and `getTriggerLevels()` so the UI can dynamically generate controls (sliders, combos) and draw trigger lines.
-- **EdgeTrigger** — Fires when a sample crosses a threshold with hysteresis. Supports rising/falling edge selection.
+- **IChannel**: The common interface every channel implements. Exposes normalized samples and output traces.
+- **Channel\<HardwareT\>** = a **hardware channel**: The pipeline for real signals. It owns a `CircularBuffer` filled by the physical input (USB/UART) and a chain of `IProcessor`s that turn that raw frame into traces.
+- **VirtualChannel** = a **virtual channel**: It has no buffer and no input of its own. Instead, it reads finished frames from source `IChannel`s (typically hardware channels) and applies `IVirtualProcessor`s to compute new, derived traces (e.g., math, filtering, measurements).
+
+Because virtual channels read from other channels, they must be processed *after* their sources using a Two-Pass system.
+1. **Pass 1 — hardware channels.** Loop over every hardware channel and, for each one, extract the frame aligned to the trigger, run its processors, and produce its traces.
+2. **Pass 2 — virtual channels.** Only after *all* hardware channels are done, loop over every virtual channel and compute their derived traces. By this point the hardware channels they read from hold the current frame, so the results are correct.
 
 #### IProcessor & IVirtualProcessor
 
@@ -121,22 +108,20 @@ Both processor base classes derive from `IProcessorControl`, which exposes the u
 
 A single output artifact representing a plottable line or matrix. Contains metadata such as `Domain::Time` or `Domain::Frequency` along with localized scaling parameters. Extensible for Decoders and Measurements.
 
-#### IChannel, Channel\<HardwareT\> & VirtualChannel
+#### ITrigger
 
-- **IChannel**: Type-agnostic interface exposing normalized samples and output traces.
-- **Channel\<HardwareT\>**: A concrete hardware pipeline owning a `CircularBuffer` and a chain of `IProcessor`s.
-- **VirtualChannel**: A channel without a buffer that reads raw frames from source `IChannel`s and applies `IVirtualProcessor`s.
+Abstract base for type-agnostic trigger strategies. Operates on normalized float samples from an `IChannel` to avoid coupling with a specific bit-depth.
+
+- Exposes `getUIParameters()` and `getTriggerLevels()` so the UI can dynamically generate controls (sliders, combos) and draw trigger lines.
+- **EdgeTrigger**: Fires when a sample crosses a threshold with hysteresis. Supports rising/falling edge selection.
+
+#### Oscilloscope
+
+The central core abstraction. Owns the hardware connections (`USBDevice` / `UARTDevice`), the global trigger engine (`ITrigger`), and an array of abstract `IChannel` objects. Provides multi-channel synchronization by evaluating a trigger on a source channel and capturing a time-aligned frame across all channels simultaneously.
 
 #### IntensityMap
 
-2D hit-count grid for digital phosphor display. Accepts time-domain normalized data and rasterizes using Bresenham lines.
-
-#### Hardware Interface
-
-Provides data acquisition from the FPGA backend.
-
-- **USBDevice**: CDC bulk-transfer interface running a background thread for high-speed streaming.
-- **UARTDevice**: Slower serial interface for stable data capture at lower sampling rates.
+2D hit-count grid for digital phosphor display. Accepts time-domain normalized data and rasterizes using Bresenham lines. Rasterization is performed on the CPU into a host-side hit-count grid, which is then converted to RGBA and uploaded to an OpenGL texture (`updateTexture` → `glTexSubImage2D`) and drawn by the GPU. The texture reserves `width × height × RGBA` bytes of VRAM; for the default 1280×720 display this is 1280 × 720 × 4 ≈ 3.5 MiB.
 
 ### File Map
 
@@ -241,7 +226,7 @@ The `usb_cdc_core` implements a USB Communication Device Class (CDC) endpoint, p
 
 ### Reset
 
-A `rst_gen` module generates a power-on reset. For USB, an additional CDC reset is synchronized into the 60 MHz ULPI domain before use. LEDs provide visual status (e.g., green lit while samples stream over USB).
+A `rst_gen` module generates a power-on reset. For USB, an additional CDC reset is synchronized into the 60 MHz ULPI domain before use. LEDs provide visual status.
 
 ### UART Variant
 

@@ -51,7 +51,7 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 
 ### Display
 
-- Hardware-accelerated digital phosphor rendering.
+- Digital phosphor rendering. The intensity map is rasterized on the CPU and uploaded to an OpenGL texture, so it is drawn on the GPU.
 - Channel controls for vertical/horizontal scale and offset.
 
 <br>
@@ -130,9 +130,13 @@ Scoped is designed with a modern, modular user interface featuring fully dockabl
 
 ## Architecture
 
+<<<<<<< Updated upstream
 Scoped is split into two parts: the software frontend and the HDL backend, separated by a USB/UART transport. 
 For an in-depth breakdown of the architecture and the codebase file map, please see the full [Architecture Documentation](docs/ARCHITECTURE.md).
 Alternatively, this documentation is summarized below.
+=======
+Scoped is split into two parts: the software frontend and the HDL backend, separated by a USB/UART transport.
+>>>>>>> Stashed changes
 
 ### Software
 
@@ -152,6 +156,26 @@ The data pipeline flows from the oscilloscope hub through channels and processor
 - **Channels:** `HardwareChannel` handles lock-free buffer acquisition, while `VirtualChannel` processes cross-channel logic. Both yield standard `Trace` objects.
 - **Processors:** Expandable modules (FFT, Filters, Math, Measurements) that take raw frames and mutate or generate new trace representations.
 - **UI:** Iterates over generated traces and maps them to the appropriate rendering subsystems (digital phosphor map or standard plots) based on their domain metadata.
+
+### Hardware (HDL)
+
+The HDL backend reads the ADC through a parallel interface, synchronizes the data across clock domains, and streams it out over USB:
+
+```mermaid
+flowchart LR
+    ADC["AD9226 ADC<br/>(Parallel Interface)"] -->|"adc_clk (25 MHz)"| INT["ADC Interface"]
+    INT --> FIFO["FWFT Dual-Clock FIFO<br/>(ADC clk → USB clk)"]
+    FIFO --> BURST["Burst Controller<br/>(512 B packets)"]
+    BURST --> CDC["USB CDC Core"]
+    CDC --> ULPI["ULPI Wrapper"]
+    ULPI --> USB["USB3300 PHY<br/>(USB 2.0 HS)"]
+```
+
+The ADC module outputs 12-bit samples in parallel, clocked by a 25 MHz clock the FPGA generates and feeds back to the ADC. The ADC interface registers these samples and drives them into a first-word fall-through (FWFT) dual-clock FIFO.
+
+The FWFT FIFO handles clock domain crossing between the independent ADC clock and the 60 MHz ULPI/PHY clock. Its fall-through behavior makes the oldest sample available immediately on the output, allowing a burst controller to read out 512-sample packets whenever the FIFO has enough data buffered.
+
+These bytes are handed to a USB CDC core, which packetizes and transmits them through a ULPI wrapper to the USB3300 PHY for delivery over USB 2.0 High-Speed. A UART variant replaces the USB transmit path with a 1 MBaud UART transmitter for slower but more stable acquisition.
 
 ### Hardware (HDL)
 

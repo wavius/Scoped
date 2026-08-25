@@ -49,8 +49,12 @@ flowchart TD
     TRG -. "reads samples" .-> CB
 
     subgraph PASS["Two-Pass update"]
-        HC -. "Pass 1 · extract frame" .-> CB
-        VC -. "Pass 2 · reads raw frame" .-> HC
+        PASS1["Pass 1 · extract frame"]
+        PASS2["Pass 2 · reads raw frame"]
+        HC -.-> PASS1
+        PASS1 -.-> CB
+        VC -.-> PASS2
+        PASS2 -.-> HC
     end
 
     HC -->|"Time + FFT traces"| PLT

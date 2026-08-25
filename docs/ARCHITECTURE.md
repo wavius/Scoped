@@ -18,7 +18,9 @@ flowchart TD
             UART["UARTDevice<br/>serial"]
         end
 
-        TRG["EdgeTrigger"]
+        subgraph TRG["Trigger"]
+            ET["EdgeTrigger"]
+        end
 
         subgraph HC["Channel&lt;uint8_t&gt;"]
             CB["CircularBuffer"]
@@ -44,9 +46,9 @@ flowchart TD
     HW -->|"streams bytes"| USB
     HW -->|"streams bytes"| UART
 
-    HWIF -->|"extract frame"| TRG
+    HWIF -->|"reads samples"| TRG
 
-    TRG -.->|"Pass 1"| HC
+    TRG -.->|"Pass 1 · extract frame"| HC
 
     HC -.->|"Pass 2 · reads raw frame"| VC
 

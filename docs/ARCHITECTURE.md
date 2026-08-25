@@ -9,6 +9,7 @@ At a high level, data flows through five stages: the hardware captures samples, 
 
 ```mermaid
 flowchart TD
+    %%{init: {"flowchart": {"nodeSpacing": 70, "rankSpacing": 110}}}%%
     HW["FPGA Backend<br/>(HDL frontend)"]
 
     subgraph OSC["Oscilloscope (Hub)"]
@@ -47,15 +48,8 @@ flowchart TD
     UART -->|"pushRawBytes"| CB
 
     TRG -. "reads samples" .-> CB
-
-    subgraph PASS["Two-Pass update"]
-        PASS1["Pass 1 · extract frame"]
-        PASS2["Pass 2 · reads raw frame"]
-        HC -.-> PASS1
-        PASS1 -.-> CB
-        VC -.-> PASS2
-        PASS2 -.-> HC
-    end
+    HC -. "Pass 1 · extract frame" .-> CB
+    VC -. "Pass 2 · reads raw frame" .-> HC
 
     HC -->|"Time + FFT traces"| PLT
     VC -->|"derived traces"| PLT

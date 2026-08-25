@@ -9,66 +9,65 @@ At a high level, data flows through five stages: the hardware captures samples, 
 
 ```mermaid
 flowchart TD
-    HW[FPGA Backend]
+    HW["FPGA Backend<br/>(HDL frontend)"]
 
-    subgraph Interface ["Hardware Interface"]
-        USB[USBDevice<br/>CDC bulk transfer, bg thread]
-        UART[UARTDevice<br/>low-rate serial]
+    subgraph OSC["Oscilloscope (Hub) — owns ↓"]
+        subgraph HWIF["Hardware transport"]
+            USB["USBDevice<br/>CDC bulk · bg thread"]
+            UART["UARTDevice<br/>serial"]
+        end
+
+        TRG["EdgeTrigger"]
+
+        subgraph HC["Channel&lt;uint8_t&gt;"]
+            CB["CircularBuffer"]
+            subgraph IP["IProcessor chain"]
+                FFT["FFTProcessor"]
+            end
+        end
+
+        subgraph VC["VirtualChannel"]
+            subgraph VP["IVirtualProcessor chain"]
+                MATH["MathProcessor"]
+                FILT["FilterProcessor"]
+                MEAS["MeasurementProcessor"]
+            end
+        end
     end
 
-    HW --> USB & UART
-
-    subgraph Core ["Oscilloscope (Hub)"]
-        OSC[Oscilloscope<br/>Two-Pass system]
-        TRG[ITrigger / EdgeTrigger]
-        CB[CircularBuffer]
-        OSC --> TRG
-        OSC --> CB
+    subgraph REND["UI Rendering"]
+        PLT["Plot subsystems<br/>(routed by Domain)"]
+        IM["IntensityMap"]
     end
 
-    USB & UART --> OSC
+    HW -->|"streams bytes"| USB
+    HW -->|"streams bytes"| UART
 
-    subgraph Channels ["IChannel / Channel"]
-        HC[Channel&lt;HardwareT&gt;<br/>owns buffer + IProcessor chain]
-        VC[VirtualChannel<br/>owns IVirtualProcessor chain]
-    end
+    USB -->|"pushRawBytes"| CB
+    UART -->|"pushRawBytes"| CB
 
-    OSC --> HC
-    CB -. samples .-> HC
-    VC -. reads raw frames .-> HC
+    TRG -. "reads samples" .-> CB
+    HC -. "Pass 1: extract frame" .-> CB
+    VC -. "Pass 2: reads raw frame" .-> HC
 
-    subgraph Proc ["Processors"]
-        IP["IProcessor<br/>(FFT)"]
-        VP["IVirtualProcessor<br/>(Math, Filter, Measurement)"]
-    end
-
-    HC --> IP
-    VC --> VP
-
-    subgraph Traces ["Trace Objects"]
-        TR[Trace<br/>Domain: Time / Frequency]
-    end
-
-    IP --> TR
-    VP --> TR
-    HC --> TR
-
-    subgraph Render ["UI Rendering"]
-        IM[IntensityMap<br/>phosphor rasterizer]
-        PLT[Plot subsystems<br/>routed by Domain]
-    end
-
-    TR --> PLT
-    TR --> IM
-    PLT --> IM
+    HC -->|"Time + FFT traces"| PLT
+    VC -->|"derived traces"| PLT
+    PLT -->|"normalize / rasterize"| IM
 ```
 
-The stages in detail:
+**Legend — how to read this diagram:**
 
-- **Oscilloscope (Hub)** coordinates hardware and global triggers.
-- **IChannel / Channel** abstracts data sources. `Channel<HardwareT>` owns a `CircularBuffer` and a chain of `IProcessor`s; `VirtualChannel` evaluates cross-channel logic via `IVirtualProcessor`s. Both output `Trace` objects.
-- **Processors** act as generators. `IProcessor`s take a single channel's raw frame and create or mutate traces (e.g., an FFT Trace); `IVirtualProcessor`s combine multiple channel traces (e.g., math or filtered traces).
-- **UI** iterates over generated traces and routes them to the correct plotting subsystem based on their `Domain` metadata.
+- **Nested subgraph = ownership.** Everything inside `Oscilloscope` is owned by it. `Channel` owns its `CircularBuffer` and `IProcessor` chain; `VirtualChannel` owns its `IVirtualProcessor` chain. The UI does *not* own anything — it reads traces.
+- **Solid arrow = data moves** from producer to consumer.
+- **Dashed arrow = non-owning reference / read.** This is how a reader observes data it does not own (e.g. `VirtualChannel` reads a hardware channel's raw frame without owning it).
+
+The stages in detail, and who owns what:
+
+- **Oscilloscope (Hub)** *owns* the hardware transport (`USBDevice`, `UARTDevice`), the global trigger (`EdgeTrigger`), and both channel lists (hardware + virtual). It coordinates acquisition and drives the Two-Pass update.
+- **Channel\<HardwareT\>** *owns* a `CircularBuffer` (filled directly by `USBDevice`/`UARTDevice` via `pushRawBytes`) and a chain of `IProcessor`s. In **Pass 1** it extracts the frame aligned to the trigger, builds a base `Time` trace, and lets each processor append traces (e.g. an FFT `Frequency` trace).
+- **VirtualChannel** *owns* only its `IVirtualProcessor` chain. In **Pass 2** it *reads* (non-owning raw pointer) the finished raw frames of its source hardware channels, and its processors emit derived traces (math, filter, measurement).
+- **ITrigger** *reads* (non-owning) the source channel's `CircularBuffer` to find the trigger point that aligns every frame.
+- **UI** *reads* the `Trace` lists produced by channels and routes each one to the correct plotting subsystem based on its `Domain` metadata (Time vs Frequency), then feeds it to the `IntensityMap` rasterizer.
 
 ### Objects
 

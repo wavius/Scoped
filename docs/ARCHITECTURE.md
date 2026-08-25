@@ -44,16 +44,16 @@ flowchart TD
     HW -->|"streams bytes"| USB
     HW -->|"streams bytes"| UART
 
-    USB -->|"pushRawBytes"| CB
-    UART -->|"pushRawBytes"| CB
+    HWIF -->|"Pass 1 · extract frame"| CB
 
     TRG -. "reads samples" .-> CB
-    HC -. "Pass 1 · extract frame" .-> CB
     VC -. "Pass 2 · reads raw frame" .-> HC
 
-    HC -->|"Time + FFT traces"| PLT
-    VC -->|"derived traces"| PLT
+    HC -->|"traces"| PLT
+    VC -->|"traces"| PLT
     PLT -->|"normalize / rasterize"| IM
+
+    HC ~~~ VC
 ```
 
 **Legend — how to read this diagram:**

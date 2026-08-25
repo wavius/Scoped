@@ -43,18 +43,18 @@ flowchart TD
         IM["IntensityMap"]
     end
 
-    HW -->|"streams bytes"| USB
-    HW -->|"streams bytes"| UART
+    HW -->|"Streams bytes"| USB
+    HW -->|"Streams bytes"| UART
 
-    HWIF -->|"reads samples"| TRG
+    HWIF -->|"Reads samples"| TRG
 
-    TRG -.->|"Pass 1 · extract frame"| HC
+    TRG -.->|"Pass 1 · Extract frame"| HC
 
-    HC -.->|"Pass 2 · reads raw frame"| VC
+    HC -.->|"Pass 2 · Reads raw frame"| VC
 
-    HC -->|"traces"| PLT
-    VC -->|"traces"| PLT
-    PLT -->|"normalize / rasterize"| IM
+    HC -->|"Traces"| PLT
+    VC -->|"Traces"| PLT
+    PLT -->|"Normalize / Rasterize"| IM
 
     HC ~~~ VC
 ```

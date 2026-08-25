@@ -46,7 +46,7 @@ flowchart TD
     HW -->|"Streams bytes"| USB
     HW -->|"Streams bytes"| UART
 
-    HWIF -->|"Reads samples"| TRG
+    HWIF -.->|"Reads samples"| TRG
 
     TRG -.->|"Pass 1 · Extract frame"| HC
 
@@ -59,11 +59,11 @@ flowchart TD
     HC ~~~ VC
 ```
 
-**Legend — how to read this diagram:**
+**Legend:**
 
-- **Nested subgraph = ownership.** Everything inside `Oscilloscope` is owned by it. `Channel` owns its `CircularBuffer` and `IProcessor` chain; `VirtualChannel` owns its `IVirtualProcessor` chain. The UI does *not* own anything — it reads traces.
-- **Solid arrow = data moves** from producer to consumer.
-- **Dashed arrow = non-owning reference / read.** This is how a reader observes data it does not own (e.g. `VirtualChannel` reads a hardware channel's raw frame without owning it).
+- **Nested box = ownership** — the outer box owns what's inside it.
+- **Solid arrow = data moves** between blocks.
+- **Dashed arrow = non-owning read** — a block reads data it doesn't own.
 
 The stages in detail, and who owns what:
 
